@@ -16,11 +16,32 @@ not the intended state (see `development-workflow.md`).
 
 ## Current Goal
 
-- Rebuild roadmap: all planned phases are now done locally (storefront,
-  admin panel, collagen landing page). Next step is deployment — set up a
-  staging environment (Firebase App Hosting, since this is a full Next.js
-  SSR app, not the old static-file hosting setup) so the owner can click
-  through everything with real data before any production cutover.
+- Staging is live — see "Deployment" below. Next step is the owner's
+  manual click-through (real credentialed admin-panel session, a real
+  test order through checkout and the collagen modal) before any decision
+  to cut the live domain over from the old static site to this rebuild.
+
+## Deployment
+
+- Staging: **https://ghost-staging--desert-shop-24af9.us-central1.hosted.app**
+  — Firebase App Hosting backend `ghost-staging` (project
+  `desert-shop-24af9`, region `us-central1`), connected to
+  `github.com/tango-sama/desert-ghost` `main` branch. Deploys via
+  `firebase apphosting:rollouts:create ghost-staging --git-branch main`;
+  connecting the GitHub repo the first time required the owner to
+  authorize Firebase's GitHub App in the console (browser-only OAuth
+  step, not CLI-scriptable). This is a SEPARATE backend/URL from the live
+  static site (`desert-shop-24af9.web.app`, still classic Firebase
+  Hosting) — zero risk to production; nothing points end users at staging.
+  Verified (2026-07-21): all five routes (`/`, `/products`, `/checkout`,
+  `/amelhadj`, `/collagen`) return 200 with real Firestore data (8 product
+  cards, RTL attrs, admin login card) on the actual deployed backend, not
+  just local dev.
+  Ghost's source now lives at `github.com/tango-sama/desert-ghost`
+  (previously local-only) — 4 commits covering the full build: storefront,
+  admin panel, collagen landing page, stores+docs.
+  NOT done: no production cutover. The live `desert-shop-24af9.web.app`
+  (old static `trinkl` site) is untouched and still what customers see.
 
 ## Completed
 
