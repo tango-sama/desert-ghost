@@ -45,6 +45,28 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- ZR parcel button fix (2026-07-21): the admin orders tab's "🟡 طرد ZR
+  Express" button appeared broken — clicking it created the parcel but the
+  card showed no confirmation and re-offered the create buttons, so the
+  owner thought nothing happened (and could create duplicates). Root cause:
+  unlike Yalidine/Noest, ZR Express does not issue a tracking number at
+  creation time (the callable returns a `parcelId`; the tracking resolves
+  later via `getParcelStatus`/the ZR webhook, which matches on
+  `zr.parcelId` — see the webhooks entry below). But the whole UI keyed
+  "does this order have a ZR parcel?" off `o.zr?.tracking` alone, so a
+  just-created, not-yet-tracked ZR parcel was invisible: `orderCarrier()`
+  returned `null`, the ZR banner didn't render, and the create buttons came
+  back. Fix (frontend-only, no schema change — `zr.parcelId` already
+  existed): added `parcelId` to `ParcelInfo` (`lib/admin.ts`), made
+  `orderCarrier`/`confirmStamp` recognize a ZR parcel via `tracking || parcelId`
+  (`components/admin/carriers.ts`, new `zrCreated` helper), rendered a
+  "تم إنشاء طرد ZR Express ✓ — رقم التتبع سيظهر قريباً" pending state in the
+  ZR banner when tracking hasn't resolved yet (`orders-view.tsx`), and kept
+  `parcelId` in `createParcel`'s optimistic patch so the order flips to
+  fulfilled immediately. Yalidine/Noest paths unchanged (they always return
+  tracking up front). Verified: `tsc --noEmit`, `eslint`, and `next build`
+  all clean.
+
 - Collagen landing page at `/collagen` (2026-07-21): full port of
   `trinkl/collagen.html` from `origin/main` (the local trinkl working copy
   lacks this — it's ~36 commits behind and missing the before/after +

@@ -33,6 +33,12 @@ export type CarrierKey = "yalidine" | "noest" | "zr";
 
 export type ParcelInfo = {
   tracking?: string;
+  // ZR Express does not issue a tracking number at creation time — the
+  // callable returns (and the webhook later heals from) the carrier's own
+  // parcel id, so a freshly created ZR parcel has `parcelId` but no
+  // `tracking` yet. The UI must treat a parcel as "created" when either is
+  // present, not `tracking` alone.
+  parcelId?: string;
   label?: string | null;
   validated?: boolean;
   createdAt?: number;

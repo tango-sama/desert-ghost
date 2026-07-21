@@ -523,13 +523,18 @@ export function OrdersView() {
       patchOrder(orderId, { deliveryLabel: note, parcelPrice });
       const d = await callFn<{
         tracking?: string;
+        parcelId?: string;
         label?: string;
         validated?: boolean;
         alreadyCreated?: boolean;
       }>(CREATE_FN[co], { orderId });
       patchOrder(orderId, {
+        // Keep the ZR parcelId so the parcel is recognized as created even
+        // before its tracking number resolves — otherwise the card would
+        // fall back to showing the create buttons again (see orderCarrier).
         [co]: {
           tracking: d.tracking,
+          parcelId: d.parcelId,
           label: d.label ?? null,
           validated: d.validated,
           createdAt: nowMs(),
@@ -828,10 +833,21 @@ export function OrdersView() {
                       </span>
                     </div>
                   )}
-                  {o.zr?.tracking && (
+                  {(o.zr?.tracking || o.zr?.parcelId) && (
                     <div className="mt-2.5 rounded-[11px] bg-[rgba(232,164,19,.12)] px-4 py-3 text-[.84rem] text-[var(--warn-ink)]">
-                      🟡 طرد ZR Express: <b className="num">{o.zr.tracking}</b> ·{" "}
-                      <span className="text-[.78rem]">الوصل يُطبع من لوحة ZR</span>
+                      {o.zr?.tracking ? (
+                        <>
+                          🟡 طرد ZR Express: <b className="num">{o.zr.tracking}</b> ·{" "}
+                          <span className="text-[.78rem]">الوصل يُطبع من لوحة ZR</span>
+                        </>
+                      ) : (
+                        <>
+                          🟡 تم إنشاء طرد ZR Express ✓ ·{" "}
+                          <span className="text-[.78rem]">
+                            رقم التتبع سيظهر قريباً — حدِّثي بـ 🔄 أو من لوحة ZR
+                          </span>
+                        </>
+                      )}
                     </div>
                   )}
                 </div>
