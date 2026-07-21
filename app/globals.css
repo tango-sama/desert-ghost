@@ -6,7 +6,7 @@
 
 @theme inline {
     --font-heading: var(--font-sans);
-    --font-sans: var(--font-sans);
+    --font-sans: var(--font-cairo);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -47,73 +47,141 @@
     --radius-4xl: calc(var(--radius) * 2.6);
 }
 
+/* Blush Rose & Gold — Desert Shop storefront palette (light only).
+   Source of truth: context/ui-context.md. Brand tokens (--rose, --gold, ...)
+   are kept alongside the shadcn semantic tokens so both bespoke storefront
+   CSS and shadcn components (Button, Card, Input, Dialog, ...) share one
+   palette. The admin dark-default theme gets its own token set in `.dark`
+   when the admin panel is rebuilt — not done yet. */
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    /* brand tokens */
+    --rose: #E0728C;
+    --rose-deep: #C8546F;
+    --rose-soft: #F3B4C2;
+    --rose-tint: #FCE9EE;
+    --gold: #D9A86C;
+    --gold-light: #E8C79A;
+    --gold-soft: #F7EDDD;
+    --blush: #FFF1EC;
+    --cream: #FFF7F4;
+    --bg-2: #FFFFFF;
+    --bg-3: #FBEEEA;
+    --ink-2: #6E5B61;
+    --ink-3: #A18C92;
+    --line: #F0DBE0;
+    --line-2: rgba(200, 84, 111, .12);
+    --shadow: 0 1px 3px rgba(224, 114, 140, .06), 0 10px 30px rgba(224, 114, 140, .10);
+    --shadow-lg: 0 22px 50px rgba(224, 114, 140, .20);
+    --ease: cubic-bezier(.16, 1, .3, 1);
+
+    /* shadcn semantic tokens, mapped onto the brand palette */
+    --background: var(--cream);
+    --foreground: #3A2A30;
+    --card: var(--bg-2);
+    --card-foreground: #3A2A30;
+    --popover: var(--bg-2);
+    --popover-foreground: #3A2A30;
+    --primary: var(--rose-deep);
+    --primary-foreground: #FFFFFF;
+    --secondary: var(--gold);
+    --secondary-foreground: #5A3F2A;
+    --muted: var(--bg-3);
+    --muted-foreground: var(--ink-2);
+    --accent: var(--rose-tint);
+    --accent-foreground: var(--rose-deep);
+    --destructive: #E5484D;
+    --border: var(--line);
+    --input: var(--line);
+    --ring: var(--rose);
+    --chart-1: var(--rose);
+    --chart-2: var(--gold);
+    --chart-3: var(--rose-deep);
+    --chart-4: var(--gold-light);
+    --chart-5: var(--rose-soft);
+    --radius: 1.25rem;
+    --sidebar: var(--bg-2);
+    --sidebar-foreground: #3A2A30;
+    --sidebar-primary: var(--rose-deep);
+    --sidebar-primary-foreground: #FFFFFF;
+    --sidebar-accent: var(--rose-tint);
+    --sidebar-accent-foreground: var(--rose-deep);
+    --sidebar-border: var(--line);
+    --sidebar-ring: var(--rose);
 }
 
-.dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+/* Admin panel (/amelhadj) — dark by default, deep plum-brown surfaces with
+   the same rose/gold hues (context/ui-context.md "Admin Panel Colors").
+   Scoped under .admin so storefront tokens stay untouched; .admin.light is
+   the owner-toggled light variant (ds_theme in localStorage). Extra
+   admin-only tokens: --card-2 (elevated/input surface), --green, --blue. */
+.admin {
+  --card-2: #2E222A;
+  --green: #22c55e;
+  --blue: #5B8DEF;
+  --ink-2: #C9B6BF;
+  --ink-3: #9A8590;
+  --background: #1B1419;
+  --foreground: #F5EDF0;
+  --card: #241A20;
+  --card-foreground: #F5EDF0;
+  --popover: #2E222A;
+  --popover-foreground: #F5EDF0;
+  --primary: var(--rose);
+  --primary-foreground: #FFFFFF;
+  --muted: #2E222A;
+  --muted-foreground: #9A8590;
+  --accent: rgba(224, 114, 140, .1);
+  --accent-foreground: var(--rose);
+  --border: #3A2C34;
+  --input: #3A2C34;
+  --ring: var(--rose);
+  --shadow: 0 30px 70px rgba(0, 0, 0, .5);
+  --login-glow: radial-gradient(ellipse 80% 60% at 50% 0%, #2A1D24, #1B1419);
+  /* state accents (ink over translucent bg). The old panel hardcoded the
+     dark-bg pastels inline and darkened them in light mode with
+     [style*=...] hacks; here they are proper tokens. */
+  --ok-ink: #7CE5A0;
+  --ok-bg: rgba(34, 197, 94, .18);
+  --info-ink: #9DBBF5;
+  --info-bg: rgba(91, 141, 239, .18);
+  --warn-ink: #F5CE7A;
+  --warn-bg: rgba(232, 164, 19, .18);
+  --alert-ink: #F2A1A4;
+  --alert-bg: rgba(229, 72, 77, .14);
+  --yal-ink: #FF9A8C;
+  --yal-bg: rgba(225, 25, 0, .18);
+  --yal-link: #FFC9C0;
+  --purple-ink: #C4B5FD;
+  --purple-bg: rgba(167, 139, 250, .18);
+  --teal-ink: #5FC9A8;
+  --teal-bg: rgba(95, 201, 168, .18);
+  --rose-badge: #F3B4C2;
+}
+.admin.light {
+  --card-2: #F3E7EC;
+  --ink-2: #75606B;
+  --ink-3: #9C8791;
+  --background: #F6EFF2;
+  --foreground: #3A2A31;
+  --card: #FFFFFF;
+  --card-foreground: #3A2A31;
+  --popover: #F3E7EC;
+  --popover-foreground: #3A2A31;
+  --muted: #F3E7EC;
+  --muted-foreground: #9C8791;
+  --border: #E7D6DE;
+  --input: #E7D6DE;
+  --shadow: 0 30px 70px rgba(58, 42, 49, .14);
+  --login-glow: radial-gradient(ellipse 80% 60% at 50% 0%, #FBEFF3, #F6EFF2);
+  --ok-ink: #15803D;
+  --info-ink: #2E5FC7;
+  --warn-ink: #A8720E;
+  --alert-ink: #C43E44;
+  --yal-ink: #C2402F;
+  --yal-link: #B33A2B;
+  --purple-ink: #6D4FC1;
+  --teal-ink: #1A8A66;
+  --rose-badge: #C8546F;
 }
 
 @layer base {
@@ -122,8 +190,64 @@
     }
   body {
     @apply bg-background text-foreground;
+    background-image: radial-gradient(ellipse 120% 80% at 50% 0%, var(--blush) 0%, var(--cream) 55%);
+    background-attachment: fixed;
+    line-height: 1.7;
     }
   html {
     @apply font-sans;
+    scroll-behavior: smooth;
     }
+  ::selection {
+    background: var(--rose);
+    color: #fff;
+    }
+  * {
+    scrollbar-width: thin;
+    scrollbar-color: var(--rose) var(--bg-3);
+    }
+  ::-webkit-scrollbar {
+    width: 9px;
+    height: 9px;
+    }
+  ::-webkit-scrollbar-track {
+    background: var(--bg-3);
+    }
+  ::-webkit-scrollbar-thumb {
+    background: linear-gradient(var(--rose), var(--rose-deep));
+    border-radius: 5px;
+    }
+}
+
+/* numbers/phones/prices read LTR even inside RTL text */
+.ltr {
+  direction: ltr;
+  unicode-bidi: isolate;
+  display: inline-block;
+}
+.num {
+  direction: ltr;
+  unicode-bidi: isolate;
+  font-feature-settings: "tnum";
+}
+bdi {
+  unicode-bidi: isolate;
+}
+
+/* scroll-reveal, wired by an IntersectionObserver on mount */
+.reveal {
+  opacity: 0;
+  transform: translateY(30px);
+  transition: opacity .7s var(--ease), transform .7s var(--ease);
+}
+.reveal.in {
+  opacity: 1;
+  transform: none;
+}
+@media (prefers-reduced-motion: reduce) {
+  .reveal {
+    opacity: 1;
+    transform: none;
+    transition: none;
+  }
 }
