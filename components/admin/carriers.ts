@@ -38,17 +38,25 @@ export const CREATE_FN: Record<CarrierKey, string> = {
 
 // Pending orders sort before confirmed ones; confirmed sort by most
 // recently created parcel.
+// A ZR parcel is "created" as soon as it has a parcelId, even before its
+// tracking number resolves (ZR issues the tracking asynchronously, healed
+// later via getParcelStatus / the webhook). Yalidine and Noest always
+// return a tracking number up front, so they only key off `tracking`.
+function zrCreated(o: Order): boolean {
+  return !!(o.zr?.tracking || o.zr?.parcelId);
+}
+
 export function confirmStamp(o: Order): number {
   if (o.noest?.tracking) return Number(o.noest.createdAt) || 1;
   if (o.yalidine?.tracking) return Number(o.yalidine.createdAt) || 1;
-  if (o.zr?.tracking) return Number(o.zr.createdAt) || 1;
+  if (zrCreated(o)) return Number(o.zr!.createdAt) || 1;
   return 0;
 }
 
 export function orderCarrier(o: Order): CarrierKey | null {
   if (o.noest?.tracking) return "noest";
   if (o.yalidine?.tracking) return "yalidine";
-  if (o.zr?.tracking) return "zr";
+  if (zrCreated(o)) return "zr";
   return null;
 }
 
