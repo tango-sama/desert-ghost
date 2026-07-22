@@ -45,6 +45,30 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- Yalidine weight/oversize fee calculation (2026-07-22): made the delivery
+  fee model explicit and correct per Yalidine's `/v1/fees` spec —
+  `total = base fee (home|desk) + weight ("oversize") fee`, where the
+  weight fee applies only to billable weight above a 5 kg free threshold
+  (first 5 kg free, then a per-kg rate for each additional whole kg).
+  `lib/delivery.ts` now splits `baseFeeForCarrier()` (the synced per-wilaya
+  home/desk lookup, unchanged) from `feeForCarrier()`, which adds the
+  weight fee; new `FREE_WEIGHT_KG = 5` / `PARCEL_WEIGHT_KG = 1` constants,
+  `billableOverweightKg()` and `weightFee()` helpers. This store ships a
+  fixed ~1 kg per parcel, which is under the free threshold, so the weight
+  fee is always 0 and the customer pays exactly the base fee — the rule is
+  written out against a named constant (not a magic 0) so it stays correct
+  if heavier products are ever added. `feeForCarrier`'s signature is
+  backward-compatible (weight defaults to 1 kg), so checkout / seller
+  quick-order / collagen order-modal are unchanged and remain the single
+  source of truth. Verified: weight helper matches Yalidine's own doc
+  examples (4 kg→0, 5 kg→0, 7 kg→100 @ 50 DA/kg), `tsc --noEmit` and lint
+  clean. NOTE for full per-commune accuracy: Yalidine's real fees vary by
+  commune within a wilaya (e.g. Adrar 1400 vs Akabli 1450 home), but the
+  synced `delivery_data/{carrier}.fees` grid is stored PER WILAYA only (no
+  per-commune fees, confirmed live 2026-07-22). Closing that gap requires
+  the server-side `syncCarriers` in `tango-sama/trinkl` to store per-commune
+  fees — out of scope for this frontend repo.
+
 - Collagen landing page at `/collagen` (2026-07-21): full port of
   `trinkl/collagen.html` from `origin/main` (the local trinkl working copy
   lacks this — it's ~36 commits behind and missing the before/after +
