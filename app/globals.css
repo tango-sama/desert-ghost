@@ -155,6 +155,8 @@
   --purple-bg: rgba(167, 139, 250, .18);
   --teal-ink: #5FC9A8;
   --teal-bg: rgba(95, 201, 168, .18);
+  --pink-ink: #FF8FE0;
+  --pink-bg: rgba(255, 46, 196, .18);
   --rose-badge: #F3B4C2;
 }
 .admin.light {
@@ -181,6 +183,7 @@
   --yal-link: #B33A2B;
   --purple-ink: #6D4FC1;
   --teal-ink: #1A8A66;
+  --pink-ink: #C81E63;
   --rose-badge: #C8546F;
 }
 

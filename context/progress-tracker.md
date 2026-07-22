@@ -404,6 +404,68 @@ not the intended state (see `development-workflow.md`).
 
 - None yet.
 
+## Completed (this session)
+
+- Sunguard landing page at `/sunguard` (2026-07-22): a second single-product
+  marketing funnel, same self-contained pattern as `/collagen`
+  (architecture-context.md — hardcoded product data, own top bar/footer, no
+  shared storefront Nav/CartDrawer). Product: Jula's Herb Watermelon 3D Aura
+  Sun Guard SPF50+ PA++++, 30g, price 3,500 د.ج (owner-provided; hardcoded in
+  `components/storefront/sunguard/product.ts`, deliberately separate from the
+  Firestore `products` collection). Own hot-pink/watermelon palette scoped in
+  `sunguard.module.css`, distinct from the site's Blush Rose & Gold theme and
+  from collagen's teal. Sections: hero (illustrated product spotlight — no
+  real product photo exists yet, so this is a hand-drawn SVG sun icon +
+  badge card, not a photo), "skin problems from sun exposure" grid (6 cards:
+  sunburn, pigmentation, premature aging, dryness, greasy residue, sensitivity
+  irritation), before/after comparison sliders, product benefits, single-
+  product order card, how-it-works, CTA banner, sticky mobile order bar.
+  Order modal (`order-modal.tsx`) reuses the same delivery data layer as
+  collagen/checkout (`lib/delivery.ts`, Noest/Yalidine only, same rule as
+  collagen) with a quantity stepper instead of collagen's multi-product
+  picker (single SKU). Orders save via `saveOrder` with
+  `source: "landing_sunguard"`.
+  Before/after images: the owner chose illustrative graphics over real
+  customer photos (no before/after photography exists for this product) —
+  `before-after.tsx` draws abstract skin-patch SVG comparisons (dark spots /
+  sunburn redness / fine lines vs. a smooth healed panel) with the same
+  "illustrative, not real customer photos" disclaimer text the collagen page
+  already carries, reusing its exact drag-slider mechanic (`--ba` custom
+  property + pointer events) with inline SVG layers instead of `<img>`.
+  Admin panel: orders placed through this funnel get a pink neon halo
+  (`#FF2EC4`) in `orders-view.tsx`, distinct from the existing blue
+  (`#00D1FF`) halo on other customer-placed orders (checkout, collagen) —
+  owner-requested so this funnel's orders are visually distinguishable at a
+  glance. Added a "🍉 صفحة واقي الشمس" tag badge (same convention as
+  collagen's teal tag) and new `--pink-ink`/`--pink-bg` tokens in
+  `app/globals.css` (`.admin`/`.admin.light`), alongside the existing
+  `--teal-*`/`--purple-*` state-accent tokens.
+  Fixed along the way: the topbar brand name/subtitle/back-link were dark
+  maroon text on the dark hero gradient (unscrolled state) — nearly
+  illegible. Made them white/light-pink by default, switching to the dark
+  ink color only once `.scrolled` adds the light blurred background
+  (transition on both), then re-verified.
+  Verified: `npm run lint` and `npm run build` clean (`/sunguard` builds as
+  `force-dynamic`, correct route group placement outside `(storefront)`).
+  Full visual + interactive verification via a real (non-virtual-time)
+  headless Chromium instance (Playwright, system browser at
+  `/opt/pw-browsers/chromium`): screenshotted hero, problems grid,
+  before/after sliders, benefits, product/order card; drove a real
+  click-through opening the order modal, confirmed the quantity stepper,
+  delivery-type toggle, and totals correctly compute
+  `3,500 د.ج × qty + fee`. The only console errors were the expected
+  Firestore-offline fallback (`getDeliveryData` catches and the wilaya
+  select shows "⏳ جاري التحميل..." — this sandbox has no outbound Firebase
+  connectivity), confirming the storefront-must-render-offline invariant
+  holds. NOT exercised: an actual successful submit against production
+  Firestore, and the admin-panel pink-halo rendering itself (both require
+  live Firestore/credentialed admin auth unavailable in this sandbox) — the
+  admin change is a small, mechanical extension of the already-verified blue
+  neon halo logic (same conditional, new branch), reviewed line-by-line
+  instead. Owner should place one real test order through `/sunguard` and
+  confirm the pink halo + badge render correctly in `/amelhadj` before fully
+  trusting it, same recommendation given for collagen's admin integration.
+
 ## Next Up
 
 

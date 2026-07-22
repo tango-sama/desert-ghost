@@ -623,6 +623,7 @@ export function OrdersView() {
         const isOpen = cardOpen(o);
         const isStaffOrder =
           o.source === "admin_phone" || o.source === "seller_direct";
+        const isSunguardOrder = o.source === "landing_sunguard";
         const picList = (o.items ?? [])
           .map((it) => {
             let img = it.image;
@@ -645,13 +646,21 @@ export function OrdersView() {
             style={
               // Neon halo marks orders placed by website customers themselves;
               // staff-entered orders (admin phone / seller direct) stay plain.
-              !isStaffOrder
+              // The sunguard landing page gets its own pink neon so it's
+              // visually distinct from other customer-placed orders (blue).
+              isSunguardOrder
                 ? {
-                    borderColor: "#00D1FF",
+                    borderColor: "#FF2EC4",
                     boxShadow:
-                      "inset 4px 0 0 #00D1FF, 0 0 14px rgba(0,209,255,.30)",
+                      "inset 4px 0 0 #FF2EC4, 0 0 14px rgba(255,46,196,.35)",
                   }
-                : undefined
+                : !isStaffOrder
+                  ? {
+                      borderColor: "#00D1FF",
+                      boxShadow:
+                        "inset 4px 0 0 #00D1FF, 0 0 14px rgba(0,209,255,.30)",
+                    }
+                  : undefined
             }
           >
             {/* always-visible summary — click to fold/unfold */}
@@ -677,6 +686,11 @@ export function OrdersView() {
                   {o.source === "landing_collagen" && (
                     <span className="mr-1 inline-block rounded-full bg-[var(--teal-bg)] px-[9px] py-[2px] text-[.72rem] font-extrabold text-[var(--teal-ink)]">
                       🧴 صفحة الكولاجين
+                    </span>
+                  )}
+                  {isSunguardOrder && (
+                    <span className="mr-1 inline-block rounded-full bg-[var(--pink-bg)] px-[9px] py-[2px] text-[.72rem] font-extrabold text-[var(--pink-ink)]">
+                      🍉 صفحة واقي الشمس
                     </span>
                   )}
                   {o.wilaya ? (
