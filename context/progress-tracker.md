@@ -45,6 +45,23 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- Yalidine fee correction override (2026-07-22): the synced Yalidine grid
+  (`delivery_data/yalidine.fees`) is wrong — `site_settings.originWilaya` is
+  correctly "Touggourt", but the server-side `syncCarriers` sync stored a
+  national/Alger-origin table (Alger 500/300, and Touggourt itself 1050/600
+  as a destination — not the cheapest row it would be from a true Touggourt
+  origin), so northern destinations are ~200-300 DA too cheap. Root fix is
+  in `tango-sama/trinkl` (syncCarriers must query `/v1/fees` from the real
+  origin wilaya) — out of scope for this frontend repo. Interim in-repo fix:
+  `FEE_OVERRIDES` in `lib/delivery.ts`, applied first in `baseFeeForCarrier`
+  (override → synced → static), seeded with owner-confirmed Alger (wilaya
+  16) = home 800 / desk 500 (was 500/300). Wins on all order surfaces
+  (checkout, seller quick-order, collagen) since they share `feeForCarrier`.
+  Add a wilaya per line as its correct fee is confirmed; remove once the
+  upstream sync is fixed. Verified: resolution order correct (Alger→800/500,
+  other wilayas unchanged, non-Yalidine carriers unaffected), tsc + lint
+  clean.
+
 - Yalidine weight/oversize fee calculation (2026-07-22): made the delivery
   fee model explicit and correct per Yalidine's `/v1/fees` spec —
   `total = base fee (home|desk) + weight ("oversize") fee`, where the

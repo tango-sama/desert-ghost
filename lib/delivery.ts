@@ -71,18 +71,42 @@ export function communesForCarrier(company: Carrier, id: number | string, cache:
   return communes(id).map((c) => c.fr || c.ar);
 }
 
-// Base (home | desk) delivery fee for a destination wilaya, from this
-// carrier's live-synced grid, falling back to the static defaults. This is
-// the fee "including commune tax" but WITHOUT any weight surcharge — see
-// deliveryFee() for the total actually charged.
+// Owner-confirmed fee corrections that override the synced grid.
+//
+// The server-side `syncCarriers` fee sync (in tango-sama/trinkl) stored a
+// national / Alger-origin Yalidine grid instead of computing fees from this
+// store's real departure wilaya (site_settings.originWilaya = "Touggourt").
+// That makes every northern destination too cheap — e.g. Alger came out
+// 500/300 instead of the real 800/500 from Touggourt. Until that sync is
+// fixed at the source, these owner-confirmed real Yalidine fees take
+// precedence over the synced/static grid so checkout shows what Yalidine
+// actually bills.
+//
+// Add a wilaya here as its correct home/desk fee is confirmed. Keyed by
+// carrier -> wilaya id (string) -> { home, desk } in DA. Remove an entry
+// once the upstream sync is fixed and its synced value is correct again.
+const FEE_OVERRIDES: Partial<Record<Carrier, Record<string, { home: number; desk: number }>>> = {
+  yalidine: {
+    // Alger (wilaya 16) — confirmed 2026-07-22 (e.g. Bab El Oued):
+    // home 800 / desk 500. Synced grid wrongly had home 500 / desk 300.
+    "16": { home: 800, desk: 500 },
+  },
+};
+
+// Base (home | desk) delivery fee for a destination wilaya. Resolution
+// order: owner-confirmed override → this carrier's live-synced grid →
+// static defaults. This is the fee "including commune tax" but WITHOUT any
+// weight surcharge — see feeForCarrier() for the total actually charged.
 export function baseFeeForCarrier(
   company: Carrier,
   id: number | string,
   type: DeliveryType,
   cache: CarrierCache
 ): number {
-  const d = cache[company];
   const stop = type === "office" || type === "desk";
+  const ov = FEE_OVERRIDES[company]?.[String(id)];
+  if (ov) return stop ? ov.desk : ov.home;
+  const d = cache[company];
   const f = d?.fees[String(id)];
   if (f) return stop ? f.desk : f.home;
   return fee(id, type, company);
