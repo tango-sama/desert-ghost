@@ -1,3 +1,4 @@
+import type { LandingHeroContent } from "@/lib/firebase";
 import styles from "./collagen.module.css";
 
 // React 19: ref is accepted as a plain prop (no forwardRef needed) — the
@@ -6,10 +7,14 @@ import styles from "./collagen.module.css";
 export function Hero({
   onOrder,
   ref,
+  content,
 }: {
   onOrder: () => void;
   ref: React.Ref<HTMLElement>;
+  content?: LandingHeroContent;
 }) {
+  const title = content?.title?.trim();
+  const lead = content?.lead?.trim();
   return (
     <section className={styles.clHero} ref={ref}>
       <div className={styles.clBubble} style={{ width: 180, height: 180, top: "6%", left: "6%" }} />
@@ -18,12 +23,19 @@ export function Hero({
       <div className={styles.clHeroInner}>
         <div>
           <span className={styles.clEyebrow}>✨ مكوّن الجمال الأول عالمياً</span>
-          <h1>
-            جمالكِ <span>يبدأ من الداخل</span> مع الكولاجين
-          </h1>
+          {/* admin-edited title loses the gradient-highlighted word — plain
+              text is a fair trade-off for editability (see admin's
+              landing-pages-view.tsx) */}
+          {title ? (
+            <h1>{title}</h1>
+          ) : (
+            <h1>
+              جمالكِ <span>يبدأ من الداخل</span> مع الكولاجين
+            </h1>
+          )}
           <p className="lead">
-            أربع تركيبات كولاجين مختارة بعناية — بودرة وكبسولات — لبشرة أكثر نضارة، شعر أقوى وأقل تساقطاً، أظافر
-            صحية، ومفاصل أكثر مرونة.
+            {lead ||
+              "أربع تركيبات كولاجين مختارة بعناية — بودرة وكبسولات — لبشرة أكثر نضارة، شعر أقوى وأقل تساقطاً، أظافر صحية، ومفاصل أكثر مرونة."}
           </p>
           <div className={styles.clHeroCtas}>
             <button type="button" className={styles.btnGold} onClick={onOrder}>

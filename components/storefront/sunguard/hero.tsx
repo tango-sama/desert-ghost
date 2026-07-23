@@ -1,3 +1,4 @@
+import type { LandingHeroContent } from "@/lib/firebase";
 import { SUNGUARD_PRODUCT } from "./product";
 import styles from "./sunguard.module.css";
 
@@ -32,7 +33,17 @@ function SunIcon() {
   );
 }
 
-export function Hero({ onOrder, ref }: { onOrder: () => void; ref: React.Ref<HTMLElement> }) {
+export function Hero({
+  onOrder,
+  ref,
+  content,
+}: {
+  onOrder: () => void;
+  ref: React.Ref<HTMLElement>;
+  content?: LandingHeroContent;
+}) {
+  const title = content?.title?.trim();
+  const lead = content?.lead?.trim();
   return (
     <section className={styles.sgHero} ref={ref}>
       <div className={styles.sgBubble} style={{ width: 180, height: 180, top: "6%", left: "6%" }} />
@@ -41,12 +52,19 @@ export function Hero({ onOrder, ref }: { onOrder: () => void; ref: React.Ref<HTM
       <div className={styles.sgHeroInner}>
         <div>
           <span className={styles.sgEyebrow}>🍉 حماية فيزيائية وكيميائية 3D Aura</span>
-          <h1>
-            بشرتكِ تستحق <span>حماية قصوى</span> من الشمس
-          </h1>
+          {/* admin-edited title loses the gradient-highlighted word — plain
+              text is a fair trade-off for editability (see admin's
+              landing-pages-view.tsx) */}
+          {title ? (
+            <h1>{title}</h1>
+          ) : (
+            <h1>
+              بشرتكِ تستحق <span>حماية قصوى</span> من الشمس
+            </h1>
+          )}
           <p className="lead">
-            واقي شمس بطعم البطيخ والبرتقال، SPF50+ PA++++، يحمي بشرتكِ من الأشعة فوق البنفسجية ويمنع التصبغات
-            والحروق وعلامات الشيخوخة المبكرة — بملمس خفيف غير دهني.
+            {lead ||
+              "واقي شمس بطعم البطيخ والبرتقال، SPF50+ PA++++، يحمي بشرتكِ من الأشعة فوق البنفسجية ويمنع التصبغات والحروق وعلامات الشيخوخة المبكرة — بملمس خفيف غير دهني."}
           </p>
           <div className={styles.sgHeroCtas}>
             <button type="button" className={styles.sgBtn} onClick={onOrder}>

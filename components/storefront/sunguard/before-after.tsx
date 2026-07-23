@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
+import type { LandingBaItem } from "@/lib/firebase";
 import styles from "./sunguard.module.css";
 
 type Kind = "spots" | "burn" | "aging";
@@ -126,9 +127,24 @@ function SkinPanel({ kind, healed, uid }: { kind: Kind; healed: boolean; uid: st
   );
 }
 
-function BaFrame({ kind, title, text }: { kind: Kind; title: string; text: string }) {
+function BaFrame({
+  kind,
+  title,
+  text,
+  before,
+  after,
+}: {
+  kind: Kind;
+  title: string;
+  text: string;
+  before?: string;
+  after?: string;
+}) {
   const frameRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
+  // Real admin-uploaded photos replace the illustrated SVG swatches once
+  // both sides of a pair are set (see landing-pages-view.tsx).
+  const isPhoto = !!(before && after);
 
   useEffect(() => {
     const fr = frameRef.current;
@@ -188,10 +204,21 @@ function BaFrame({ kind, title, text }: { kind: Kind; title: string; text: strin
   return (
     <div className={styles.baCard}>
       <div className={styles.baFrame} ref={frameRef}>
-        <SkinPanel kind={kind} healed={false} uid={`${kind}-before`} />
-        <div className={styles.baAfter}>
-          <SkinPanel kind={kind} healed uid={`${kind}-after`} />
-        </div>
+        {isPhoto ? (
+          <>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className={styles.baImg} src={before} alt="" draggable={false} />
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className={cn(styles.baImg, styles.baAfter)} src={after} alt="" draggable={false} />
+          </>
+        ) : (
+          <>
+            <SkinPanel kind={kind} healed={false} uid={`${kind}-before`} />
+            <div className={styles.baAfter}>
+              <SkinPanel kind={kind} healed uid={`${kind}-after`} />
+            </div>
+          </>
+        )}
         <span className={cn(styles.baTag, styles.baTagBefore)}>قبل</span>
         <span className={cn(styles.baTag, styles.baTagAfter)}>بعد</span>
         <div className={styles.baHandle}>
@@ -209,7 +236,21 @@ function BaFrame({ kind, title, text }: { kind: Kind; title: string; text: strin
   );
 }
 
-export function BeforeAfter() {
+export function BeforeAfter({ items }: { items?: LandingBaItem[] }) {
+  // admin overrides apply by card position (fixed spots/burn/aging slots —
+  // see landing-pages-view.tsx); title/text can be edited independently of
+  // photos, but both before+after are required together to swap in real
+  // photos for the illustration.
+  const cards = CARDS.map((c, i) => {
+    const o = items?.[i];
+    return {
+      ...c,
+      title: o?.title?.trim() || c.title,
+      text: o?.text?.trim() || c.text,
+      before: o?.before?.trim(),
+      after: o?.after?.trim(),
+    };
+  });
   return (
     <section className={`${styles.sgSec} ${styles.sgBa}`} id="beforeAfter">
       <span className={styles.sgLabel}>قبل وبعد</span>
@@ -217,8 +258,8 @@ export function BeforeAfter() {
       <div className={styles.sgUnderline} />
       <p className={styles.sgBaSub}>اسحبي المؤشر يميناً ويساراً لمشاهدة أثر الحماية اليومية من الشمس على بشرتكِ.</p>
       <div className={styles.sgBaGrid}>
-        {CARDS.map((c) => (
-          <BaFrame key={c.kind} kind={c.kind} title={c.title} text={c.text} />
+        {cards.map((c) => (
+          <BaFrame key={c.kind} kind={c.kind} title={c.title} text={c.text} before={c.before} after={c.after} />
         ))}
       </div>
       <p className={styles.sgBaNote}>

@@ -41,13 +41,14 @@ export function SunguardPage({
   }, []);
 
   const [modalOpen, setModalOpen] = useState(false);
+  const landing = settings.landingPages?.sunguard;
 
   return (
     <div className={styles.sunguard} dir="rtl">
       <Topbar scrolled={topScrolled} />
-      <Hero ref={heroRef} onOrder={() => setModalOpen(true)} />
+      <Hero ref={heroRef} onOrder={() => setModalOpen(true)} content={landing?.hero} />
       <Problems />
-      <BeforeAfter />
+      <BeforeAfter items={landing?.beforeAfter} />
       <Benefits />
       <ProductSection onOrder={() => setModalOpen(true)} />
       <HowItWorks />

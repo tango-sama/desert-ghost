@@ -64,6 +64,33 @@ export type Featured = {
   order?: number;
 };
 
+// Editable copy for the self-contained landing funnels (/sunguard,
+// /collagen) — admin-editable via the "صفحات الهبوط" panel tab, stored
+// under site_settings (already public-read/admin-write) instead of a new
+// collection so no Firestore rules change is needed. Empty/missing fields
+// mean "keep the page's built-in default" — each landing component falls
+// back to its hardcoded copy when a field is blank.
+export type LandingHeroContent = {
+  title?: string;
+  lead?: string;
+};
+
+export type LandingBaItem = {
+  title?: string;
+  text?: string;
+  before?: string;
+  after?: string;
+};
+
+export type LandingPageContent = {
+  hero?: LandingHeroContent;
+  beforeAfter?: LandingBaItem[];
+};
+
+export type LandingPageKey = "sunguard" | "collagen";
+
+export type LandingPagesContent = Partial<Record<LandingPageKey, LandingPageContent>>;
+
 export type SiteSettings = {
   waNumber?: string;
   waEnabled?: boolean;
@@ -73,6 +100,7 @@ export type SiteSettings = {
   facebook?: string;
   tiktok?: string;
   tiktokLiveUntil?: number;
+  landingPages?: LandingPagesContent;
   [key: string]: unknown;
 };
 

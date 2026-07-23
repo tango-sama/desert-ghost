@@ -2,6 +2,7 @@
 
 import { useEffect, useRef } from "react";
 import { cn } from "@/lib/utils";
+import type { LandingBaItem } from "@/lib/firebase";
 import styles from "./collagen.module.css";
 
 const CARDS = [
@@ -153,14 +154,35 @@ function BaFrame({ before, after, beforeAlt, afterAlt }: { before: string; after
   );
 }
 
-export function BeforeAfter({ onOrder }: { onOrder: () => void }) {
+export function BeforeAfter({
+  onOrder,
+  items,
+}: {
+  onOrder: () => void;
+  items?: LandingBaItem[];
+}) {
+  // admin overrides apply by card position (fixed nails/hair/skin slots —
+  // see landing-pages-view.tsx); an override needs both photos to replace
+  // the default pair, but title/text can be edited independently.
+  const cards = CARDS.map((c, i) => {
+    const o = items?.[i];
+    const before = o?.before?.trim();
+    const after = o?.after?.trim();
+    return {
+      ...c,
+      title: o?.title?.trim() || c.title,
+      text: o?.text?.trim() || c.text,
+      before: before && after ? before : c.before,
+      after: before && after ? after : c.after,
+    };
+  });
   return (
     <section className={styles.clBa} id="beforeAfter">
       <span className={styles.clLabel}>قبل وبعد</span>
       <h2 className={styles.clTitle}>شاهدي الفرق بنفسكِ</h2>
       <p className={styles.clBaSub}>اسحبي المؤشر يميناً ويساراً لتشاهدي الفرق الذي يصنعه الالتزام بالكولاجين يومياً.</p>
       <div className={styles.clBaGrid}>
-        {CARDS.map((c) => (
+        {cards.map((c) => (
           <div className={styles.baCard} key={c.title}>
             <BaFrame before={c.before} after={c.after} beforeAlt={c.beforeAlt} afterAlt={c.afterAlt} />
             <h3>{c.title}</h3>

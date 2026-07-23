@@ -46,6 +46,7 @@ export function CollagenPage({
 
   const [modalOpen, setModalOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
+  const landing = settings.landingPages?.collagen;
 
   function openOrder(productId?: string) {
     if (productId) setSelected((s) => (s.includes(productId) ? s : [...s, productId]));
@@ -55,8 +56,8 @@ export function CollagenPage({
   return (
     <div className={styles.collagen} dir="rtl">
       <Topbar scrolled={topScrolled} />
-      <Hero ref={heroRef} onOrder={() => openOrder()} />
-      <BeforeAfter onOrder={() => openOrder()} />
+      <Hero ref={heroRef} onOrder={() => openOrder()} content={landing?.hero} />
+      <BeforeAfter onOrder={() => openOrder()} items={landing?.beforeAfter} />
       <StoryStack />
       <Benefits />
       <TrustStrip />

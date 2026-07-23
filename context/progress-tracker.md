@@ -517,6 +517,52 @@ not the intended state (see `development-workflow.md`).
   anymore) — comment updated to point at the product section instead of
   claiming no photo exists.
 
+- Admin "صفحات الهبوط" (Landing Pages) tab added (2026-07-23): lets the
+  owner edit the hero title/lead and the 3 before/after cards (title, text,
+  optional photo pair) for both `/sunguard` and `/collagen` without touching
+  code. New `components/admin/views/landing-pages-view.tsx`, registered in
+  `admin-shell.tsx` (nav key `landing`). Deliberately stores content under
+  the existing `site_settings` doc (`landingPages.sunguard` /
+  `landingPages.collagen`, typed in `lib/firebase.ts` as
+  `LandingPageContent`/`LandingHeroContent`/`LandingBaItem`) rather than a
+  new Firestore collection — this repo has no `firestore.rules` file to
+  edit, and `site_settings` is already public-read/admin-write, so the
+  feature needed zero rules changes. Hero/before-after components in both
+  `sunguard/` and `collagen/` folders now take an optional `content`/`items`
+  prop and fall back to their original hardcoded copy whenever a field is
+  blank — an admin who never opens the new tab sees no change at all
+  (confirmed via screenshot diff against the pre-change pages). Before/after
+  cards merge by fixed position (3 slots per page, matching the storefront's
+  hardcoded card order) — the admin panel doesn't support adding/removing
+  cards, only editing the 3 that exist. For `/sunguard`, whose before/after
+  is currently hand-drawn SVG (no real photos yet — see the entry above),
+  supplying both a "before" and "after" photo in the admin form switches
+  that card to real photos (added a `.baImg` CSS class mirroring collagen's,
+  new `isPhoto` branch in `sunguard/before-after.tsx`'s `BaFrame`); leaving
+  either blank keeps the illustration. Admin form fields are empty by
+  default with the current default copy as a placeholder — an admin who
+  saves without touching a field keeps the default (empty string persisted
+  reads back as "use default", never as literal blank copy).
+  Uploads reuse the existing `pickImage`/`uploadImage` pipeline (WebP
+  conversion → Firebase Storage), same as every other admin image field.
+  Editing state resets correctly per page tab via React's key-based remount
+  (`<PageEditor key={page} .../>`) instead of a state-syncing effect, to
+  satisfy the `react-hooks/set-state-in-effect` lint rule.
+  Verified: `npm run lint` and `npm run build` clean. Confirmed via headless
+  Chromium screenshots that both landing pages render byte-for-byte
+  identical to before this change when no override is saved. Separately
+  confirmed the full override path renders correctly end-to-end (hero
+  title/lead swap, before/after text swap, and the illustration→real-photo
+  swap on sunguard) by temporarily forcing `getSettings()` to return test
+  `landingPages` data, screenshotting, then reverting that temporary code
+  before committing (confirmed clean via `git diff` — no test code shipped).
+  NOT exercised: the actual admin UI at `/amelhadj` (the new tab, the save
+  button, the upload button) end-to-end with real Firebase Auth login —
+  this sandbox has no admin credentials. Owner should open the new "صفحات
+  الهبوط" tab once, edit a field, save, and refresh the corresponding
+  landing page to confirm the write round-trips against production
+  Firestore before relying on it.
+
 ## Next Up
 
 

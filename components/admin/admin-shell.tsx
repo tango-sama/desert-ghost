@@ -13,6 +13,7 @@ import { OrdersView } from "@/components/admin/views/orders-view";
 import { MessagesView } from "@/components/admin/views/messages-view";
 import { IncomeView } from "@/components/admin/views/income-view";
 import { SettingsView } from "@/components/admin/views/settings-view";
+import { LandingPagesView } from "@/components/admin/views/landing-pages-view";
 
 type ViewKey =
   | "products"
@@ -21,6 +22,7 @@ type ViewKey =
   | "orders"
   | "messages"
   | "income"
+  | "landing"
   | "settings";
 
 const NAV: { key: ViewKey; icon: string; label: string }[] = [
@@ -30,6 +32,7 @@ const NAV: { key: ViewKey; icon: string; label: string }[] = [
   { key: "orders", icon: "📦", label: "الطلبات" },
   { key: "messages", icon: "💬", label: "الرسائل" },
   { key: "income", icon: "💰", label: "الأرباح" },
+  { key: "landing", icon: "🖼️", label: "صفحات الهبوط" },
   { key: "settings", icon: "⚙️", label: "الإعدادات" },
 ];
 
@@ -40,6 +43,7 @@ const TITLES: Record<ViewKey, string> = {
   orders: "الطلبات",
   messages: "رسائل الزبائن",
   income: "الأرباح والمصاريف",
+  landing: "صفحات الهبوط",
   settings: "إعدادات الموقع",
 };
 
@@ -50,6 +54,7 @@ const VIEWS: Record<ViewKey, React.ComponentType> = {
   orders: OrdersView,
   messages: MessagesView,
   income: IncomeView,
+  landing: LandingPagesView,
   settings: SettingsView,
 };
 
