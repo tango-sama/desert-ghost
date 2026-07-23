@@ -151,6 +151,38 @@
   position: relative;
   z-index: 2;
 }
+
+/* Big shining sun sitting behind the hero content — visible the instant the
+   section paints, before the glass cards animate in over it. */
+.sgBgSun {
+  position: absolute;
+  z-index: 0;
+  top: -12%;
+  inset-inline-start: -8%;
+  width: 460px;
+  height: 460px;
+  opacity: 0.92;
+  filter: drop-shadow(0 0 70px rgba(255, 216, 140, 0.55));
+  animation: sgSunSpin 50s linear infinite, sgSunPulse 5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes sgSunSpin {
+  to { transform: rotate(360deg); }
+}
+@keyframes sgSunPulse {
+  0%, 100% { filter: drop-shadow(0 0 70px rgba(255, 216, 140, 0.5)); }
+  50% { filter: drop-shadow(0 0 100px rgba(255, 216, 140, 0.8)); }
+}
+@media (max-width: 640px) {
+  .sgBgSun { width: 300px; height: 300px; top: -8%; inset-inline-start: -14%; }
+}
+
+/* ── load-in reveal: hero content fades/rises through a blur, in over the
+   sun, the moment the page first paints ── */
+@keyframes sgReveal {
+  from { opacity: 0; transform: translateY(24px); filter: blur(10px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
 .sgBubble {
   position: absolute;
   border-radius: 50%;
@@ -175,6 +207,7 @@
   padding: 0.5rem 1.1rem;
   border-radius: 100px;
   margin-bottom: 1.4rem;
+  animation: sgReveal 0.8s var(--ease) 0.05s both;
 }
 .sgHero h1 {
   font-size: clamp(2.1rem, 4.6vw, 3.4rem);
@@ -182,6 +215,7 @@
   line-height: 1.18;
   color: #fff;
   margin-bottom: 1.1rem;
+  animation: sgReveal 0.8s var(--ease) 0.18s both;
 }
 .sgHero h1 span {
   background: linear-gradient(135deg, #ff8fd4, var(--gold));
@@ -196,17 +230,20 @@
   max-width: 520px;
   margin-bottom: 2rem;
   line-height: 1.85;
+  animation: sgReveal 0.8s var(--ease) 0.3s both;
 }
 .sgHeroCtas {
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
   margin-bottom: 2.2rem;
+  animation: sgReveal 0.8s var(--ease) 0.42s both;
 }
 .sgTrust {
   display: flex;
   gap: 1.6rem;
   flex-wrap: wrap;
+  animation: sgReveal 0.8s var(--ease) 0.54s both;
 }
 .sgTrust span {
   display: flex;
@@ -231,16 +268,43 @@
   border: 1px solid rgba(255, 255, 255, 0.16);
   backdrop-filter: blur(6px);
   text-align: center;
-  animation: sgBob 6s ease-in-out infinite;
+  animation: sgSpotReveal 0.95s var(--ease) 0.32s both, sgBob 6s ease-in-out 1.3s infinite;
+}
+@keyframes sgSpotReveal {
+  from { opacity: 0; transform: translateY(36px) scale(0.94); filter: blur(16px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
 }
 @keyframes sgBob {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-12px); }
 }
-.sgSpotSun {
-  width: 92px;
-  height: 92px;
-  margin: 0 auto 1.1rem;
+.sgSpotVisual {
+  display: flex;
+  align-items: flex-end;
+  justify-content: center;
+  min-height: 150px;
+  margin-bottom: 1.1rem;
+}
+.sgSpotVisual .sgSpotSun {
+  width: 84px;
+  height: 84px;
+  margin: 0;
+  flex-shrink: 0;
+  position: relative;
+  z-index: 1;
+}
+.sgSpotProduct {
+  height: 156px;
+  width: auto;
+  margin-inline-start: -24px;
+  position: relative;
+  z-index: 2;
+  filter: drop-shadow(0 12px 20px rgba(58, 10, 32, 0.45));
+}
+@media (max-width: 640px) {
+  .sgSpotVisual { min-height: 120px; }
+  .sgSpotVisual .sgSpotSun { width: 64px; height: 64px; }
+  .sgSpotProduct { height: 124px; margin-inline-start: -18px; }
 }
 .sgSpotBrand {
   font-size: 0.68rem;
@@ -282,6 +346,19 @@
   padding: 0.5rem 1rem;
   border-radius: 100px;
   box-shadow: 0 8px 20px rgba(217, 168, 108, 0.4);
+  animation: sgReveal 0.6s var(--ease) 0.85s both;
+}
+@media (prefers-reduced-motion: reduce) {
+  .sgBgSun,
+  .sgEyebrow,
+  .sgHero h1,
+  .sgHero p.lead,
+  .sgHeroCtas,
+  .sgTrust,
+  .sgSpot,
+  .sgSpotSpf {
+    animation: none;
+  }
 }
 @media (max-width: 980px) {
   .sgHeroInner { grid-template-columns: 1fr; }

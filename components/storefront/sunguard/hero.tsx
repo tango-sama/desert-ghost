@@ -3,11 +3,12 @@ import type { SUNGUARD_PRODUCT } from "./product";
 import styles from "./sunguard.module.css";
 
 // The hero visual is an illustrated spotlight card (sun icon, brand, SPF
-// badge) rather than a product photo — the real studio shot now lives in
-// the product section below (see progress-tracker.md).
-function SunIcon() {
+// badge, and a small transparent product cutout) rather than the real
+// studio shot, which lives in the product section below (see
+// progress-tracker.md).
+function SunIcon({ className }: { className: string }) {
   return (
-    <svg className={styles.sgSpotSun} viewBox="0 0 100 100" fill="none">
+    <svg className={className} viewBox="0 0 100 100" fill="none">
       <defs>
         <radialGradient id="sgSun" cx="50%" cy="45%" r="60%">
           <stop offset="0%" stopColor="#FFE9A8" />
@@ -48,6 +49,7 @@ export function Hero({
   const lead = content?.lead?.trim();
   return (
     <section className={styles.sgHero} ref={ref}>
+      <SunIcon className={styles.sgBgSun} />
       <div className={styles.sgBubble} style={{ width: 180, height: 180, top: "6%", left: "6%" }} />
       <div className={styles.sgBubble} style={{ width: 110, height: 110, top: "64%", left: "14%", animationDelay: "2s" }} />
       <div className={styles.sgBubble} style={{ width: 140, height: 140, top: "12%", left: "82%", animationDelay: "1.2s" }} />
@@ -64,7 +66,7 @@ export function Hero({
               بشرتكِ تستحق <span>حماية قصوى</span> من الشمس
             </h1>
           )}
-          <p className="lead">
+          <p className={styles.lead}>
             {lead ||
               "واقي شمس بطعم البطيخ والبرتقال، SPF50+ PA++++، يحمي بشرتكِ من الأشعة فوق البنفسجية ويمنع التصبغات والحروق وعلامات الشيخوخة المبكرة — بملمس خفيف غير دهني."}
           </p>
@@ -108,7 +110,15 @@ export function Hero({
         <div>
           <div className={styles.sgSpot}>
             <span className={styles.sgSpotSpf}>SPF 50+ PA++++</span>
-            <SunIcon />
+            <div className={styles.sgSpotVisual}>
+              <SunIcon className={styles.sgSpotSun} />
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/assets/sunguard/product.png"
+                alt={product.title}
+                className={styles.sgSpotProduct}
+              />
+            </div>
             <div className={styles.sgSpotBrand}>{product.brand}</div>
             <div className={styles.sgSpotTitle}>{product.title}</div>
             <div className={styles.sgSpotBadges}>
