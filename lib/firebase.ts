@@ -85,11 +85,29 @@ export type LandingBaItem = {
 export type LandingPageContent = {
   hero?: LandingHeroContent;
   beforeAfter?: LandingBaItem[];
+  // Custom path segment (no slashes/spaces) serving this page's content at
+  // /<slug> via app/[slug]/page.tsx, in addition to its built-in route —
+  // the built-in route (app/sunguard, app/collagen) redirects to it once
+  // set, so old shared links keep working.
+  slug?: string;
 };
 
 export type LandingPageKey = "sunguard" | "collagen";
 
 export type LandingPagesContent = Partial<Record<LandingPageKey, LandingPageContent>>;
+
+// Path segments a custom landing-page slug must not collide with — the
+// static file routes under app/ always win over the app/[slug] catch-all,
+// so reusing one of these would make that page's content unreachable.
+export const LANDING_RESERVED_SLUGS = [
+  "sunguard",
+  "collagen",
+  "checkout",
+  "categories",
+  "products",
+  "product",
+  "amelhadj",
+];
 
 export type SiteSettings = {
   waNumber?: string;

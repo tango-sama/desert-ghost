@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { redirect } from "next/navigation";
 import { getSettings } from "@/lib/firebase";
 import { isBefore } from "@/lib/time";
 import { SunguardPage } from "@/components/storefront/sunguard/sunguard-page";
@@ -18,6 +19,10 @@ export const metadata: Metadata = {
 
 export default async function Page() {
   const settings = await getSettings();
+  // Admin picked a custom link (صفحات الهبوط tab) — forward there so old
+  // shared /sunguard links keep working instead of breaking.
+  const slug = settings.landingPages?.sunguard?.slug?.trim();
+  if (slug) redirect(`/${encodeURIComponent(slug)}`);
   const isTikTokLive = isBefore(settings.tiktokLiveUntil as number | undefined);
   return <SunguardPage settings={settings} isTikTokLive={isTikTokLive} />;
 }

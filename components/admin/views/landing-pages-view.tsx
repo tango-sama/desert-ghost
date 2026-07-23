@@ -1,7 +1,12 @@
 "use client";
 
 import { useState } from "react";
-import type { LandingPageContent, LandingPageKey, SiteSettings } from "@/lib/firebase";
+import {
+  LANDING_RESERVED_SLUGS,
+  type LandingPageContent,
+  type LandingPageKey,
+  type SiteSettings,
+} from "@/lib/firebase";
 import { setDocIn } from "@/lib/admin";
 import { useAdminStore } from "@/stores/admin-store";
 import { cn } from "@/lib/utils";
@@ -81,12 +86,29 @@ function PageEditor({
   const [heroTitle, setHeroTitle] = useState(saved?.hero?.title ?? "");
   const [heroLead, setHeroLead] = useState(saved?.hero?.lead ?? "");
   const [slots, setSlots] = useState<SlotForm[]>(() => slotsFromSaved(saved));
+  const [slug, setSlug] = useState(saved?.slug ?? "");
 
   function setSlot(i: number, patch: Partial<SlotForm>) {
     setSlots((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
   }
 
+  function slugError(s: string): string | null {
+    if (!s) return null; // empty = keep the built-in /sunguard or /collagen route
+    if (/[\s/]/.test(s)) return "الرابط يجب أن يكون كلمة واحدة بدون مسافات أو /";
+    const other = page === "sunguard" ? "collagen" : "sunguard";
+    if (LANDING_RESERVED_SLUGS.includes(s)) return "هذا الرابط محجوز — اختاري رابطاً آخر";
+    if (settings.landingPages?.[other]?.slug?.trim() === s)
+      return "هذا الرابط مستخدم من طرف الصفحة الأخرى";
+    return null;
+  }
+
   async function save() {
+    const s = slug.trim();
+    const err = slugError(s);
+    if (err) {
+      toast(err);
+      return;
+    }
     const current = useAdminStore.getState().settings;
     const docId = String((current as { id?: string }).id ?? "general");
     const content: LandingPageContent = {
@@ -97,6 +119,7 @@ function PageEditor({
         before: s.before.trim(),
         after: s.after.trim(),
       })),
+      slug: s,
     };
     const data: SiteSettings = {
       ...current,
@@ -116,9 +139,47 @@ function PageEditor({
   const heroPh = HERO_PLACEHOLDER[page];
   const baSlots = BA_SLOTS[page];
   const folder = PAGES.find((p) => p.key === page)!.folder;
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  const liveSlug = saved?.slug?.trim();
+  const currentPath = liveSlug ? `/${liveSlug}` : `/${page}`;
 
   return (
     <div>
+      <div className={cardCls}>
+        <h3 className={cardH3}>🔗 رابط الصفحة</h3>
+        <div className="mb-3 text-[.78rem] text-[var(--ink-3)]">
+          اتركي الحقل فارغاً لإبقاء الرابط الافتراضي (/{page}). الرابط القديم يبقى يعمل دائماً
+          ويُحوَّل تلقائياً إلى الرابط الجديد بعد الحفظ.
+        </div>
+        <Field label="الرابط المخصص">
+          <div className="flex items-center gap-2">
+            <span className="whitespace-nowrap text-[.85rem] text-[var(--ink-3)]" dir="ltr">
+              {origin}/
+            </span>
+            <input
+              className={inp}
+              style={{ flex: 1 }}
+              value={slug}
+              onChange={(e) => setSlug(e.target.value)}
+              placeholder={page}
+            />
+          </div>
+        </Field>
+        <div className="text-[.8rem] text-[var(--ink-2)]">
+          الرابط الحالي:{" "}
+          <a
+            href={currentPath}
+            target="_blank"
+            rel="noreferrer"
+            className="font-bold text-[var(--rose)]"
+            dir="ltr"
+          >
+            {origin}
+            {currentPath}
+          </a>
+        </div>
+      </div>
+
       <div className={cardCls}>
         <h3 className={cardH3}>🖼️ الواجهة (Hero)</h3>
         <div className="mb-3 text-[.78rem] text-[var(--ink-3)]">

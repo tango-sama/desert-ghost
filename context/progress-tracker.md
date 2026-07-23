@@ -563,6 +563,42 @@ not the intended state (see `development-workflow.md`).
   landing page to confirm the write round-trips against production
   Firestore before relying on it.
 
+- Custom landing-page link ("رابط الصفحة") added to the same admin tab
+  (2026-07-23): lets the owner change the public URL path for `/sunguard`
+  and `/collagen` (e.g. to an Arabic slug) without a code change or losing
+  old shared links. Added `LandingPageContent.slug` (`lib/firebase.ts`) plus
+  an exported `LANDING_RESERVED_SLUGS` list reused by both the admin form's
+  validation and — implicitly, by being the source of truth — the route
+  precedence reasoning below. New catch-all route `app/[slug]/page.tsx`
+  reads `settings.landingPages.<page>.slug` and renders `SunguardPage` or
+  `CollagenPage` directly (no redirect) when it matches; unmatched slugs
+  call `notFound()`. `app/sunguard/page.tsx` and `app/collagen/page.tsx`
+  gained a check at the top: if a custom slug is set, `redirect()` (307) to
+  `/<slug>` — so the built-in route always keeps working as a forwarding
+  address instead of breaking existing links once the owner renames it.
+  Static file routes (`app/checkout`, `app/products`, etc.) always take
+  precedence over the `[slug]` catch-all in Next's router, so a custom slug
+  colliding with a reserved name would silently make that page unreachable
+  at the new path — the admin form blocks reserved names and blocks reusing
+  the other landing page's slug, client-side before save.
+  Found and fixed a real bug during verification: Next 16.2.10 (Turbopack)
+  does not consistently URL-decode non-ASCII `params.slug` — `page.tsx`'s
+  own params were still percent-encoded while `generateMetadata`'s were
+  decoded, in the same request. Fixed by explicitly `decodeURIComponent`-ing
+  inside `matchPage()` (wrapped in try/catch for malformed sequences) rather
+  than trusting the framework — worth remembering if another dynamic route
+  ever needs a non-ASCII segment.
+  Verified end-to-end against the real, reachable production Firestore this
+  session (unlike earlier entries, this sandbox had outbound connectivity
+  this time): confirmed `/sunguard` issues a 307 to the encoded Arabic slug,
+  the slug path itself renders the full sunguard page (screenshot), an
+  unmatched slug 404s, and `/collagen` is untouched when no slug is set for
+  it — all via a temporary forced override of `getSettings()`, reverted
+  (and confirmed reverted via `git diff`) before committing.
+  NOT exercised: the admin form's new "رابط الصفحة" field and its
+  validation messages through a real login — same sandbox constraint as the
+  rest of this tab.
+
 ## Next Up
 
 
