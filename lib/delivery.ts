@@ -71,17 +71,95 @@ export function communesForCarrier(company: Carrier, id: number | string, cache:
   return communes(id).map((c) => c.fr || c.ar);
 }
 
-export function feeForCarrier(
+// Owner-confirmed fee corrections that override the synced grid.
+//
+// The server-side `syncCarriers` fee sync (in tango-sama/trinkl) stored a
+// national / Alger-origin Yalidine grid instead of computing fees from this
+// store's real departure wilaya (site_settings.originWilaya = "Touggourt").
+// That makes every northern destination too cheap — e.g. Alger came out
+// 500/300 instead of the real 800/500 from Touggourt. Until that sync is
+// fixed at the source, these owner-confirmed real Yalidine fees take
+// precedence over the synced/static grid so checkout shows what Yalidine
+// actually bills.
+//
+// Add a wilaya here as its correct home/desk fee is confirmed. Keyed by
+// carrier -> wilaya id (string) -> { home, desk } in DA. Remove an entry
+// once the upstream sync is fixed and its synced value is correct again.
+const FEE_OVERRIDES: Partial<Record<Carrier, Record<string, { home: number; desk: number }>>> = {
+  yalidine: {
+    // Alger (wilaya 16) — confirmed 2026-07-22 (e.g. Bab El Oued):
+    // home 800 / desk 500. Synced grid wrongly had home 500 / desk 300.
+    "16": { home: 800, desk: 500 },
+  },
+};
+
+// Base (home | desk) delivery fee for a destination wilaya. Resolution
+// order: owner-confirmed override → this carrier's live-synced grid →
+// static defaults. This is the fee "including commune tax" but WITHOUT any
+// weight surcharge — see feeForCarrier() for the total actually charged.
+export function baseFeeForCarrier(
   company: Carrier,
   id: number | string,
   type: DeliveryType,
   cache: CarrierCache
 ): number {
-  const d = cache[company];
   const stop = type === "office" || type === "desk";
+  const ov = FEE_OVERRIDES[company]?.[String(id)];
+  if (ov) return stop ? ov.desk : ov.home;
+  const d = cache[company];
   const f = d?.fees[String(id)];
   if (f) return stop ? f.desk : f.home;
   return fee(id, type, company);
+}
+
+// --- Weight ("oversize") fee ---------------------------------------------
+//
+// Yalidine (and Noest/ZR the same way) bill a delivery as:
+//     total = base fee (home | desk)  +  weight fee
+// The base fee already includes the commune tax. The weight fee — Yalidine
+// calls it `oversize_fee` — applies ONLY to the billable weight above a
+// free threshold: the first FREE_WEIGHT_KG are free, then a per-kg rate for
+// each additional (whole, rounded-up) kilogram.
+//
+// Every parcel this store ships is a fixed ~1 kg (PARCEL_WEIGHT_KG), which
+// is under the 5 kg free threshold, so the weight fee is always 0 and the
+// customer only ever pays the base fee. The rule is written out in full,
+// against a named constant rather than a magic 0, so it stays correct if
+// heavier products are ever added and so the "delivery is just the base
+// fee" behaviour is explicit and self-documenting.
+export const FREE_WEIGHT_KG = 5;
+export const PARCEL_WEIGHT_KG = 1;
+
+// Whole kilograms billed beyond the free threshold (rounded up), matching
+// Yalidine's "first N kg free, then per additional kg" rule.
+export function billableOverweightKg(weightKg: number, freeKg = FREE_WEIGHT_KG): number {
+  return Math.max(0, Math.ceil(weightKg) - freeKg);
+}
+
+// The weight surcharge for a parcel. `ratePerKg` is Yalidine's `oversize_fee`
+// (per additional kg). It's not part of the synced per-wilaya grid because
+// it never applies to this store's 1 kg parcels; when the billable weight is
+// within the free threshold the rate is irrelevant and the surcharge is 0.
+export function weightFee(
+  weightKg: number = PARCEL_WEIGHT_KG,
+  ratePerKg = 0
+): number {
+  return billableOverweightKg(weightKg) * ratePerKg;
+}
+
+// Total delivery fee actually charged to the customer: base fee + weight
+// fee. Weight defaults to the store's fixed 1 kg, for which the weight fee
+// is 0, so the total equals the base fee. Kept as the single source of
+// truth for every order surface (checkout, seller quick-order, collagen).
+export function feeForCarrier(
+  company: Carrier,
+  id: number | string,
+  type: DeliveryType,
+  cache: CarrierCache,
+  weightKg: number = PARCEL_WEIGHT_KG,
+  oversizeRatePerKg = 0
+): number {
+  return baseFeeForCarrier(company, id, type, cache) + weightFee(weightKg, oversizeRatePerKg);
 }
 
 const PHONE_RE = /^0[567][0-9]{8}$/;
