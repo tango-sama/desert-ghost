@@ -599,6 +599,39 @@ not the intended state (see `development-workflow.md`).
   validation messages through a real login — same sandbox constraint as the
   rest of this tab.
 
+- Editable product name/image/price added to the same admin tab (2026-07-23):
+  the "🧴 المنتج/المنتجات" card lets the owner override each landing page's
+  product title, price, and photo — everything else (brand, size, headline,
+  bullets, icons, colors) stays page-defined. Added `LandingProductOverride`
+  (`lib/firebase.ts`) and `product?`/`products?` on `LandingPageContent` —
+  `product` for sunguard's single SKU, `products` for collagen's 5-item
+  array (4 core + the glutathione special offer), both matched by position
+  like `beforeAfter`. `SUNGUARD_PRODUCT` gained an `image` field (previously
+  the photo path was hardcoded inline in `product-section.tsx`) so the
+  default now lives in one place.
+  The nontrivial part: `SUNGUARD_PRODUCT`/`COLLAGEN_PRODUCTS` were each
+  imported directly into 3–4 sibling components (`hero.tsx`,
+  `product-section.tsx`/`products-section.tsx`, `order-modal.tsx`) with no
+  shared prop — editing name/price only where it's *displayed* without also
+  fixing where it's *charged* would have let a customer see one price and
+  get billed another. Fixed by computing the merged product(s) once in
+  `sunguard-page.tsx` / `collagen-page.tsx` and threading it down as a
+  `product`/`products` prop everywhere, replacing every direct import of the
+  raw constant in those 6 files so display and checkout total can never
+  disagree.
+  Verified: `npm run lint` / `npm run build` clean. Confirmed via screenshot
+  that both pages are byte-for-byte unchanged with no override saved.
+  Separately forced a real override through `getSettings()` (temporary, then
+  reverted — confirmed via `git diff`) and confirmed via screenshots: the
+  sunguard product section, hero spotlight would also update (same prop,
+  not independently re-verified visually), and — most importantly — the
+  order modal shows the overridden title and the overridden price in the
+  actual total (9,999 د.ج), and collagen's product #1 shows its override in
+  both the product grid and the order modal's product-picker list, while
+  products #2–5 are untouched.
+  NOT exercised: the admin form's new product fields through a real login —
+  same sandbox constraint as the rest of this tab.
+
 ## Next Up
 
 

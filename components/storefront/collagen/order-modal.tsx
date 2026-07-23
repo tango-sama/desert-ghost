@@ -16,7 +16,8 @@ import {
   type CarrierCache,
   type DeliveryType,
 } from "@/lib/delivery";
-import { COLLAGEN_PRODUCTS, moneyFmt } from "./products";
+import type { CollagenProduct } from "./products";
+import { moneyFmt } from "./products";
 import styles from "./collagen.module.css";
 
 type Pending = { name: string; phone: string; wilaya: string; baladiya: string; address: string };
@@ -38,6 +39,7 @@ export function OrderModal({
   setSelected,
   settings,
   cache,
+  products,
   onClose,
 }: {
   open: boolean;
@@ -45,6 +47,7 @@ export function OrderModal({
   setSelected: React.Dispatch<React.SetStateAction<string[]>>;
   settings: SiteSettings;
   cache: CarrierCache;
+  products: CollagenProduct[];
   onClose: () => void;
 }) {
   const company = pickCompany(settings);
@@ -84,7 +87,7 @@ export function OrderModal({
   const feeOffice = selectedWilaya ? feeForCarrier(company, selectedWilaya.id, "office", cache) : null;
   const fee = selectedWilaya ? feeForCarrier(company, selectedWilaya.id, delivery, cache) : 0;
 
-  const picked = COLLAGEN_PRODUCTS.filter((p) => selected.includes(p.id));
+  const picked = products.filter((p) => selected.includes(p.id));
   const subtotal = picked.reduce((n, p) => n + p.price, 0);
 
   function toggle(id: string) {
@@ -192,7 +195,7 @@ export function OrderModal({
           ) : (
             <>
               <p className={styles.clHint}>يمكنكِ اختيار أكثر من منتج في نفس الطلب</p>
-              {COLLAGEN_PRODUCTS.map((p) => {
+              {products.map((p) => {
                 const on = selected.includes(p.id);
                 return (
                   <div

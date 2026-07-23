@@ -8,6 +8,7 @@ export const SUNGUARD_PRODUCT = {
   title: "Watermelon 3D Aura Sun Guard SPF50+ PA++++",
   size: "30 g",
   price: 3500,
+  image: "/assets/sunguard/product-shot.webp",
 };
 
 export function moneyFmt(n: number): string {

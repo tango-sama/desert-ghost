@@ -2,10 +2,17 @@
 
 import { cn } from "@/lib/utils";
 import { RevealRoot } from "@/components/storefront/reveal-root";
-import { COLLAGEN_PRODUCTS, moneyFmt } from "./products";
+import type { CollagenProduct } from "./products";
+import { moneyFmt } from "./products";
 import styles from "./collagen.module.css";
 
-export function ProductsSection({ onPick }: { onPick: (id: string) => void }) {
+export function ProductsSection({
+  products,
+  onPick,
+}: {
+  products: CollagenProduct[];
+  onPick: (id: string) => void;
+}) {
   return (
     <RevealRoot>
       <section className={`${styles.clSec} reveal`} id="products">
@@ -19,7 +26,7 @@ export function ProductsSection({ onPick }: { onPick: (id: string) => void }) {
           </p>
         </div>
         <div className={styles.clProducts}>
-          {COLLAGEN_PRODUCTS.map((p) => (
+          {products.map((p) => (
             <div
               key={p.id}
               className={cn(styles.clProw, p.special && styles.clProwSpecial)}

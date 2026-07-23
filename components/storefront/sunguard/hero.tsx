@@ -1,5 +1,5 @@
 import type { LandingHeroContent } from "@/lib/firebase";
-import { SUNGUARD_PRODUCT } from "./product";
+import type { SUNGUARD_PRODUCT } from "./product";
 import styles from "./sunguard.module.css";
 
 // The hero visual is an illustrated spotlight card (sun icon, brand, SPF
@@ -37,10 +37,12 @@ export function Hero({
   onOrder,
   ref,
   content,
+  product,
 }: {
   onOrder: () => void;
   ref: React.Ref<HTMLElement>;
   content?: LandingHeroContent;
+  product: typeof SUNGUARD_PRODUCT;
 }) {
   const title = content?.title?.trim();
   const lead = content?.lead?.trim();
@@ -107,12 +109,12 @@ export function Hero({
           <div className={styles.sgSpot}>
             <span className={styles.sgSpotSpf}>SPF 50+ PA++++</span>
             <SunIcon />
-            <div className={styles.sgSpotBrand}>{SUNGUARD_PRODUCT.brand}</div>
-            <div className={styles.sgSpotTitle}>{SUNGUARD_PRODUCT.title}</div>
+            <div className={styles.sgSpotBrand}>{product.brand}</div>
+            <div className={styles.sgSpotTitle}>{product.title}</div>
             <div className={styles.sgSpotBadges}>
               <span className={styles.sgSpotBadge}>🍉 بطعم البطيخ</span>
               <span className={styles.sgSpotBadge}>💧 خفيف وغير دهني</span>
-              <span className={styles.sgSpotBadge}>{SUNGUARD_PRODUCT.size}</span>
+              <span className={styles.sgSpotBadge}>{product.size}</span>
             </div>
           </div>
         </div>

@@ -16,7 +16,8 @@ import {
   type CarrierCache,
   type DeliveryType,
 } from "@/lib/delivery";
-import { SUNGUARD_PRODUCT, moneyFmt } from "./product";
+import type { SUNGUARD_PRODUCT } from "./product";
+import { moneyFmt } from "./product";
 import styles from "./sunguard.module.css";
 
 type Pending = { name: string; phone: string; wilaya: string; baladiya: string; address: string };
@@ -36,11 +37,13 @@ export function OrderModal({
   open,
   settings,
   cache,
+  product,
   onClose,
 }: {
   open: boolean;
   settings: SiteSettings;
   cache: CarrierCache;
+  product: typeof SUNGUARD_PRODUCT;
   onClose: () => void;
 }) {
   const company = pickCompany(settings);
@@ -74,7 +77,7 @@ export function OrderModal({
   const feeOffice = selectedWilaya ? feeForCarrier(company, selectedWilaya.id, "office", cache) : null;
   const fee = selectedWilaya ? feeForCarrier(company, selectedWilaya.id, delivery, cache) : 0;
 
-  const subtotal = SUNGUARD_PRODUCT.price * qty;
+  const subtotal = product.price * qty;
 
   function selectWilaya(id: string) {
     setPending((p) => ({ ...p, wilaya: id, baladiya: "" }));
@@ -122,7 +125,7 @@ export function OrderModal({
       deliveryType: delivery,
       deliveryFee: fee,
       insurance: false,
-      items: [{ id: SUNGUARD_PRODUCT.id, title: SUNGUARD_PRODUCT.title, price: SUNGUARD_PRODUCT.price, qty }],
+      items: [{ id: product.id, title: product.title, price: product.price, qty }],
       subtotal,
       total: subtotal + fee,
       source: "landing_sunguard",
@@ -168,7 +171,7 @@ export function OrderModal({
           ) : (
             <>
               <div className={styles.sgQty}>
-                <span className={styles.sgQtyLabel}>{SUNGUARD_PRODUCT.title}</span>
+                <span className={styles.sgQtyLabel}>{product.title}</span>
                 <div className={styles.sgQtyCtrl}>
                   <button type="button" className={styles.sgQtyBtn} onClick={() => setQty((q) => Math.max(1, q - 1))} aria-label="إنقاص الكمية">
                     −
@@ -277,7 +280,7 @@ export function OrderModal({
                 <div className={styles.sgTotals}>
                   <div className={styles.tl}>
                     <span>
-                      {SUNGUARD_PRODUCT.title} ×{qty}
+                      {product.title} ×{qty}
                     </span>
                     <span>{moneyFmt(subtotal)}</span>
                   </div>

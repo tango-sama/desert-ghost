@@ -17,6 +17,7 @@ import { CtaBanner } from "./cta-banner";
 import { Footer } from "./footer";
 import { StickyBar } from "./sticky-bar";
 import { OrderModal } from "./order-modal";
+import { COLLAGEN_PRODUCTS } from "./products";
 import styles from "./collagen.module.css";
 
 export function CollagenPage({
@@ -47,6 +48,15 @@ export function CollagenPage({
   const [modalOpen, setModalOpen] = useState(false);
   const [selected, setSelected] = useState<string[]>([]);
   const landing = settings.landingPages?.collagen;
+  const products = COLLAGEN_PRODUCTS.map((p, i) => {
+    const o = landing?.products?.[i];
+    return {
+      ...p,
+      title: o?.title?.trim() || p.title,
+      image: o?.image?.trim() || p.image,
+      price: o?.price && o.price > 0 ? o.price : p.price,
+    };
+  });
 
   function openOrder(productId?: string) {
     if (productId) setSelected((s) => (s.includes(productId) ? s : [...s, productId]));
@@ -61,7 +71,7 @@ export function CollagenPage({
       <StoryStack />
       <Benefits />
       <TrustStrip />
-      <ProductsSection onPick={(id) => openOrder(id)} />
+      <ProductsSection products={products} onPick={(id) => openOrder(id)} />
       <HowItWorks />
       <Reviews />
       <CtaBanner onOrder={() => openOrder()} />
@@ -74,6 +84,7 @@ export function CollagenPage({
         setSelected={setSelected}
         settings={settings}
         cache={cache}
+        products={products}
         onClose={() => setModalOpen(false)}
       />
     </div>

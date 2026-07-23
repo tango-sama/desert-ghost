@@ -82,9 +82,21 @@ export type LandingBaItem = {
   after?: string;
 };
 
+// Product-field overrides — title/image/price only (not brand, size, or
+// collagen's headline/bullets/icons, which stay page-defined). Matched by
+// position: `product` is sunguard's single SKU, `products` lines up with
+// COLLAGEN_PRODUCTS by index.
+export type LandingProductOverride = {
+  title?: string;
+  image?: string;
+  price?: number;
+};
+
 export type LandingPageContent = {
   hero?: LandingHeroContent;
   beforeAfter?: LandingBaItem[];
+  product?: LandingProductOverride;
+  products?: LandingProductOverride[];
   // Custom path segment (no slashes/spaces) serving this page's content at
   // /<slug> via app/[slug]/page.tsx, in addition to its built-in route —
   // the built-in route (app/sunguard, app/collagen) redirects to it once

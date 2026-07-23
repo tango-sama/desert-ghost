@@ -1,26 +1,33 @@
 "use client";
 
 import { RevealRoot } from "@/components/storefront/reveal-root";
-import { SUNGUARD_PRODUCT, moneyFmt } from "./product";
+import type { SUNGUARD_PRODUCT } from "./product";
+import { moneyFmt } from "./product";
 import styles from "./sunguard.module.css";
 
-export function ProductSection({ onOrder }: { onOrder: () => void }) {
+export function ProductSection({
+  onOrder,
+  product,
+}: {
+  onOrder: () => void;
+  product: typeof SUNGUARD_PRODUCT;
+}) {
   return (
     <RevealRoot>
       <section className={`${styles.sgSec} ${styles.sgProductWrap} reveal`} id="product">
         <div className={styles.sgProduct}>
           <div className={styles.sgProdVisual}>
             <img
-              src="/assets/sunguard/product-shot.webp"
-              alt={`${SUNGUARD_PRODUCT.brand} ${SUNGUARD_PRODUCT.title}`}
+              src={product.image}
+              alt={`${product.brand} ${product.title}`}
               loading="lazy"
               className={styles.sgProdPhoto}
             />
           </div>
           <div>
-            <div className={styles.sgProdBrand}>{SUNGUARD_PRODUCT.brand}</div>
-            <h3>{SUNGUARD_PRODUCT.title}</h3>
-            <span className={styles.sgProdSize}>{SUNGUARD_PRODUCT.size}</span>
+            <div className={styles.sgProdBrand}>{product.brand}</div>
+            <h3>{product.title}</h3>
+            <span className={styles.sgProdSize}>{product.size}</span>
             <ul className={styles.sgProdBullets}>
               <li>
                 <b>✓</b>
@@ -40,7 +47,7 @@ export function ProductSection({ onOrder }: { onOrder: () => void }) {
               </li>
             </ul>
             <div className={styles.sgProdFoot}>
-              <span className={styles.sgPrice}>{moneyFmt(SUNGUARD_PRODUCT.price)}</span>
+              <span className={styles.sgPrice}>{moneyFmt(product.price)}</span>
               <button type="button" className={styles.sgBtn} onClick={onOrder}>
                 🛒 اطلبيه الآن
               </button>

@@ -15,6 +15,7 @@ import { CtaBanner } from "./cta-banner";
 import { Footer } from "./footer";
 import { StickyBar } from "./sticky-bar";
 import { OrderModal } from "./order-modal";
+import { SUNGUARD_PRODUCT } from "./product";
 import styles from "./sunguard.module.css";
 
 export function SunguardPage({
@@ -42,21 +43,34 @@ export function SunguardPage({
 
   const [modalOpen, setModalOpen] = useState(false);
   const landing = settings.landingPages?.sunguard;
+  const override = landing?.product;
+  const product = {
+    ...SUNGUARD_PRODUCT,
+    title: override?.title?.trim() || SUNGUARD_PRODUCT.title,
+    image: override?.image?.trim() || SUNGUARD_PRODUCT.image,
+    price: override?.price && override.price > 0 ? override.price : SUNGUARD_PRODUCT.price,
+  };
 
   return (
     <div className={styles.sunguard} dir="rtl">
       <Topbar scrolled={topScrolled} />
-      <Hero ref={heroRef} onOrder={() => setModalOpen(true)} content={landing?.hero} />
+      <Hero ref={heroRef} onOrder={() => setModalOpen(true)} content={landing?.hero} product={product} />
       <Problems />
       <BeforeAfter items={landing?.beforeAfter} />
       <Benefits />
-      <ProductSection onOrder={() => setModalOpen(true)} />
+      <ProductSection onOrder={() => setModalOpen(true)} product={product} />
       <HowItWorks />
       <CtaBanner onOrder={() => setModalOpen(true)} />
       <Footer />
       <TikTokLiveButton settings={settings} isLive={isTikTokLive} />
       <StickyBar show={stickyShow} onOrder={() => setModalOpen(true)} />
-      <OrderModal open={modalOpen} settings={settings} cache={cache} onClose={() => setModalOpen(false)} />
+      <OrderModal
+        open={modalOpen}
+        settings={settings}
+        cache={cache}
+        product={product}
+        onClose={() => setModalOpen(false)}
+      />
     </div>
   );
 }

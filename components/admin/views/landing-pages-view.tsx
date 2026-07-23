@@ -5,11 +5,14 @@ import {
   LANDING_RESERVED_SLUGS,
   type LandingPageContent,
   type LandingPageKey,
+  type LandingProductOverride,
   type SiteSettings,
 } from "@/lib/firebase";
 import { setDocIn } from "@/lib/admin";
 import { useAdminStore } from "@/stores/admin-store";
 import { cn } from "@/lib/utils";
+import { SUNGUARD_PRODUCT } from "@/components/storefront/sunguard/product";
+import { COLLAGEN_PRODUCTS } from "@/components/storefront/collagen/products";
 import {
   inp,
   txt,
@@ -70,6 +73,51 @@ function slotsFromSaved(saved: LandingPageContent | undefined): SlotForm[] {
   }));
 }
 
+// Product fields are editable — title/image/price only, not brand, size, or
+// collagen's headline/bullets/icons (those stay page-defined). Defaults come
+// straight from each page's real product data, not duplicated text, so the
+// placeholders never drift from what actually ships.
+const PRODUCT_DEFAULTS: Record<
+  LandingPageKey,
+  { label: string; title: string; price: number; image: string }[]
+> = {
+  sunguard: [
+    {
+      label: "المنتج",
+      title: SUNGUARD_PRODUCT.title,
+      price: SUNGUARD_PRODUCT.price,
+      image: SUNGUARD_PRODUCT.image,
+    },
+  ],
+  collagen: COLLAGEN_PRODUCTS.map((p, i) => ({
+    label: `المنتج ${i + 1} — ${p.brand}`,
+    title: p.title,
+    price: p.price,
+    image: p.image,
+  })),
+};
+
+type ProductForm = { title: string; price: string; image: string };
+
+function productOverrideAt(
+  saved: LandingPageContent | undefined,
+  page: LandingPageKey,
+  i: number
+): LandingProductOverride | undefined {
+  return page === "sunguard" ? saved?.product : saved?.products?.[i];
+}
+
+function productFormFromSaved(saved: LandingPageContent | undefined, page: LandingPageKey): ProductForm[] {
+  return PRODUCT_DEFAULTS[page].map((_, i) => {
+    const o = productOverrideAt(saved, page, i);
+    return {
+      title: o?.title ?? "",
+      price: o?.price ? String(o.price) : "",
+      image: o?.image ?? "",
+    };
+  });
+}
+
 // Keyed by `page` in the parent so switching pages remounts this with a
 // fresh initial state (React's reset-via-key pattern) instead of syncing
 // props to state in an effect.
@@ -87,9 +135,14 @@ function PageEditor({
   const [heroLead, setHeroLead] = useState(saved?.hero?.lead ?? "");
   const [slots, setSlots] = useState<SlotForm[]>(() => slotsFromSaved(saved));
   const [slug, setSlug] = useState(saved?.slug ?? "");
+  const [products, setProducts] = useState<ProductForm[]>(() => productFormFromSaved(saved, page));
 
   function setSlot(i: number, patch: Partial<SlotForm>) {
     setSlots((prev) => prev.map((s, idx) => (idx === i ? { ...s, ...patch } : s)));
+  }
+
+  function setProduct(i: number, patch: Partial<ProductForm>) {
+    setProducts((prev) => prev.map((p, idx) => (idx === i ? { ...p, ...patch } : p)));
   }
 
   function slugError(s: string): string | null {
@@ -111,6 +164,11 @@ function PageEditor({
     }
     const current = useAdminStore.getState().settings;
     const docId = String((current as { id?: string }).id ?? "general");
+    const productOverrides: LandingProductOverride[] = products.map((p) => ({
+      title: p.title.trim(),
+      image: p.image.trim(),
+      price: p.price.trim() ? Number(p.price.trim()) : 0,
+    }));
     const content: LandingPageContent = {
       hero: { title: heroTitle.trim(), lead: heroLead.trim() },
       beforeAfter: slots.map((s) => ({
@@ -119,6 +177,7 @@ function PageEditor({
         before: s.before.trim(),
         after: s.after.trim(),
       })),
+      ...(page === "sunguard" ? { product: productOverrides[0] } : { products: productOverrides }),
       slug: s,
     };
     const data: SiteSettings = {
@@ -201,6 +260,61 @@ function PageEditor({
             placeholder={heroPh.lead}
           />
         </Field>
+      </div>
+
+      <div className={cardCls}>
+        <h3 className={cardH3}>🧴 {page === "sunguard" ? "المنتج" : "المنتجات"}</h3>
+        <div className="mb-4 text-[.78rem] text-[var(--ink-3)]">
+          الاسم والسعر والصورة قابلون للتعديل — التفاصيل الأخرى (المكوّنات، النقاط، الألوان) تبقى كما هي. اتركي أي
+          حقل فارغاً للإبقاء على قيمته الافتراضية.
+        </div>
+        {PRODUCT_DEFAULTS[page].map((slot, i) => (
+          <div key={slot.label} className="mb-5 border-b border-border pb-5 last:mb-0 last:border-b-0 last:pb-0">
+            <div className="mb-3 text-[.85rem] font-bold text-[var(--ink-2)]">{slot.label}</div>
+            <div className={cn("grid grid-cols-2 gap-4 max-[860px]:grid-cols-1")}>
+              <Field label="الاسم">
+                <input
+                  className={inp}
+                  value={products[i]?.title ?? ""}
+                  onChange={(e) => setProduct(i, { title: e.target.value })}
+                  placeholder={slot.title}
+                />
+              </Field>
+              <Field label="السعر (د.ج)">
+                <input
+                  className={inp}
+                  type="number"
+                  min={0}
+                  dir="ltr"
+                  value={products[i]?.price ?? ""}
+                  onChange={(e) => setProduct(i, { price: e.target.value })}
+                  placeholder={String(slot.price)}
+                />
+              </Field>
+            </div>
+            <Field label="الصورة">
+              <div className="flex items-center gap-3">
+                {/* eslint-disable-next-line @next/next/no-img-element */}
+                <img className={thumbPrev} src={products[i]?.image || slot.image} alt="" />
+                <input
+                  className={inp}
+                  style={{ flex: 1 }}
+                  dir="ltr"
+                  value={products[i]?.image ?? ""}
+                  onChange={(e) => setProduct(i, { image: e.target.value })}
+                  placeholder={slot.image}
+                />
+                <button
+                  type="button"
+                  className={uploadLbl}
+                  onClick={() => pickImage(folder, toast, (url) => setProduct(i, { image: url }))}
+                >
+                  ⬆ رفع
+                </button>
+              </div>
+            </Field>
+          </div>
+        ))}
       </div>
 
       <div className={cardCls}>
