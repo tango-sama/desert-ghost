@@ -507,6 +507,16 @@ not the intended state (see `development-workflow.md`).
   confirm the pink halo + badge render correctly in `/amelhadj` before fully
   trusting it, same recommendation given for collagen's admin integration.
 
+- Real product photo added (2026-07-23): owner supplied a studio shot of the
+  actual tube + box (Jula's Herb Watermelon 3D Aura Sun Guard). Converted to
+  `public/assets/sunguard/product-shot.webp` (Pillow, quality 88, same
+  per-product-line asset convention as `assets/collagen/`) and swapped in for
+  the hand-drawn `TubeIcon` SVG placeholder in `product-section.tsx`'s
+  `.sgProdVisual` slot. The hero's illustrated spotlight card is left as-is
+  (deliberate design choice, not a placeholder-for-lack-of-photo situation
+  anymore) — comment updated to point at the product section instead of
+  claiming no photo exists.
+
 ## Next Up
 
 

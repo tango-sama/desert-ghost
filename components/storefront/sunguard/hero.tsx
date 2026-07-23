@@ -2,8 +2,8 @@ import { SUNGUARD_PRODUCT } from "./product";
 import styles from "./sunguard.module.css";
 
 // The hero visual is an illustrated spotlight card (sun icon, brand, SPF
-// badge) rather than a product photo — no clean studio shot of this
-// product exists yet in the codebase (see progress-tracker.md).
+// badge) rather than a product photo — the real studio shot now lives in
+// the product section below (see progress-tracker.md).
 function SunIcon() {
   return (
     <svg className={styles.sgSpotSun} viewBox="0 0 100 100" fill="none">

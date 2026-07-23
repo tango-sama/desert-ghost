@@ -4,37 +4,18 @@ import { RevealRoot } from "@/components/storefront/reveal-root";
 import { SUNGUARD_PRODUCT, moneyFmt } from "./product";
 import styles from "./sunguard.module.css";
 
-function TubeIcon() {
-  return (
-    <svg width="140" height="180" viewBox="0 0 140 180" fill="none">
-      <defs>
-        <linearGradient id="sgTubeBody" x1="0" y1="0" x2="1" y2="1">
-          <stop offset="0%" stopColor="#FF6FC0" />
-          <stop offset="100%" stopColor="var(--sg-mid, #C81E63)" />
-        </linearGradient>
-      </defs>
-      <rect x="20" y="0" width="100" height="26" rx="10" fill="#F4A6C9" />
-      <path d="M28 24 h84 l-8 130 a8 8 0 0 1 -8 8 H44 a8 8 0 0 1 -8 -8 Z" fill="url(#sgTubeBody)" />
-      <rect x="34" y="70" width="72" height="48" rx="8" fill="rgba(255,255,255,.92)" />
-      <text x="70" y="90" textAnchor="middle" fontSize="13" fontWeight="900" fill="#5C1235">
-        SPF
-      </text>
-      <text x="70" y="110" textAnchor="middle" fontSize="15" fontWeight="900" fill="#5C1235">
-        50+
-      </text>
-      <circle cx="70" cy="150" r="12" fill="#E8483A" opacity="0.9" />
-      <path d="M70 143 a7 9 0 0 1 0 14 a7 9 0 0 1 0 -14 Z" fill="#F6D9DE" opacity="0.9" />
-    </svg>
-  );
-}
-
 export function ProductSection({ onOrder }: { onOrder: () => void }) {
   return (
     <RevealRoot>
       <section className={`${styles.sgSec} ${styles.sgProductWrap} reveal`} id="product">
         <div className={styles.sgProduct}>
           <div className={styles.sgProdVisual}>
-            <TubeIcon />
+            <img
+              src="/assets/sunguard/product-shot.webp"
+              alt={`${SUNGUARD_PRODUCT.brand} ${SUNGUARD_PRODUCT.title}`}
+              loading="lazy"
+              className={styles.sgProdPhoto}
+            />
           </div>
           <div>
             <div className={styles.sgProdBrand}>{SUNGUARD_PRODUCT.brand}</div>
