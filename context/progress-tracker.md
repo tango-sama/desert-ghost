@@ -632,6 +632,29 @@ not the intended state (see `development-workflow.md`).
   NOT exercised: the admin form's new product fields through a real login —
   same sandbox constraint as the rest of this tab.
 
+- Real before/after photos for `/sunguard` (2026-07-25): replaced the three
+  hand-drawn SVG skin-patch comparisons in `sunguard/before-after.tsx` with
+  AI-generated macro photography (dark spots, sunburn, aging — one before/
+  after pair each), matching the default-hardcoded-pair pattern already used
+  by `collagen/before-after.tsx` (`CARDS` now carries `before`/`after` webp
+  paths directly; admin override logic unchanged — still needs both photos
+  in a pair to replace the default). Images generated via RunningHub
+  (webapp `2081007670147997698`, a bare FLUX/z-image-turbo txt2img app —
+  only a single CLIPTextEncode `text` field is exposed, no img2img/aspect
+  control), one `run_task_and_wait` call per image with a macro-photography
+  prompt tailored to each before/after state; downloaded PNGs into
+  `/images`, converted to WebP via `sharp` (quality 82, ~60-120KB each),
+  final assets at `public/assets/sunguard/ba-{spots,burn,aging}-{before,after}.webp`.
+  Removed the now-unused `SkinPanel` SVG component and the `isPhoto`
+  conditional branch entirely — real photos are always shown now, no
+  illustration fallback path left in this component. The "illustrative,
+  not real customer photos" disclaimer text stays (still true: AI-generated
+  macro photography, not actual customers).
+  Verified: `tsc --noEmit` clean; `npm run dev` + browser screenshot
+  confirmed all three photo pairs render correctly on the live page with
+  working drag-to-reveal sliders; `get_page_text` confirmed all card
+  copy intact.
+
 ## Next Up
 
 
