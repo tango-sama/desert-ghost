@@ -73,6 +73,10 @@ export type Featured = {
 export type LandingHeroContent = {
   title?: string;
   lead?: string;
+  // Hero visual override — currently only read by /glutathione (see
+  // glutathione/hero.tsx); sunguard/collagen keep their built-in hero
+  // visuals. Falls back to the page's product photo when blank.
+  image?: string;
 };
 
 export type LandingBaItem = {
@@ -97,6 +101,10 @@ export type LandingPageContent = {
   beforeAfter?: LandingBaItem[];
   product?: LandingProductOverride;
   products?: LandingProductOverride[];
+  // Photo for the ingredient/formula split section — currently only read
+  // by /glutathione (see glutathione/formula.tsx). Falls back to the
+  // page's product photo when blank.
+  formulaImage?: string;
   // Custom path segment (no slashes/spaces) serving this page's content at
   // /<slug> via app/[slug]/page.tsx, in addition to its built-in route —
   // the built-in route (app/sunguard, app/collagen) redirects to it once

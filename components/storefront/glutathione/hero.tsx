@@ -24,6 +24,7 @@ export function Hero({
 }) {
   const title = content?.title?.trim();
   const lead = content?.lead?.trim();
+  const heroImage = content?.image?.trim() || product.image;
   return (
     <section className={styles.glHero} ref={ref}>
       <div className={styles.glHeroRay} />
@@ -95,7 +96,7 @@ export function Hero({
             <div className={styles.glSpotVisual}>
               <span className={styles.glSpotCorner}>✨ {product.size}</span>
               {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={product.image} alt={product.title} />
+              <img src={heroImage} alt={product.title} />
             </div>
             <div className={styles.glSpotBrand}>{product.brand}</div>
             <div className={styles.glSpotTitle}>{product.title}</div>

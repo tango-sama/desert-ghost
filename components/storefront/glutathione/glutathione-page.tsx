@@ -50,9 +50,13 @@ export function GlutathionePage({
   const landing = settings.landingPages?.glutathione;
   const override = landing?.product;
   // Merged once and threaded everywhere below (hero, formula, product
-  // card, order modal) so an admin-edited name/price/photo can never
-  // disagree between what's displayed and what's charged at checkout —
-  // same fix applied to sunguard/collagen (see progress-tracker.md).
+  // card, order modal) so an admin-edited name/price can never disagree
+  // between what's displayed and what's charged at checkout — same fix
+  // applied to sunguard/collagen (see progress-tracker.md). The photo is
+  // the exception: hero and formula each accept their own independent
+  // image override (content.image / formulaImage) that falls back to
+  // this shared product.image when blank — image choice doesn't affect
+  // what's charged, so there's no consistency risk in letting it vary.
   const product = {
     ...GLUTATHIONE_PRODUCT,
     title: override?.title?.trim() || GLUTATHIONE_PRODUCT.title,
@@ -65,7 +69,7 @@ export function GlutathionePage({
       <Topbar scrolled={topScrolled} />
       <Hero ref={heroRef} onOrder={() => setModalOpen(true)} product={product} gift={GIFT_SOAP} content={landing?.hero} />
       <Benefits />
-      <Formula product={product} />
+      <Formula product={product} image={landing?.formulaImage} />
       <Gift gift={GIFT_SOAP} />
       <CareRoutine />
       <ProductSection onOrder={() => setModalOpen(true)} product={product} />

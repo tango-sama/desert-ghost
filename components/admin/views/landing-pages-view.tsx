@@ -156,6 +156,8 @@ function PageEditor({
   const saved = settings.landingPages?.[page];
   const [heroTitle, setHeroTitle] = useState(saved?.hero?.title ?? "");
   const [heroLead, setHeroLead] = useState(saved?.hero?.lead ?? "");
+  const [heroImage, setHeroImage] = useState(saved?.hero?.image ?? "");
+  const [formulaImage, setFormulaImage] = useState(saved?.formulaImage ?? "");
   const [slots, setSlots] = useState<SlotForm[]>(() => slotsFromSaved(saved, BA_SLOTS[page].length));
   const [slug, setSlug] = useState(saved?.slug ?? "");
   const [products, setProducts] = useState<ProductForm[]>(() => productFormFromSaved(saved, page));
@@ -193,7 +195,7 @@ function PageEditor({
       price: p.price.trim() ? Number(p.price.trim()) : 0,
     }));
     const content: LandingPageContent = {
-      hero: { title: heroTitle.trim(), lead: heroLead.trim() },
+      hero: { title: heroTitle.trim(), lead: heroLead.trim(), image: heroImage.trim() },
       beforeAfter: slots.map((s) => ({
         title: s.title.trim(),
         text: s.text.trim(),
@@ -201,6 +203,7 @@ function PageEditor({
         after: s.after.trim(),
       })),
       ...(SINGLE_PRODUCT_PAGES.includes(page) ? { product: productOverrides[0] } : { products: productOverrides }),
+      formulaImage: formulaImage.trim(),
       slug: s,
     };
     const data: SiteSettings = {
@@ -283,7 +286,61 @@ function PageEditor({
             placeholder={heroPh.lead}
           />
         </Field>
+        {page === "glutathione" && (
+          <Field label="صورة الواجهة (Hero)">
+            <div className="flex items-center gap-3">
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img className={thumbPrev} src={heroImage || PRODUCT_DEFAULTS[page][0].image} alt="" />
+              <input
+                className={inp}
+                style={{ flex: 1 }}
+                dir="ltr"
+                value={heroImage}
+                onChange={(e) => setHeroImage(e.target.value)}
+                placeholder={PRODUCT_DEFAULTS[page][0].image}
+              />
+              <button
+                type="button"
+                className={uploadLbl}
+                onClick={() => pickImage(folder, toast, (url) => setHeroImage(url))}
+              >
+                ⬆ رفع
+              </button>
+            </div>
+          </Field>
+        )}
       </div>
+
+      {page === "glutathione" && (
+      <div className={cardCls}>
+        <h3 className={cardH3}>🧬 صورة قسم التركيبة</h3>
+        <div className="mb-4 text-[.78rem] text-[var(--ink-3)]">
+          الصورة المعروضة في قسم &quot;تركيبة ثلاثية الجمال&quot; — قد تكون مختلفة عن صورة الواجهة وصورة المنتج. اتركيها
+          فارغة للإبقاء على صورة المنتج الافتراضية.
+        </div>
+        <Field label="الصورة">
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className={thumbPrev} src={formulaImage || PRODUCT_DEFAULTS[page][0].image} alt="" />
+            <input
+              className={inp}
+              style={{ flex: 1 }}
+              dir="ltr"
+              value={formulaImage}
+              onChange={(e) => setFormulaImage(e.target.value)}
+              placeholder={PRODUCT_DEFAULTS[page][0].image}
+            />
+            <button
+              type="button"
+              className={uploadLbl}
+              onClick={() => pickImage(folder, toast, (url) => setFormulaImage(url))}
+            >
+              ⬆ رفع
+            </button>
+          </div>
+        </Field>
+      </div>
+      )}
 
       <div className={cardCls}>
         <h3 className={cardH3}>🧴 {SINGLE_PRODUCT_PAGES.includes(page) ? "المنتج" : "المنتجات"}</h3>

@@ -892,6 +892,39 @@ not the intended state (see `development-workflow.md`).
   real login — same sandbox constraint noted on the original "صفحات
   الهبوط" tab entry above.
 
+- Independent hero/formula-section photos for glutathione (2026-07-26,
+  same session): owner pointed at two screenshots (the hero spotlight
+  card and the "تركيبة ثلاثية الجمال" formula section) and asked that
+  both be admin-editable — previously both silently shared the single
+  `product.image` field, so editing "the product photo" changed all three
+  photo placements (hero, formula, product/order card) at once with no
+  way to vary them.
+  Added two new optional fields: `LandingHeroContent.image` (hero visual)
+  and `LandingPageContent.formulaImage` (the formula-section visual) —
+  both currently read only by `/glutathione`; sunguard/collagen's types
+  gained the fields for free (shared `LandingPageContent`) but their
+  components don't read them, so this is a no-op for those two pages.
+  `hero.tsx` and `formula.tsx` each resolve their own image
+  (`content?.image?.trim() || product.image` /
+  `image?.trim() || product.image`) — falling back to the shared product
+  photo when blank, so leaving both new fields empty reproduces the old
+  shared-photo behavior exactly. The product/order card keeps reading
+  `product.image` directly, unaffected.
+  Admin view gained a "صورة الواجهة (Hero)" field inside the existing
+  Hero card and a new "🧬 صورة قسم التركيبة" card, both rendered only
+  when `page === "glutathione"` (sunguard/collagen don't get these
+  fields — their hero visuals aren't independently overridable).
+  Verified: `npm run lint` / `npm run build` clean. Confirmed via
+  screenshot that the default (no-override) render is byte-for-byte
+  unchanged. Then temporarily forced two deliberately mismatched test
+  images (the gift soap photo for hero, the sunguard product photo for
+  formula) directly in `app/glutathione/page.tsx`, screenshotted all
+  three photo spots, and confirmed each one is now independently
+  correct — hero showed the soap, the formula section showed the
+  sunscreen tube, and the product/order card still showed the real
+  glutathione bottle unaffected. Reverted the temporary code before
+  committing (confirmed via `git diff`, no changes left on that file).
+
 ## Next Up
 
 

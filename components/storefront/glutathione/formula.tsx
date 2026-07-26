@@ -24,7 +24,14 @@ const TRIO = [
   },
 ];
 
-export function Formula({ product }: { product: typeof GLUTATHIONE_PRODUCT }) {
+export function Formula({
+  product,
+  image,
+}: {
+  product: typeof GLUTATHIONE_PRODUCT;
+  image?: string;
+}) {
+  const visual = image?.trim() || product.image;
   return (
     <RevealRoot>
       <section className={`${styles.glSec} ${styles.glFormula} reveal`}>
@@ -39,7 +46,7 @@ export function Formula({ product }: { product: typeof GLUTATHIONE_PRODUCT }) {
             <span className={styles.glMolecule} style={{ width: 50, height: 50, top: "62%", insetInlineStart: "4%" }} />
             <span className={styles.glMolecule} style={{ width: 60, height: 60, top: "14%", insetInlineEnd: "6%" }} />
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={product.image} alt={product.title} />
+            <img src={visual} alt={product.title} />
           </div>
           <div className={styles.glFormList}>
             {TRIO.map((t) => (
