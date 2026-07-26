@@ -831,6 +831,19 @@ not the intended state (see `development-workflow.md`).
   in this file) — owner should also confirm the gift-soap inventory is
   ready before this goes live, since every order will now promise it.
 
+- Product photo swapped for an owner-supplied cleaner shot (2026-07-26,
+  same session): the previous `public/assets/glutathione/product-shot.webp`
+  was cropped from the raw Firestore catalog photo and still showed
+  visible clutter at the edges (a neighboring product's box color bleeding
+  in — visible once actually looking at the rendered hero card). Owner
+  supplied a polished replacement (same real bottle/label, staged on
+  marble with plants, no other products in frame) — swapped in directly
+  (447×504 source, saved as webp, quality 90) with no code changes needed
+  since every section already reads `GLUTATHIONE_PRODUCT.image`. Verified
+  via headless Chromium screenshots that the new photo renders cleanly in
+  all three places it's used: hero spotlight card, the formula section's
+  molecule-decorated visual, and the product/order card.
+
 ## Next Up
 
 

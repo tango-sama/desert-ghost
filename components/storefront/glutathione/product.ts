@@ -2,9 +2,12 @@
 // intentionally separate from the Firestore `products` collection, same
 // pattern as components/storefront/sunguard/product.ts and
 // components/storefront/collagen/products.ts (architecture-context.md:
-// this funnel is self-contained). Real product details (title, price,
-// image) sourced from the live Firestore `products/1780283875728` doc
-// (2026-07-26); price kept in sync with the current catalog price.
+// this funnel is self-contained). Title/price sourced from the live
+// Firestore `products/1780283875728` doc (2026-07-26); price kept in sync
+// with the current catalog price. `image` is an owner-supplied polished
+// product photo (2026-07-26) replacing an earlier crop of the raw
+// Firestore catalog image, which had visible neighboring-product clutter
+// at the edges — same real bottle/label, cleaner staging.
 export const GLUTATHIONE_PRODUCT = {
   id: "gl-life-extension",
   brand: "LIFE EXTENSION",
