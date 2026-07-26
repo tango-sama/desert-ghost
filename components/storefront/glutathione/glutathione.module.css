@@ -525,85 +525,117 @@
   .glBenefits { grid-template-columns: repeat(2, 1fr); }
 }
 
-/* ───────── formula split (ingredient trio, two columns) ───────── */
+/* ───────── formula orbit diagram (ingredient trio) ─────────
+   Real markup, not an uploaded image — see formula.tsx for why: an
+   AI-generated version of this diagram had garbled/duplicated Arabic
+   text baked into its pixels, illegible at any size. */
 .glFormula {
   max-width: none;
   background: linear-gradient(180deg, #eef3fb 0%, #fff 100%);
 }
-.glFormInner {
-  max-width: 1200px;
-  margin: 0 auto;
-  display: grid;
-  grid-template-columns: 0.9fr 1.1fr;
-  gap: 3rem;
-  align-items: center;
-}
-.glFormVisual {
-  position: relative;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 280px;
-}
-.glFormVisual img {
-  max-width: 260px;
-  width: 100%;
-  height: auto;
-  border-radius: 20px;
-  box-shadow: 0 24px 50px rgba(15, 31, 61, 0.16);
-  position: relative;
-  z-index: 2;
-}
-.glMolecule {
-  position: absolute;
-  border-radius: 50%;
-  border: 2px solid rgba(70, 110, 180, 0.35);
-  z-index: 1;
-}
 .glFormHead {
   text-align: center;
-  margin-bottom: 2rem;
+  margin-bottom: 1rem;
 }
 .glFormHead .glTitle {
   text-align: center;
 }
-.glFormList {
-  display: flex;
-  flex-direction: column;
-  gap: 1.4rem;
+.glOrbit {
+  position: relative;
+  width: 100%;
+  max-width: 620px;
+  height: 560px;
+  margin: 0 auto;
 }
-.glFormRow {
-  display: flex;
-  align-items: flex-start;
-  gap: 1rem;
-  text-align: right;
+.glOrbitRing {
+  position: absolute;
+  inset: 0;
+  margin: auto;
+  width: 82%;
+  height: 82%;
+  z-index: 0;
 }
-.glFormIc {
-  width: 48px;
-  height: 48px;
-  border-radius: 50%;
-  background: var(--gl-deep);
-  color: var(--gl-gold);
+.glOrbitBottle {
+  position: absolute;
+  inset: 0;
   display: flex;
   align-items: center;
   justify-content: center;
-  font-size: 1.2rem;
-  flex-shrink: 0;
+  z-index: 2;
+  pointer-events: none;
 }
-.glFormRow h3 {
-  font-size: 1rem;
+.glOrbitBottle img {
+  max-height: 230px;
+  width: auto;
+  border-radius: 14px;
+  box-shadow: 0 20px 40px rgba(15, 31, 61, 0.18);
+}
+.glOrbitNode {
+  position: absolute;
+  width: 180px;
+  text-align: center;
+  z-index: 3;
+}
+.glOrbitTop {
+  top: -8px;
+  left: 50%;
+  transform: translateX(-50%);
+}
+.glOrbitLeft {
+  bottom: 10px;
+  inset-inline-start: -6px;
+}
+.glOrbitRight {
+  bottom: 10px;
+  inset-inline-end: -6px;
+}
+.glOrbitIcon {
+  width: 62px;
+  height: 62px;
+  margin: 0 auto 0.6rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gl-cream), #fff);
+  border: 1.5px solid rgba(185, 134, 47, 0.35);
+  box-shadow: 0 10px 24px rgba(46, 27, 14, 0.12);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+}
+.glOrbitNode h3 {
+  font-size: 0.92rem;
   font-weight: 900;
   color: var(--gl-deep);
-  margin-bottom: 0.25rem;
+  margin-bottom: 0.3rem;
 }
-.glFormRow p {
-  font-size: 0.85rem;
+.glOrbitNode p {
+  font-size: 0.72rem;
   color: var(--ink-2);
-  line-height: 1.7;
+  line-height: 1.55;
 }
-@media (max-width: 900px) {
-  .glFormInner { grid-template-columns: 1fr; }
-  .glFormRow { text-align: center; flex-direction: column; align-items: center; }
+@media (max-width: 720px) {
+  .glOrbit {
+    height: auto;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 1.6rem;
+  }
+  .glOrbitRing {
+    display: none;
+  }
+  .glOrbitBottle {
+    position: static;
+  }
+  .glOrbitBottle img {
+    max-height: 190px;
+  }
+  .glOrbitNode {
+    position: static;
+    width: 100%;
+    max-width: 320px;
+    transform: none;
+  }
 }
 
 /* ───────── free gift section ───────── */

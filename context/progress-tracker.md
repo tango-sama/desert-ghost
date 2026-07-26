@@ -925,6 +925,63 @@ not the intended state (see `development-workflow.md`).
   glutathione bottle unaffected. Reverted the temporary code before
   committing (confirmed via `git diff`, no changes left on that file).
 
+- Formula-section visual rebuilt as real markup instead of an uploaded
+  image (2026-07-26, same session): the owner had already used the new
+  "🧬 صورة قسم التركيبة" admin field (added earlier this session) to
+  upload an AI-generated "orbit of ingredient badges around the bottle"
+  graphic, then asked to "make it big and readable" because the text was
+  illegible. Inspected the actual uploaded file
+  (`landing_glutathione/1785106108405_...webp`, pulled from the live
+  Firestore `site_settings` doc via a public REST read) and found the
+  problem wasn't size — the Arabic labels are genuinely garbled/
+  malformed glyphs baked into the image pixels (not real text), a
+  duplicated "فيتامين C" label appears twice instead of a distinct third
+  ingredient, and even the English text on the bottle label itself is
+  wrong ("Amiro Acids ForImmune Suppoirt", "100 CAPSUIES", "OFFTARY
+  GLVPLLAIENT" instead of the real label text) — a fundamental AI-image
+  text-rendering failure no amount of resizing could fix. Owner chose to
+  rebuild the same visual concept in real code rather than revert to the
+  plain default.
+  Rewrote `formula.tsx`/the CSS from the old two-column
+  image+list layout to a single centered "orbit" diagram: an SVG ring
+  (gold gradient stroke + 3 bead dots) behind the real product photo,
+  with 3 real-text badge nodes (icon circle + bold title + real
+  description, reusing the existing accurate `TRIO` copy) positioned at
+  the top/bottom-left/bottom-right — no image-based text anywhere, so it
+  can never be illegible or wrong no matter the size. Used the page's
+  established gold/navy/cream palette (not the AI image's mismatched
+  blue) to stay visually consistent with the rest of `/glutathione`. On
+  narrow screens (`max-width: 720px`) the ring hides and everything
+  collapses into a simple centered vertical stack (photo, then the three
+  nodes in order) instead of trying to preserve absolute positioning at
+  small sizes.
+  The `formulaImage` override field (from the earlier "independently
+  editable photos" work) still exists and still works — it now overrides
+  just the center bottle photo inside this new diagram, not the whole
+  scene — but its still-live stored value is the broken AI graphic, which
+  will keep showing as a wrong "bottle" photo until the owner clears that
+  field in the admin panel (blank + save); I don't have write access to
+  production Firestore from this sandbox to clear it myself (admin-only
+  write, no credentials here). Updated that field's admin help text to
+  warn against uploading images with baked-in text/full scenes for
+  exactly this reason.
+  Found and fixed one real bug during verification: on mobile, the top
+  orbit node kept the desktop centering trick's `transform:
+  translateX(-50%)` (meant to pair with `left: 50%` for absolute
+  centering) even after switching to `position: static`, which left it
+  shifted noticeably left instead of centered — `transform` still applies
+  to statically positioned elements even though positional offsets don't.
+  Fixed by resetting `transform: none` on `.glOrbitNode` inside the
+  mobile media query.
+  Verified: `npm run lint` / `npm run build` clean. Screenshotted the
+  broken source image directly to confirm the diagnosis, then
+  screenshotted the new diagram at desktop and mobile widths (before and
+  after the transform fix) with the bad `formulaImage` override
+  temporarily cleared in `app/glutathione/page.tsx` to isolate the new
+  component's own correctness from the separate live-data cleanup the
+  owner still needs to do — reverted that temporary code before
+  committing (confirmed via `git diff`).
+
 ## Next Up
 
 
