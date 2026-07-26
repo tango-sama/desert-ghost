@@ -104,7 +104,7 @@ export type LandingPageContent = {
   slug?: string;
 };
 
-export type LandingPageKey = "sunguard" | "collagen";
+export type LandingPageKey = "sunguard" | "collagen" | "glutathione";
 
 export type LandingPagesContent = Partial<Record<LandingPageKey, LandingPageContent>>;
 
@@ -114,6 +114,7 @@ export type LandingPagesContent = Partial<Record<LandingPageKey, LandingPageCont
 export const LANDING_RESERVED_SLUGS = [
   "sunguard",
   "collagen",
+  "glutathione",
   "checkout",
   "categories",
   "products",

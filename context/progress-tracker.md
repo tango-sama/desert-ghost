@@ -844,6 +844,54 @@ not the intended state (see `development-workflow.md`).
   all three places it's used: hero spotlight card, the formula section's
   molecule-decorated visual, and the product/order card.
 
+- `/glutathione` wired into the admin "صفحات الهبوط" (Landing Pages) tab
+  (2026-07-26, same session): brings it up to parity with `/sunguard` and
+  `/collagen` — hero title/lead, product name/price/photo, and a custom
+  slug are now admin-editable, per the owner's request to add this page's
+  content to the existing admin tab.
+  `LandingPageKey` (`lib/firebase.ts`) extended to
+  `"sunguard" | "collagen" | "glutathione"`, and `"glutathione"` added to
+  `LANDING_RESERVED_SLUGS`. `app/[slug]/page.tsx`'s `matchPage`/`META`
+  generalized from two hardcoded pages to a loop over all three keys
+  (previously `sunguard`/`collagen` were each named explicitly). Built-in
+  `app/glutathione/page.tsx` gained the same slug-redirect other pages
+  have (redirects to the custom slug once one is set, so the built-in URL
+  keeps forwarding). `glutathione-page.tsx` now merges
+  `settings.landingPages.glutathione.product` into one `product` object
+  threaded through Hero/Formula/ProductSection/OrderModal — same fix as
+  sunguard/collagen's product-override work, so an edited name/price can
+  never disagree between what's displayed and what's charged at checkout.
+  `hero.tsx` takes an optional `content` prop; an edited title renders as
+  plain white text (loses the two-tone gold split), same editability
+  trade-off already accepted on sunguard.
+  Admin view (`landing-pages-view.tsx`) changes: added a third "💊
+  الجلوتاثيون" tab; generalized `productOverrideAt`/the save branch from
+  an `page === "sunguard"` special case to a `SINGLE_PRODUCT_PAGES`
+  list (now `["sunguard", "glutathione"]`) so both single-SKU pages share
+  the same code path collagen's multi-SKU array doesn't use; generalized
+  `slugError`'s slug-collision check from a single hardcoded "other page"
+  to looping over all pages; generalized `slotsFromSaved` to take a slot
+  count instead of a hardcoded `[0,1,2]`.
+  Deliberately did NOT add before/after editing for glutathione: unlike
+  sunguard/collagen's 3 independent before/after cards, glutathione's
+  single before/after card directly reuses sunguard's illustrative asset
+  (see care-routine.tsx) rather than being its own configurable claim, so
+  `BA_SLOTS.glutathione = []` and the "قبل / بعد" admin card now renders
+  conditionally (only when a page has slots) instead of always.
+  Verified: `npm run lint` / `npm run build` clean. Confirmed via
+  screenshot that `/glutathione` renders byte-for-byte identical to
+  before this change with no override saved. Then temporarily forced
+  `getSettings()` to return a test override (hero title/lead + product
+  title/price) directly in `app/glutathione/page.tsx`, screenshotted, and
+  confirmed the override renders correctly in all three places at once —
+  hero headline/spotlight card, the product/order section, and the order
+  modal's quantity label — with the price correctly carried through to
+  the modal total (9,999 د.ج). Reverted the temporary code before
+  committing (confirmed via `git diff`). NOT exercised: the actual admin
+  UI at `/amelhadj` (the new tab, its form, the save button) through a
+  real login — same sandbox constraint noted on the original "صفحات
+  الهبوط" tab entry above.
+
 ## Next Up
 
 

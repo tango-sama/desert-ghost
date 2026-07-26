@@ -47,16 +47,28 @@ export function GlutathionePage({
   }, []);
 
   const [modalOpen, setModalOpen] = useState(false);
+  const landing = settings.landingPages?.glutathione;
+  const override = landing?.product;
+  // Merged once and threaded everywhere below (hero, formula, product
+  // card, order modal) so an admin-edited name/price/photo can never
+  // disagree between what's displayed and what's charged at checkout —
+  // same fix applied to sunguard/collagen (see progress-tracker.md).
+  const product = {
+    ...GLUTATHIONE_PRODUCT,
+    title: override?.title?.trim() || GLUTATHIONE_PRODUCT.title,
+    image: override?.image?.trim() || GLUTATHIONE_PRODUCT.image,
+    price: override?.price && override.price > 0 ? override.price : GLUTATHIONE_PRODUCT.price,
+  };
 
   return (
     <div className={styles.glutathione} dir="rtl">
       <Topbar scrolled={topScrolled} />
-      <Hero ref={heroRef} onOrder={() => setModalOpen(true)} product={GLUTATHIONE_PRODUCT} gift={GIFT_SOAP} />
+      <Hero ref={heroRef} onOrder={() => setModalOpen(true)} product={product} gift={GIFT_SOAP} content={landing?.hero} />
       <Benefits />
-      <Formula product={GLUTATHIONE_PRODUCT} />
+      <Formula product={product} />
       <Gift gift={GIFT_SOAP} />
       <CareRoutine />
-      <ProductSection onOrder={() => setModalOpen(true)} product={GLUTATHIONE_PRODUCT} />
+      <ProductSection onOrder={() => setModalOpen(true)} product={product} />
       <TrustStrip />
       <Faq />
       <CtaBanner onOrder={() => setModalOpen(true)} />
@@ -67,7 +79,7 @@ export function GlutathionePage({
         open={modalOpen}
         settings={settings}
         cache={cache}
-        product={GLUTATHIONE_PRODUCT}
+        product={product}
         gift={GIFT_SOAP}
         onClose={() => setModalOpen(false)}
       />

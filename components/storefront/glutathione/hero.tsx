@@ -1,3 +1,4 @@
+import type { LandingHeroContent } from "@/lib/firebase";
 import type { GLUTATHIONE_PRODUCT, GIFT_SOAP } from "./product";
 import styles from "./glutathione.module.css";
 
@@ -13,24 +14,37 @@ export function Hero({
   ref,
   product,
   gift,
+  content,
 }: {
   onOrder: () => void;
   ref: React.Ref<HTMLElement>;
   product: typeof GLUTATHIONE_PRODUCT;
   gift: typeof GIFT_SOAP;
+  content?: LandingHeroContent;
 }) {
+  const title = content?.title?.trim();
+  const lead = content?.lead?.trim();
   return (
     <section className={styles.glHero} ref={ref}>
       <div className={styles.glHeroRay} />
       <div className={styles.glHeroInner}>
         <div>
           <span className={styles.glEyebrow}>✨ تركيبة متقدمة لدعم جمالكِ من الداخل</span>
-          <h1>اكتشفي إشراقتكِ</h1>
-          <span className={styles.glHeroGold}>الطبيعية من الداخل</span>
+          {/* admin-edited title loses the two-tone gold split — plain
+              white text is a fair trade-off for editability (see
+              landing-pages-view.tsx and the same tradeoff on sunguard) */}
+          {title ? (
+            <h1>{title}</h1>
+          ) : (
+            <>
+              <h1>اكتشفي إشراقتكِ</h1>
+              <span className={styles.glHeroGold}>الطبيعية من الداخل</span>
+            </>
+          )}
           <span className={styles.glHeroSub}>Glutathione, Cysteine &amp; Vitamin C</span>
           <p className={styles.lead}>
-            تساعد على دعم مضادات الأكسدة وتعزيز صحة البشرة، وتوحيد لونها وتفتيحها، من أجل بشرة أكثر
-            نضارة وحيوية — 100 كبسولة.
+            {lead ||
+              "تساعد على دعم مضادات الأكسدة وتعزيز صحة البشرة، وتوحيد لونها وتفتيحها، من أجل بشرة أكثر نضارة وحيوية — 100 كبسولة."}
           </p>
 
           <div className={styles.glGiftBox}>

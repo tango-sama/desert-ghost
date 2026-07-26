@@ -13,6 +13,7 @@ import { useAdminStore } from "@/stores/admin-store";
 import { cn } from "@/lib/utils";
 import { SUNGUARD_PRODUCT } from "@/components/storefront/sunguard/product";
 import { COLLAGEN_PRODUCTS } from "@/components/storefront/collagen/products";
+import { GLUTATHIONE_PRODUCT } from "@/components/storefront/glutathione/product";
 import {
   inp,
   txt,
@@ -27,13 +28,15 @@ import {
   pickImage,
 } from "@/components/admin/ui";
 
-// Editable copy for the two self-contained landing funnels (/sunguard,
-// /collagen). Placeholders below mirror each page's hardcoded default copy
-// (hero.tsx / before-after.tsx in each folder) purely for display — leaving
-// a field blank keeps that built-in default, it is never written as text.
+// Editable copy for the self-contained landing funnels (/sunguard,
+// /collagen, /glutathione). Placeholders below mirror each page's
+// hardcoded default copy (hero.tsx / before-after.tsx in each folder)
+// purely for display — leaving a field blank keeps that built-in default,
+// it is never written as text.
 const PAGES: { key: LandingPageKey; label: string; folder: string }[] = [
   { key: "sunguard", label: "🍉 واقي الشمس", folder: "landing_sunguard" },
   { key: "collagen", label: "✨ الكولاجين", folder: "landing_collagen" },
+  { key: "glutathione", label: "💊 الجلوتاثيون", folder: "landing_glutathione" },
 ];
 
 const HERO_PLACEHOLDER: Record<LandingPageKey, { title: string; lead: string }> = {
@@ -45,10 +48,17 @@ const HERO_PLACEHOLDER: Record<LandingPageKey, { title: string; lead: string }> 
     title: "جمالكِ يبدأ من الداخل مع الكولاجين",
     lead: "أربع تركيبات كولاجين مختارة بعناية — بودرة وكبسولات — لبشرة أكثر نضارة، شعر أقوى وأقل تساقطاً، أظافر صحية، ومفاصل أكثر مرونة.",
   },
+  glutathione: {
+    title: "اكتشفي إشراقتكِ الطبيعية من الداخل",
+    lead: "تساعد على دعم مضادات الأكسدة وتعزيز صحة البشرة، وتوحيد لونها وتفتيحها، من أجل بشرة أكثر نضارة وحيوية — 100 كبسولة.",
+  },
 };
 
-// The before/after grid is 3 fixed slots per page (not a free-form list —
+// The before/after grid is fixed slots per page (not a free-form list —
 // matches the storefront components, which merge overrides by position).
+// glutathione has none: its single before/after card reuses sunguard's
+// illustrative asset directly (see care-routine.tsx) rather than being an
+// independently configurable per-product claim.
 const BA_SLOTS: Record<LandingPageKey, { label: string; title: string; text: string }[]> = {
   sunguard: [
     { label: "بطاقة 1 — التصبغات", title: "بشرة موحّدة بلا تصبّغات", text: "الحماية اليومية تمنع تكوّن بقع داكنة جديدة وتساعد على توحيد لون البشرة مع الوقت." },
@@ -60,12 +70,13 @@ const BA_SLOTS: Record<LandingPageKey, { label: string; title: string; text: str
     { label: "بطاقة 2 — الشعر", title: "شعر أقوى وأقل تساقطاً", text: "تغذية للبصيلات من الجذور، تساقط أقل وكثافة ولمعان يزدادان مع الوقت." },
     { label: "بطاقة 3 — البشرة", title: "بشرة أكثر نضارة وإشراقاً", text: "خطوط أدق، ترطيب أعمق، وإشراقة تلاحظينها خلال 4–8 أسابيع من الانتظام." },
   ],
+  glutathione: [],
 };
 
 type SlotForm = { title: string; text: string; before: string; after: string };
 
-function slotsFromSaved(saved: LandingPageContent | undefined): SlotForm[] {
-  return [0, 1, 2].map((i) => ({
+function slotsFromSaved(saved: LandingPageContent | undefined, count: number): SlotForm[] {
+  return Array.from({ length: count }, (_, i) => ({
     title: saved?.beforeAfter?.[i]?.title ?? "",
     text: saved?.beforeAfter?.[i]?.text ?? "",
     before: saved?.beforeAfter?.[i]?.before ?? "",
@@ -95,7 +106,19 @@ const PRODUCT_DEFAULTS: Record<
     price: p.price,
     image: p.image,
   })),
+  glutathione: [
+    {
+      label: "المنتج",
+      title: GLUTATHIONE_PRODUCT.title,
+      price: GLUTATHIONE_PRODUCT.price,
+      image: GLUTATHIONE_PRODUCT.image,
+    },
+  ],
 };
+
+// Pages with one SKU store the override at `product`; collagen's multi-SKU
+// page stores an array at `products` indexed by position.
+const SINGLE_PRODUCT_PAGES: LandingPageKey[] = ["sunguard", "glutathione"];
 
 type ProductForm = { title: string; price: string; image: string };
 
@@ -104,7 +127,7 @@ function productOverrideAt(
   page: LandingPageKey,
   i: number
 ): LandingProductOverride | undefined {
-  return page === "sunguard" ? saved?.product : saved?.products?.[i];
+  return SINGLE_PRODUCT_PAGES.includes(page) ? saved?.product : saved?.products?.[i];
 }
 
 function productFormFromSaved(saved: LandingPageContent | undefined, page: LandingPageKey): ProductForm[] {
@@ -133,7 +156,7 @@ function PageEditor({
   const saved = settings.landingPages?.[page];
   const [heroTitle, setHeroTitle] = useState(saved?.hero?.title ?? "");
   const [heroLead, setHeroLead] = useState(saved?.hero?.lead ?? "");
-  const [slots, setSlots] = useState<SlotForm[]>(() => slotsFromSaved(saved));
+  const [slots, setSlots] = useState<SlotForm[]>(() => slotsFromSaved(saved, BA_SLOTS[page].length));
   const [slug, setSlug] = useState(saved?.slug ?? "");
   const [products, setProducts] = useState<ProductForm[]>(() => productFormFromSaved(saved, page));
 
@@ -146,12 +169,12 @@ function PageEditor({
   }
 
   function slugError(s: string): string | null {
-    if (!s) return null; // empty = keep the built-in /sunguard or /collagen route
+    if (!s) return null; // empty = keep the page's built-in route
     if (/[\s/]/.test(s)) return "الرابط يجب أن يكون كلمة واحدة بدون مسافات أو /";
-    const other = page === "sunguard" ? "collagen" : "sunguard";
     if (LANDING_RESERVED_SLUGS.includes(s)) return "هذا الرابط محجوز — اختاري رابطاً آخر";
-    if (settings.landingPages?.[other]?.slug?.trim() === s)
-      return "هذا الرابط مستخدم من طرف الصفحة الأخرى";
+    const others = PAGES.map((p) => p.key).filter((k) => k !== page);
+    if (others.some((k) => settings.landingPages?.[k]?.slug?.trim() === s))
+      return "هذا الرابط مستخدم من طرف صفحة أخرى";
     return null;
   }
 
@@ -177,7 +200,7 @@ function PageEditor({
         before: s.before.trim(),
         after: s.after.trim(),
       })),
-      ...(page === "sunguard" ? { product: productOverrides[0] } : { products: productOverrides }),
+      ...(SINGLE_PRODUCT_PAGES.includes(page) ? { product: productOverrides[0] } : { products: productOverrides }),
       slug: s,
     };
     const data: SiteSettings = {
@@ -263,7 +286,7 @@ function PageEditor({
       </div>
 
       <div className={cardCls}>
-        <h3 className={cardH3}>🧴 {page === "sunguard" ? "المنتج" : "المنتجات"}</h3>
+        <h3 className={cardH3}>🧴 {SINGLE_PRODUCT_PAGES.includes(page) ? "المنتج" : "المنتجات"}</h3>
         <div className="mb-4 text-[.78rem] text-[var(--ink-3)]">
           الاسم والسعر والصورة قابلون للتعديل — التفاصيل الأخرى (المكوّنات، النقاط، الألوان) تبقى كما هي. اتركي أي
           حقل فارغاً للإبقاء على قيمته الافتراضية.
@@ -317,6 +340,7 @@ function PageEditor({
         ))}
       </div>
 
+      {baSlots.length > 0 && (
       <div className={cardCls}>
         <h3 className={cardH3}>↔️ قبل / بعد</h3>
         <div className="mb-4 text-[.78rem] text-[var(--ink-3)]">
@@ -390,6 +414,7 @@ function PageEditor({
           </div>
         ))}
       </div>
+      )}
 
       <div className={rowActions}>
         <button type="button" className={btn("green")} onClick={save}>
