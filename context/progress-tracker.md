@@ -1011,6 +1011,26 @@ not the intended state (see `development-workflow.md`).
   reverted (temp code and temp asset both removed, confirmed via
   `git diff` and `git status`).
 
+- `formulaImage` made truly full-bleed (2026-07-26, same session): the
+  previous full-image render still wrapped the image in a padded,
+  rounded-corner, drop-shadowed "card" (`max-width: 640px`), so it read
+  as an image floating inside the section rather than the section
+  itself — owner circled the visible padding/whitespace in a screenshot
+  and asked for it to actually fill the section. Removed the wrapper's
+  padding and background, and the image's max-width cap, border-radius,
+  and box-shadow — it now renders edge-to-edge at the section's full
+  width with a hard-cut transition from the sections above/below, on
+  both desktop and mobile.
+  Verified: `npm run lint` / `npm run build` clean. Re-used the same
+  local-copy-of-the-live-image technique (Firebase Storage unreachable
+  from this sandbox) to screenshot the full-bleed result at desktop
+  (both a short and a tall viewport, to confirm the headline at the
+  image's top isn't an issue — it only gets briefly covered by the fixed
+  header during the scroll transition itself, same as any section's top
+  edge passing under a fixed nav, not a lost-content problem) and mobile.
+  Reverted the temporary verification code and asset before committing
+  (confirmed via `git diff` / `git status`).
+
 ## Next Up
 
 
