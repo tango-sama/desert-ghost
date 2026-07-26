@@ -1,0 +1,1193 @@
+/* Glutathione, Cysteine & C (Life Extension) landing page — a self-contained
+   single-product funnel (architecture-context.md), same pattern as
+   components/storefront/sunguard and components/storefront/collagen. Its
+   own deep-espresso/amber-gold palette — evokes liver health, richness,
+   and skin radiance — distinct from sunguard's pink and collagen's teal.
+   Shared brand tokens (--gold, --ink-2, --ink-3, --line, --ease) come from
+   app/globals.css :root. */
+
+.glutathione {
+  --gl-deep: #2e1b0e;
+  --gl-mid: #b9862f;
+  --gl-gold: #f0c468;
+  --gl-cream: #fff9ee;
+  overflow-x: hidden;
+  max-width: 100vw;
+  background: #fffcf6;
+}
+
+/* ───────── shared CTA buttons ───────── */
+.glBtn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  padding: 0.95rem 2.2rem;
+  font-weight: 800;
+  border: none;
+  border-radius: 100px;
+  cursor: pointer;
+  font-family: inherit;
+  background: linear-gradient(135deg, var(--gl-gold), var(--gl-mid));
+  color: #2e1b0e;
+  box-shadow: 0 8px 22px rgba(185, 134, 47, 0.35);
+  transition: all 0.3s var(--ease);
+}
+.glBtn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 14px 32px rgba(185, 134, 47, 0.5);
+}
+.glBtn:disabled {
+  opacity: 0.7;
+  cursor: default;
+  transform: none;
+}
+.glBtnGhost {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-weight: 700;
+  font-size: 0.9rem;
+  padding: 0.95rem 1.4rem;
+  border-radius: 100px;
+  border: 1.5px solid var(--line);
+  background: var(--bg-2);
+  cursor: pointer;
+  font-family: inherit;
+  transition: all 0.3s;
+}
+
+/* ───────── promo/trust bar + top bar (stacked fixed header) ─────────
+   Ad-style landing pages (the reference this page was restyled from)
+   pin a dense trust/urgency strip above the nav. Only verified, real
+   claims go here (no fabricated customer counts) — see product.ts and
+   progress-tracker.md. */
+.glHeader {
+  position: fixed;
+  top: 0;
+  inset-inline: 0;
+  z-index: 200;
+  display: flex;
+  flex-direction: column;
+}
+.glPromo {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.6rem;
+  background: var(--gl-deep);
+  color: var(--gl-gold);
+  font-size: 0.72rem;
+  font-weight: 800;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding: 0 1rem;
+  transition: height 0.35s var(--ease), opacity 0.35s var(--ease);
+}
+.glHeader.scrolled .glPromo {
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.glPromo span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+.glTop {
+  width: 100%;
+  padding: 1rem 3rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  transition: all 0.4s var(--ease);
+  background: transparent;
+}
+.glHeader.scrolled .glTop {
+  background: rgba(255, 252, 246, 0.92);
+  backdrop-filter: blur(16px);
+  padding: 0.65rem 3rem;
+  box-shadow: 0 6px 24px rgba(46, 27, 14, 0.08);
+}
+.glTop .brand {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+.glTop .brand img {
+  height: 40px;
+  width: auto;
+}
+.brandTx {
+  display: flex;
+  flex-direction: column;
+  line-height: 1.05;
+}
+.brandName {
+  font-weight: 800;
+  font-size: 1.05rem;
+  color: var(--gl-deep);
+  transition: color 0.4s var(--ease);
+}
+.brandSub {
+  font-size: 0.56rem;
+  letter-spacing: 2.5px;
+  color: var(--gl-mid);
+  text-transform: uppercase;
+  margin-top: 2px;
+}
+.glBack {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--gl-mid);
+  display: flex;
+  align-items: center;
+  gap: 0.35rem;
+}
+.glBack svg {
+  width: 16px;
+  height: 16px;
+}
+@media (max-width: 640px) {
+  .glTop {
+    padding: 0.8rem 1.1rem;
+  }
+  .glHeader.scrolled .glTop {
+    padding: 0.6rem 1.1rem;
+  }
+  .brandTx {
+    display: none;
+  }
+  .glPromo {
+    gap: 1rem;
+    font-size: 0.66rem;
+  }
+  .glPromo span:last-child {
+    display: none;
+  }
+}
+
+/* ───────── hero — light, bold "ad-style" layout ─────────
+   Restyled per owner reference (a dense, mobile-first direct-response
+   landing page): white/cream background, oversized stacked black
+   headline with one word on a solid highlight chip, real product photo
+   on a soft card instead of a dark moody gradient hero. */
+.glHero {
+  position: relative;
+  overflow: hidden;
+  padding: 8.5rem 3rem 4rem;
+  background: linear-gradient(180deg, var(--gl-cream) 0%, #fff 60%);
+}
+.glHeroInner {
+  max-width: 1280px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1.05fr 0.95fr;
+  gap: 3rem;
+  align-items: center;
+  position: relative;
+  z-index: 2;
+}
+
+/* Soft radiant glow behind the product card — evokes "glow from within"
+   without needing a dark backdrop. */
+.glBgGlow {
+  position: absolute;
+  z-index: 0;
+  top: -6%;
+  inset-inline-end: -6%;
+  width: 420px;
+  height: 420px;
+  opacity: 0.5;
+  filter: drop-shadow(0 0 60px rgba(185, 134, 47, 0.35));
+  animation: glGlowSpin 50s linear infinite, glGlowPulse 5s ease-in-out infinite;
+  pointer-events: none;
+}
+@keyframes glGlowSpin {
+  to { transform: rotate(360deg); }
+}
+@keyframes glGlowPulse {
+  0%, 100% { filter: drop-shadow(0 0 60px rgba(185, 134, 47, 0.28)); }
+  50% { filter: drop-shadow(0 0 90px rgba(185, 134, 47, 0.5)); }
+}
+@media (max-width: 640px) {
+  .glBgGlow { width: 280px; height: 280px; }
+}
+
+@keyframes glReveal {
+  from { opacity: 0; transform: translateY(24px); filter: blur(10px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+.glEyebrow {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.76rem;
+  font-weight: 800;
+  letter-spacing: 0.5px;
+  color: var(--gl-deep);
+  background: rgba(185, 134, 47, 0.1);
+  border: 1px solid rgba(185, 134, 47, 0.3);
+  padding: 0.5rem 1.1rem;
+  border-radius: 100px;
+  margin-bottom: 1.2rem;
+  animation: glReveal 0.8s var(--ease) 0.05s both;
+}
+.glHero h1 {
+  font-size: clamp(2.4rem, 6vw, 4.1rem);
+  font-weight: 900;
+  line-height: 1.14;
+  color: #1a1108;
+  margin-bottom: 1.2rem;
+  animation: glReveal 0.8s var(--ease) 0.18s both;
+}
+.glHero h1 mark {
+  display: inline-block;
+  background: linear-gradient(135deg, var(--gl-gold), #e0a83e);
+  color: #1a1108;
+  padding: 0.05em 0.35em;
+  border-radius: 0.28em;
+  box-shadow: 0 6px 0 rgba(185, 134, 47, 0.25);
+}
+.glHero p.lead {
+  color: var(--ink-2);
+  font-size: 1.05rem;
+  max-width: 520px;
+  margin-bottom: 1.6rem;
+  line-height: 1.85;
+  animation: glReveal 0.8s var(--ease) 0.3s both;
+}
+.glPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #1a1108;
+  background: var(--gl-gold);
+  padding: 0.55rem 1.2rem;
+  border-radius: 100px;
+  margin-bottom: 1.8rem;
+  animation: glReveal 0.8s var(--ease) 0.38s both;
+}
+.glHeroCtas {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+  margin-bottom: 2.2rem;
+  animation: glReveal 0.8s var(--ease) 0.46s both;
+}
+.glTrust {
+  display: flex;
+  gap: 1.6rem;
+  flex-wrap: wrap;
+  animation: glReveal 0.8s var(--ease) 0.54s both;
+}
+.glTrust span {
+  display: flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+.glTrust svg {
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  color: var(--gl-mid);
+}
+
+/* ───────── hero product spotlight ───────── */
+.glSpot {
+  position: relative;
+  border-radius: 28px;
+  padding: 2rem 1.6rem 1.8rem;
+  background: #fff;
+  border: 1px solid rgba(185, 134, 47, 0.18);
+  box-shadow: 0 24px 60px rgba(46, 27, 14, 0.14);
+  text-align: center;
+  animation: glSpotReveal 0.95s var(--ease) 0.32s both, glBob 6s ease-in-out 1.3s infinite;
+}
+@keyframes glSpotReveal {
+  from { opacity: 0; transform: translateY(36px) scale(0.94); filter: blur(16px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+@keyframes glBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+.glSpotVisual {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 190px;
+  margin-bottom: 1.1rem;
+}
+.glSpotVisual img {
+  max-height: 210px;
+  width: auto;
+  border-radius: 12px;
+  filter: drop-shadow(0 16px 24px rgba(46, 27, 14, 0.25));
+}
+.glSpotCorner {
+  position: absolute;
+  top: -6px;
+  inset-inline-end: 10%;
+  background: linear-gradient(135deg, var(--gl-gold), var(--gl-mid));
+  color: #1a1108;
+  font-weight: 900;
+  font-size: 0.78rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 100px;
+  box-shadow: 0 8px 18px rgba(185, 134, 47, 0.4);
+  animation: glReveal 0.6s var(--ease) 0.85s both;
+}
+.glSpotBrand {
+  font-size: 0.68rem;
+  letter-spacing: 2px;
+  font-weight: 800;
+  color: var(--gl-mid);
+  text-transform: uppercase;
+}
+.glSpotTitle {
+  color: var(--gl-deep);
+  font-size: 1.15rem;
+  font-weight: 900;
+  line-height: 1.4;
+  margin: 0.4rem 0 1rem;
+}
+.glSpotBadges {
+  display: flex;
+  justify-content: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.glSpotBadge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.4rem 0.9rem;
+  border-radius: 100px;
+  background: var(--gl-cream);
+  color: var(--gl-deep);
+  border: 1px solid rgba(185, 134, 47, 0.25);
+}
+@media (prefers-reduced-motion: reduce) {
+  .glBgGlow,
+  .glEyebrow,
+  .glHero h1,
+  .glHero p.lead,
+  .glPill,
+  .glHeroCtas,
+  .glTrust,
+  .glSpot {
+    animation: none;
+  }
+}
+@media (max-width: 980px) {
+  .glHeroInner { grid-template-columns: 1fr; }
+  .glSpot { max-width: 380px; margin: 0 auto; }
+}
+@media (max-width: 640px) {
+  .glHero { padding: 7.5rem 1.2rem 3rem; }
+  .glHeroCtas { justify-content: center; }
+  .glHero p.lead { margin-inline: auto; }
+  .glPill { margin-inline: auto; }
+  .glTrust { justify-content: center; }
+}
+
+/* ───────── highlight block (second "why us" section) ───────── */
+.glHighlight {
+  max-width: none;
+  background: linear-gradient(155deg, var(--gl-cream) 0%, #fbe8c4 100%);
+  padding: 4.5rem 3rem;
+}
+.glHiInner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  align-items: center;
+}
+.glHiKicker {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--gl-mid);
+  margin-bottom: 0.4rem;
+}
+.glHiInner h2 {
+  font-size: clamp(1.5rem, 3.2vw, 2rem);
+  font-weight: 900;
+  color: var(--gl-deep);
+  margin-bottom: 0.9rem;
+  line-height: 1.3;
+}
+.glHiInner > div > p {
+  color: var(--ink-2);
+  font-size: 0.95rem;
+  line-height: 1.8;
+  margin-bottom: 1.4rem;
+  max-width: 480px;
+}
+.glHiBadgeRow {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 1.6rem;
+}
+.glHiChoice {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+.glHiBest {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 900;
+  color: #1a1108;
+  background: var(--gl-gold);
+  padding: 0.5rem 1.1rem;
+  border-radius: 100px;
+}
+.glHiBig {
+  font-size: clamp(1.7rem, 3.6vw, 2.5rem);
+  font-weight: 900;
+  color: var(--gl-deep);
+  line-height: 1.28;
+}
+.glHiVisual {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.glHiVisual img {
+  max-width: 240px;
+  width: 100%;
+  height: auto;
+  border-radius: 20px;
+  box-shadow: 0 20px 44px rgba(46, 27, 14, 0.22);
+}
+.glHiRosette {
+  position: absolute;
+  bottom: -14px;
+  inset-inline-start: 6%;
+  background: #fff;
+  border: 1px solid rgba(185, 134, 47, 0.25);
+  border-radius: 18px;
+  padding: 0.7rem 1rem;
+  box-shadow: 0 14px 30px rgba(46, 27, 14, 0.18);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  max-width: 200px;
+}
+.glHiRosette .ric {
+  font-size: 1.3rem;
+}
+.glHiRosette span {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--ink-2);
+  line-height: 1.4;
+}
+@media (max-width: 900px) {
+  .glHighlight { padding: 3.5rem 1.2rem; }
+  .glHiInner { grid-template-columns: 1fr; text-align: center; }
+  .glHiInner > div > p { margin-inline: auto; }
+  .glHiBadgeRow { justify-content: center; }
+  .glHiRosette { position: static; margin-top: 1rem; }
+}
+
+/* ───────── section shell ───────── */
+.glSec {
+  max-width: 1280px;
+  margin: 0 auto;
+  padding: 5rem 3rem;
+}
+.glSecHead {
+  text-align: center;
+  margin-bottom: 3rem;
+}
+.glLabel {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  margin-bottom: 0.85rem;
+  padding: 6px 16px;
+  border-radius: 100px;
+  color: var(--gl-mid);
+  background: rgba(185, 134, 47, 0.09);
+  border: 1px solid rgba(185, 134, 47, 0.32);
+}
+.glTitle {
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
+  font-weight: 900;
+  color: var(--gl-deep);
+  line-height: 1.18;
+}
+.glUnderline {
+  width: 70px;
+  height: 3px;
+  margin: 0.8rem auto 0;
+  border-radius: 100px;
+  background: linear-gradient(90deg, var(--gl-mid), var(--gl-gold));
+}
+.glSub {
+  color: var(--ink-2);
+  max-width: 560px;
+  margin: 0.9rem auto 0;
+  font-size: 0.95rem;
+}
+@media (max-width: 640px) {
+  .glSec { padding: 3.5rem 1.2rem; }
+}
+
+/* ───────── problems ───────── */
+.glProbDark {
+  max-width: none;
+  background: linear-gradient(180deg, #180d05 0%, var(--gl-deep) 100%);
+}
+.glProbDark .glLabel {
+  color: #f0dfb8;
+  background: rgba(255, 255, 255, 0.07);
+  border-color: rgba(240, 223, 184, 0.35);
+}
+.glProbDark .glTitle,
+.glProbDark .glSecHead > p {
+  color: #fff;
+}
+.glProbGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.1rem;
+  max-width: 1100px;
+  margin: 0 auto;
+  text-align: right;
+}
+.glProb {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 20px;
+  padding: 1.5rem 1.3rem;
+  background: rgba(255, 255, 255, 0.04);
+  transition: all 0.35s var(--ease);
+}
+.glProb:hover {
+  transform: translateY(-6px);
+  border-color: rgba(240, 196, 104, 0.4);
+  box-shadow: 0 22px 48px rgba(0, 0, 0, 0.35);
+}
+.spIc {
+  width: 52px;
+  height: 52px;
+  border-radius: 16px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.5rem;
+  background: linear-gradient(135deg, rgba(240, 196, 104, 0.2), rgba(185, 134, 47, 0.1));
+  margin-bottom: 1rem;
+}
+.glProb h4 {
+  color: #fff;
+  font-size: 1rem;
+  font-weight: 900;
+  margin-bottom: 0.45rem;
+}
+.glProb p {
+  color: #f5e6c8;
+  font-size: 0.8rem;
+  line-height: 1.75;
+  margin-bottom: 0.75rem;
+}
+.spFix {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.45rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--gl-gold);
+  line-height: 1.65;
+  border-top: 1px dashed rgba(240, 196, 104, 0.35);
+  padding-top: 0.75rem;
+}
+.spFix b {
+  flex-shrink: 0;
+}
+@media (max-width: 960px) {
+  .glProbGrid { grid-template-columns: 1fr 1fr; max-width: 720px; }
+}
+@media (max-width: 640px) {
+  .glProbGrid { grid-template-columns: 1fr; max-width: 430px; }
+}
+
+/* ───────── science / ingredient trio ───────── */
+.glSciGrid {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.4rem;
+  max-width: 1100px;
+  margin: 0 auto;
+}
+.glSciCard {
+  background: #fff;
+  border: 1px solid rgba(185, 134, 47, 0.16);
+  border-radius: 22px;
+  padding: 2rem 1.5rem;
+  text-align: center;
+  box-shadow: 0 8px 26px rgba(46, 27, 14, 0.06);
+  transition: all 0.35s var(--ease);
+}
+.glSciCard:hover {
+  transform: translateY(-6px);
+  box-shadow: 0 20px 40px rgba(46, 27, 14, 0.12);
+}
+.sciIc {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1.1rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.7rem;
+  background: linear-gradient(135deg, var(--gl-cream), #fff);
+  border: 1px solid rgba(185, 134, 47, 0.28);
+}
+.glSciCard h3 {
+  font-size: 1.02rem;
+  font-weight: 900;
+  color: var(--gl-deep);
+  margin-bottom: 0.2rem;
+}
+.sciTag {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 800;
+  color: var(--gl-mid);
+  letter-spacing: 0.5px;
+  margin-bottom: 0.7rem;
+}
+.glSciCard p {
+  font-size: 0.85rem;
+  color: var(--ink-2);
+  line-height: 1.75;
+}
+@media (max-width: 960px) {
+  .glSciGrid { grid-template-columns: 1fr; max-width: 480px; }
+}
+
+/* ───────── benefits ───────── */
+.glBenefits {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 1.25rem;
+}
+.glBenefit {
+  text-align: center;
+  background: #fff;
+  border: 1px solid rgba(185, 134, 47, 0.16);
+  border-radius: 20px;
+  padding: 1.8rem 1.1rem;
+  box-shadow: 0 8px 26px rgba(46, 27, 14, 0.06);
+  transition: all 0.4s var(--ease);
+}
+.glBenefit:hover {
+  transform: translateY(-8px);
+  box-shadow: 0 20px 40px rgba(46, 27, 14, 0.14);
+}
+.bic {
+  width: 64px;
+  height: 64px;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 1.7rem;
+  background: linear-gradient(135deg, var(--gl-cream), #fff);
+  border: 1px solid rgba(185, 134, 47, 0.28);
+}
+.glBenefit h3 {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: var(--gl-deep);
+  margin-bottom: 0.4rem;
+}
+.glBenefit p {
+  font-size: 0.8rem;
+  color: var(--ink-3);
+  line-height: 1.6;
+}
+@media (max-width: 900px) {
+  .glBenefits { grid-template-columns: repeat(2, 1fr); }
+}
+
+/* ───────── how it works ───────── */
+.glSteps {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 1.6rem;
+}
+.glStep {
+  text-align: center;
+}
+.sn {
+  width: 56px;
+  height: 56px;
+  margin: 0 auto 1rem;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--gl-gold), var(--gl-mid));
+  color: #2e1b0e;
+  font-weight: 900;
+  font-size: 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 10px 26px rgba(185, 134, 47, 0.3);
+}
+.glStep h3 {
+  font-size: 0.94rem;
+  font-weight: 800;
+  color: var(--gl-deep);
+  margin-bottom: 0.4rem;
+}
+.glStep p {
+  font-size: 0.8rem;
+  color: var(--ink-3);
+  line-height: 1.6;
+  max-width: 230px;
+  margin: 0 auto;
+}
+@media (max-width: 768px) {
+  .glSteps { grid-template-columns: 1fr; gap: 2rem; }
+}
+
+/* ───────── product / order card ───────── */
+.glProductWrap {
+  max-width: none;
+  background: var(--gl-cream);
+}
+.glProduct {
+  max-width: 880px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 0.85fr 1.15fr;
+  gap: 2.4rem;
+  align-items: center;
+  background: #fff;
+  border-radius: 28px;
+  padding: 2.4rem;
+  box-shadow: 0 20px 50px rgba(46, 27, 14, 0.1);
+}
+.glProdVisual {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.glProdPhoto {
+  width: 100%;
+  max-width: 280px;
+  height: auto;
+  border-radius: 20px;
+  box-shadow: 0 20px 40px rgba(46, 27, 14, 0.18);
+}
+.glProdBrand {
+  font-size: 0.68rem;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  font-weight: 800;
+  color: var(--gl-mid);
+  margin-bottom: 0.4rem;
+}
+.glProduct h3 {
+  font-size: 1.3rem;
+  font-weight: 900;
+  color: var(--gl-deep);
+  line-height: 1.35;
+  margin-bottom: 0.6rem;
+}
+.glProdSize {
+  display: inline-block;
+  font-size: 0.72rem;
+  font-weight: 800;
+  color: var(--ink-2);
+  background: var(--bg-3);
+  padding: 0.25rem 0.7rem;
+  border-radius: 100px;
+  margin-bottom: 1rem;
+}
+.glProdBullets {
+  list-style: none;
+  margin-bottom: 1.3rem;
+}
+.glProdBullets li {
+  display: flex;
+  align-items: flex-start;
+  gap: 0.5rem;
+  font-size: 0.85rem;
+  color: var(--ink-2);
+  margin-bottom: 0.55rem;
+  line-height: 1.55;
+}
+.glProdBullets li b {
+  color: var(--gl-mid);
+  flex-shrink: 0;
+}
+.glProdFoot {
+  display: flex;
+  align-items: center;
+  gap: 1.1rem;
+  flex-wrap: wrap;
+}
+.glPrice {
+  font-weight: 900;
+  font-size: 1.35rem;
+  color: var(--gl-deep);
+}
+.glProdMini {
+  display: flex;
+  gap: 0.9rem;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--ink-3);
+  margin-top: 0.9rem;
+}
+.glProdMini span {
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+}
+@media (max-width: 760px) {
+  .glProduct { grid-template-columns: 1fr; padding: 1.8rem; text-align: center; }
+  .glProdBullets li { text-align: right; }
+}
+
+/* ───────── final CTA banner ───────── */
+.glCta {
+  max-width: 1280px;
+  margin: 0 auto 5rem;
+  padding: 3rem;
+  border-radius: 28px;
+  text-align: center;
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(135deg, var(--gl-deep), var(--gl-mid));
+}
+.glCta h2 {
+  color: #fff;
+  font-size: clamp(1.4rem, 3vw, 2rem);
+  font-weight: 900;
+  margin-bottom: 0.7rem;
+}
+.glCta p {
+  color: #f5e6c8;
+  margin-bottom: 1.6rem;
+}
+@media (max-width: 640px) {
+  .glCta { margin: 0 1.2rem 3.5rem; padding: 2.2rem 1.4rem; }
+}
+
+/* ───────── sticky mobile order bar ───────── */
+.glSticky {
+  position: fixed;
+  bottom: 0;
+  inset-inline: 0;
+  z-index: 180;
+  background: #fff;
+  border-top: 1px solid rgba(185, 134, 47, 0.22);
+  box-shadow: 0 -8px 26px rgba(46, 27, 14, 0.12);
+  padding: 0.75rem 1.2rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  transform: translateY(120%);
+  transition: transform 0.4s var(--ease);
+}
+.glSticky.show {
+  transform: translateY(0);
+}
+.ssTxt {
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: var(--gl-deep);
+}
+.ssTxt small {
+  display: block;
+  font-weight: 600;
+  color: var(--ink-3);
+  font-size: 0.68rem;
+}
+.glSticky button {
+  white-space: nowrap;
+}
+
+/* ───────── order modal ───────── */
+.glOv {
+  position: fixed;
+  inset: 0;
+  background: rgba(24, 13, 5, 0.55);
+  z-index: 400;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 1.2rem;
+  backdrop-filter: blur(2px);
+}
+.glModal {
+  background: #fff;
+  border-radius: 24px;
+  max-width: 480px;
+  width: 100%;
+  max-height: 90vh;
+  overflow-y: auto;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.35);
+  animation: glPop 0.3s var(--ease);
+}
+@keyframes glPop {
+  from { transform: scale(0.94); opacity: 0; }
+  to { transform: scale(1); opacity: 1; }
+}
+.glModalHead {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 1.2rem 1.4rem;
+  border-bottom: 1px solid var(--line);
+}
+.glModalHead h3 {
+  font-size: 1.05rem;
+  font-weight: 800;
+  color: var(--gl-deep);
+}
+.glModalClose {
+  background: none;
+  border: none;
+  cursor: pointer;
+  color: var(--ink-3);
+  padding: 4px;
+  display: flex;
+}
+.glModalClose svg {
+  width: 22px;
+  height: 22px;
+}
+.glModalBody {
+  padding: 1.3rem 1.4rem 1.6rem;
+}
+.glQty {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  background: var(--gl-cream);
+  border-radius: 14px;
+  padding: 0.7rem 1rem;
+  margin-bottom: 1rem;
+}
+.glQtyLabel {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--gl-deep);
+}
+.glQtyCtrl {
+  display: flex;
+  align-items: center;
+  gap: 0.7rem;
+}
+.glQtyBtn {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  border: 1.5px solid var(--gl-mid);
+  background: #fff;
+  color: var(--gl-mid);
+  font-weight: 900;
+  font-size: 1rem;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s;
+}
+.glQtyBtn:hover {
+  background: var(--gl-mid);
+  color: #fff;
+}
+.glQtyNum {
+  font-weight: 900;
+  font-size: 1rem;
+  color: var(--gl-deep);
+  min-width: 1.4rem;
+  text-align: center;
+}
+.glFields {
+  margin-top: 0.2rem;
+}
+.glField {
+  margin-bottom: 1rem;
+}
+.glField label {
+  display: block;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--ink-2);
+  margin-bottom: 0.45rem;
+}
+.glInput {
+  width: 100%;
+  background: var(--cream);
+  border: 1.5px solid var(--line);
+  color: var(--foreground);
+  font-family: inherit;
+  font-size: 0.92rem;
+  padding: 0.8rem 1rem;
+  border-radius: 12px;
+  outline: none;
+  transition: border 0.25s;
+}
+.glInput:focus {
+  border-color: var(--gl-mid);
+}
+.glInput.err {
+  border-color: var(--destructive);
+  background: #fff0f0;
+}
+.glDel {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.6rem;
+}
+.glDopt {
+  border: 1.5px solid var(--line);
+  border-radius: 14px;
+  padding: 0.65rem 0.5rem;
+  text-align: center;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--ink-2);
+  cursor: pointer;
+  transition: all 0.2s;
+}
+.glDopt small {
+  display: block;
+  font-weight: 700;
+  color: var(--gl-mid);
+  margin-top: 0.25rem;
+}
+.glDopt.on {
+  border-color: var(--gl-mid);
+  background: rgba(185, 134, 47, 0.08);
+  color: var(--gl-deep);
+}
+.glTotals {
+  background: var(--gl-cream);
+  border-radius: 14px;
+  padding: 0.85rem 1rem;
+  margin: 1rem 0;
+}
+.tl {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--ink-2);
+  padding: 0.2rem 0;
+}
+.tl.grand {
+  font-weight: 900;
+  color: var(--gl-deep);
+  border-top: 1px dashed rgba(185, 134, 47, 0.32);
+  margin-top: 0.4rem;
+  padding-top: 0.55rem;
+}
+.tl.grand span:last-child {
+  font-size: 1.1rem;
+  color: var(--gl-mid);
+}
+.glSubmit {
+  width: 100%;
+  border: none;
+  cursor: pointer;
+  font-family: inherit;
+  font-weight: 800;
+  font-size: 0.95rem;
+  color: #2e1b0e;
+  padding: 0.95rem;
+  border-radius: 100px;
+  background: linear-gradient(135deg, var(--gl-gold), var(--gl-mid));
+  box-shadow: 0 10px 26px rgba(185, 134, 47, 0.35);
+  transition: all 0.25s var(--ease);
+}
+.glSubmit:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 16px 34px rgba(185, 134, 47, 0.45);
+}
+.glSubmit:disabled {
+  opacity: 0.7;
+  cursor: default;
+  transform: none;
+}
+.glNote {
+  text-align: center;
+  font-size: 0.74rem;
+  color: var(--ink-3);
+  margin-top: 0.9rem;
+  line-height: 1.6;
+}
+.glSuccess {
+  text-align: center;
+  padding: 0.5rem 0 1rem;
+}
+.glSuccess .ic {
+  width: 72px;
+  height: 72px;
+  border-radius: 50%;
+  background: #e6f8ec;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  margin: 0 auto 1.1rem;
+}
+.glSuccess .ic svg {
+  width: 34px;
+  height: 34px;
+  color: #22c55e;
+}
+.glSuccess h4 {
+  font-size: 1.15rem;
+  font-weight: 900;
+  color: var(--gl-deep);
+  margin-bottom: 0.6rem;
+}
+.glSuccess p {
+  color: var(--ink-2);
+  font-size: 0.88rem;
+  line-height: 1.7;
+  margin-bottom: 1.2rem;
+}
+
+.glFooter {
+  background: #fff;
+  border-top: 1px solid rgba(185, 134, 47, 0.2);
+  padding: 2.2rem 3rem;
+  text-align: center;
+}
+.glFooter p {
+  font-size: 0.78rem;
+  color: var(--ink-3);
+}
+.glFooter a {
+  color: var(--gl-mid);
+  font-weight: 700;
+}
