@@ -982,6 +982,35 @@ not the intended state (see `development-workflow.md`).
   owner still needs to do — reverted that temporary code before
   committing (confirmed via `git diff`).
 
+- `formulaImage` can now replace the whole formula section, not just the
+  center bottle photo (2026-07-26, same session): after the previous
+  broken AI graphic, the owner generated and uploaded a much better one —
+  a complete, legible, accurately-worded marketing graphic (headline,
+  4-point benefit sidebar, orbit-style ingredient badges, real product
+  label text, all correctly spelled this time — verified by fetching and
+  viewing the actual file) — and asked for it to be "the whole section
+  background."
+  `formula.tsx` now branches: if `formulaImage` is set, the section
+  renders as just that image (full width, rounded corners, shadow,
+  `max-width: 640px`) with no separate heading or orbit diagram — the
+  image supplies its own; if unset, the existing real-markup orbit
+  diagram (heading + ring + 3 text badges) still renders as before. This
+  is an explicit, acknowledged tradeoff: once an image is set, the
+  ingredient copy for that section is no longer independently editable
+  as text — changing it means uploading a new image. Updated that
+  field's admin help text accordingly (previously discouraged full-scene
+  images; now explains an uploaded image replaces the section entirely
+  and to double-check its text before uploading, since a bad one can't
+  be fixed except by re-uploading).
+  Verified: `npm run lint` / `npm run build` clean. Firebase Storage is
+  unreachable from this sandbox (confirmed again — the real uploaded
+  image 404s here), so verification used a local copy of the exact same
+  uploaded file temporarily referenced via `formulaImage` in
+  `app/glutathione/page.tsx`, screenshotted at desktop and mobile widths
+  (both legible, mobile sidebar text is small but readable), then
+  reverted (temp code and temp asset both removed, confirmed via
+  `git diff` and `git status`).
+
 ## Next Up
 
 

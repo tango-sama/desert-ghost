@@ -2,12 +2,14 @@ import { RevealRoot } from "@/components/storefront/reveal-root";
 import type { GLUTATHIONE_PRODUCT } from "./product";
 import styles from "./glutathione.module.css";
 
-// Ingredient-science "orbit" diagram — copy sourced from the real Firestore
-// product description (products/1780283875838). Built as real markup (not
-// an uploaded image) specifically so the text stays sharp and correctly
-// worded at any size — an earlier AI-generated version of this visual had
-// garbled/duplicated Arabic labels baked into the image pixels, which no
-// amount of resizing could fix (see progress-tracker.md, 2026-07-26).
+// Ingredient-science section — two possible renders:
+// 1. Default (no admin image set): a real-markup "orbit" diagram (crisp,
+//    always-correct text — see progress-tracker.md, 2026-07-26, for why
+//    an earlier AI-generated version of this was replaced).
+// 2. Admin-set `formulaImage`: the image becomes the entire section
+//    (owner's choice, 2026-07-26) — used only when the supplied image is
+//    itself a complete, legible, accurate graphic; loses independent
+//    text-editability for this section in exchange for that visual.
 const TRIO = [
   {
     ic: "🧬",
@@ -53,7 +55,19 @@ export function Formula({
   product: typeof GLUTATHIONE_PRODUCT;
   image?: string;
 }) {
-  const visual = image?.trim() || product.image;
+  const fullImage = image?.trim();
+
+  if (fullImage) {
+    return (
+      <RevealRoot>
+        <section className={`${styles.glFormula} ${styles.glFormulaImageWrap} reveal`}>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img src={fullImage} alt="تركيبة ثلاثية الجمال" className={styles.glFormulaFullImage} />
+        </section>
+      </RevealRoot>
+    );
+  }
+
   return (
     <RevealRoot>
       <section className={`${styles.glSec} ${styles.glFormula} reveal`}>
@@ -66,7 +80,7 @@ export function Formula({
           <OrbitRing />
           <div className={styles.glOrbitBottle}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={visual} alt={product.title} />
+            <img src={product.image} alt={product.title} />
           </div>
           {TRIO.map((t) => (
             <div className={`${styles.glOrbitNode} ${t.pos}`} key={t.h}>
