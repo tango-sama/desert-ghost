@@ -371,6 +371,7 @@
 }
 .glSpotCorner {
   position: absolute;
+  z-index: 2;
   top: -6px;
   inset-inline-end: 10%;
   background: linear-gradient(135deg, var(--gl-gold), var(--gl-mid));
