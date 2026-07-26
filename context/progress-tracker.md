@@ -722,6 +722,47 @@ not the intended state (see `development-workflow.md`).
   same recommendation as collagen/sunguard, owner should place one real test
   order through `/glutathione` before fully trusting it.
 
+- `/glutathione` restyled to an "ad-style" direct-response look (2026-07-26,
+  same session): the owner sent a reference screenshot (a Landify/CreaX-
+  style mobile funnel for an unrelated hair-removal product) and asked for
+  that visual method, not the original soft boutique-DTC look the page
+  launched with. Kept every section, all copy, and the order flow
+  identical — this was a restyle, not a re-scope. Changes, all in the
+  existing `glutathione/*` files (no new page): (1) `topbar.tsx` now
+  renders a stacked fixed header — a slim promo/trust strip (`.glPromo`)
+  above the brand nav, collapsing to 0 height once scrolled past 30px.
+  Deliberately did NOT copy the reference's "+8K customers" social-proof
+  stat — that number doesn't exist for this product/store, so fabricating
+  it would be a false marketing claim; used only verified claims instead
+  (free delivery, COD, "100% original product"); (2) `hero.tsx` switched
+  from the dark radial-gradient hero to a light cream/white background with
+  a much larger stacked headline and a solid gold `<mark>` highlight chip
+  behind "إشراقاً حقيقياً" (a literal highlight-chip word, not just
+  gradient text), plus a new pill badge under the lead paragraph; the
+  product spotlight card is now a plain white card (was a dark glass
+  panel) with a small gold corner badge on the photo; (3) new
+  `highlight.tsx` section added between Hero and Problems — the
+  reference's "best choice" panel (kicker + bold claim + "الخيار الأمثل"
+  gold badge + product photo + a small rosette callout). The rosette says
+  "نتائج تراكمية مع الاستخدام المنتظم" (gradual results with regular use)
+  rather than anything implying fast/instant results — this is a supplement
+  taken over weeks, and the reference's "in minutes" framing (fine for a
+  topical cream) would be a misleading claim here; (4) CSS: added
+  `.glHeader`/`.glPromo` (stacked fixed header), rewrote all hero styles
+  for the light background, added `.glHighlight`/`.glHi*` for the new
+  section, bumped `.glTitle` size slightly for a punchier feel across the
+  rest of the page (Problems/Science/Benefits/etc. kept their existing
+  structure and content, no tsx changes needed there).
+  Verified: `npm run lint` / `npm run build` clean. Full visual
+  verification via headless Chromium (desktop 1280px + mobile 420px
+  viewports): confirmed the promo bar, highlight badge chip, new
+  highlight section, and the rest of the page all render correctly, RTL
+  layout holds (image/text sides swap correctly in the new highlight
+  grid), and the promo bar's third badge correctly hides on narrow mobile
+  widths to avoid crowding. Only console output was the same expected
+  Firestore-offline fallback noted throughout this file (no outbound
+  Firebase access in this sandbox).
+
 ## Next Up
 
 

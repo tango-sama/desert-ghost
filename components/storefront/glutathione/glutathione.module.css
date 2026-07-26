@@ -57,20 +57,56 @@
   transition: all 0.3s;
 }
 
-/* ───────── minimal top bar ───────── */
-.glTop {
+/* ───────── promo/trust bar + top bar (stacked fixed header) ─────────
+   Ad-style landing pages (the reference this page was restyled from)
+   pin a dense trust/urgency strip above the nav. Only verified, real
+   claims go here (no fabricated customer counts) — see product.ts and
+   progress-tracker.md. */
+.glHeader {
   position: fixed;
   top: 0;
-  width: 100%;
+  inset-inline: 0;
   z-index: 200;
+  display: flex;
+  flex-direction: column;
+}
+.glPromo {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.6rem;
+  background: var(--gl-deep);
+  color: var(--gl-gold);
+  font-size: 0.72rem;
+  font-weight: 800;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding: 0 1rem;
+  transition: height 0.35s var(--ease), opacity 0.35s var(--ease);
+}
+.glHeader.scrolled .glPromo {
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.glPromo span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
+}
+.glTop {
+  width: 100%;
   padding: 1rem 3rem;
   display: flex;
   align-items: center;
   justify-content: space-between;
   transition: all 0.4s var(--ease);
+  background: transparent;
 }
-.glTop.scrolled {
-  background: rgba(255, 252, 246, 0.9);
+.glHeader.scrolled .glTop {
+  background: rgba(255, 252, 246, 0.92);
   backdrop-filter: blur(16px);
   padding: 0.65rem 3rem;
   box-shadow: 0 6px 24px rgba(46, 27, 14, 0.08);
@@ -92,34 +128,23 @@
 .brandName {
   font-weight: 800;
   font-size: 1.05rem;
-  color: #fff;
-  transition: color 0.4s var(--ease);
-}
-.glTop.scrolled .brandName {
   color: var(--gl-deep);
+  transition: color 0.4s var(--ease);
 }
 .brandSub {
   font-size: 0.56rem;
   letter-spacing: 2.5px;
-  color: #f0dfb8;
+  color: var(--gl-mid);
   text-transform: uppercase;
   margin-top: 2px;
-  transition: color 0.4s var(--ease);
-}
-.glTop.scrolled .brandSub {
-  color: var(--gl-mid);
 }
 .glBack {
   font-size: 0.8rem;
   font-weight: 700;
-  color: #f0dfb8;
+  color: var(--gl-mid);
   display: flex;
   align-items: center;
   gap: 0.35rem;
-  transition: color 0.4s var(--ease);
-}
-.glTop.scrolled .glBack {
-  color: var(--gl-mid);
 }
 .glBack svg {
   width: 16px;
@@ -129,17 +154,31 @@
   .glTop {
     padding: 0.8rem 1.1rem;
   }
+  .glHeader.scrolled .glTop {
+    padding: 0.6rem 1.1rem;
+  }
   .brandTx {
+    display: none;
+  }
+  .glPromo {
+    gap: 1rem;
+    font-size: 0.66rem;
+  }
+  .glPromo span:last-child {
     display: none;
   }
 }
 
-/* ───────── hero ───────── */
+/* ───────── hero — light, bold "ad-style" layout ─────────
+   Restyled per owner reference (a dense, mobile-first direct-response
+   landing page): white/cream background, oversized stacked black
+   headline with one word on a solid highlight chip, real product photo
+   on a soft card instead of a dark moody gradient hero. */
 .glHero {
   position: relative;
   overflow: hidden;
-  padding: 8.5rem 3rem 5rem;
-  background: radial-gradient(ellipse 90% 70% at 50% -10%, #6b4a1f 0%, var(--gl-deep) 55%, #180d05 100%);
+  padding: 8.5rem 3rem 4rem;
+  background: linear-gradient(180deg, var(--gl-cream) 0%, #fff 60%);
 }
 .glHeroInner {
   max-width: 1280px;
@@ -152,17 +191,17 @@
   z-index: 2;
 }
 
-/* Soft radiant glow sitting behind the hero content, evoking "glow from
-   within" — visible the instant the section paints. */
+/* Soft radiant glow behind the product card — evokes "glow from within"
+   without needing a dark backdrop. */
 .glBgGlow {
   position: absolute;
   z-index: 0;
-  top: -12%;
-  inset-inline-start: -8%;
-  width: 460px;
-  height: 460px;
-  opacity: 0.9;
-  filter: drop-shadow(0 0 70px rgba(240, 196, 104, 0.5));
+  top: -6%;
+  inset-inline-end: -6%;
+  width: 420px;
+  height: 420px;
+  opacity: 0.5;
+  filter: drop-shadow(0 0 60px rgba(185, 134, 47, 0.35));
   animation: glGlowSpin 50s linear infinite, glGlowPulse 5s ease-in-out infinite;
   pointer-events: none;
 }
@@ -170,27 +209,16 @@
   to { transform: rotate(360deg); }
 }
 @keyframes glGlowPulse {
-  0%, 100% { filter: drop-shadow(0 0 70px rgba(240, 196, 104, 0.45)); }
-  50% { filter: drop-shadow(0 0 100px rgba(240, 196, 104, 0.75)); }
+  0%, 100% { filter: drop-shadow(0 0 60px rgba(185, 134, 47, 0.28)); }
+  50% { filter: drop-shadow(0 0 90px rgba(185, 134, 47, 0.5)); }
 }
 @media (max-width: 640px) {
-  .glBgGlow { width: 300px; height: 300px; top: -8%; inset-inline-start: -14%; }
+  .glBgGlow { width: 280px; height: 280px; }
 }
 
 @keyframes glReveal {
   from { opacity: 0; transform: translateY(24px); filter: blur(10px); }
   to { opacity: 1; transform: translateY(0); filter: blur(0); }
-}
-.glBubble {
-  position: absolute;
-  border-radius: 50%;
-  background: radial-gradient(circle at 35% 30%, rgba(255, 255, 255, 0.28), rgba(255, 255, 255, 0.02) 70%);
-  pointer-events: none;
-  animation: glFloat 9s ease-in-out infinite;
-}
-@keyframes glFloat {
-  0%, 100% { transform: translateY(0) scale(1); }
-  50% { transform: translateY(-26px) scale(1.05); }
 }
 .glEyebrow {
   display: inline-flex;
@@ -199,43 +227,57 @@
   font-size: 0.76rem;
   font-weight: 800;
   letter-spacing: 0.5px;
-  color: #f0dfb8;
-  background: rgba(255, 255, 255, 0.08);
-  border: 1px solid rgba(240, 223, 184, 0.35);
+  color: var(--gl-deep);
+  background: rgba(185, 134, 47, 0.1);
+  border: 1px solid rgba(185, 134, 47, 0.3);
   padding: 0.5rem 1.1rem;
   border-radius: 100px;
-  margin-bottom: 1.4rem;
+  margin-bottom: 1.2rem;
   animation: glReveal 0.8s var(--ease) 0.05s both;
 }
 .glHero h1 {
-  font-size: clamp(2.1rem, 4.6vw, 3.4rem);
+  font-size: clamp(2.4rem, 6vw, 4.1rem);
   font-weight: 900;
-  line-height: 1.18;
-  color: #fff;
-  margin-bottom: 1.1rem;
+  line-height: 1.14;
+  color: #1a1108;
+  margin-bottom: 1.2rem;
   animation: glReveal 0.8s var(--ease) 0.18s both;
 }
-.glHero h1 span {
-  background: linear-gradient(135deg, var(--gl-gold), #fff3d6);
-  -webkit-background-clip: text;
-  background-clip: text;
-  -webkit-text-fill-color: transparent;
-  color: transparent;
+.glHero h1 mark {
+  display: inline-block;
+  background: linear-gradient(135deg, var(--gl-gold), #e0a83e);
+  color: #1a1108;
+  padding: 0.05em 0.35em;
+  border-radius: 0.28em;
+  box-shadow: 0 6px 0 rgba(185, 134, 47, 0.25);
 }
 .glHero p.lead {
-  color: #fff;
-  font-size: 1.02rem;
+  color: var(--ink-2);
+  font-size: 1.05rem;
   max-width: 520px;
-  margin-bottom: 2rem;
+  margin-bottom: 1.6rem;
   line-height: 1.85;
   animation: glReveal 0.8s var(--ease) 0.3s both;
+}
+.glPill {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  font-weight: 800;
+  color: #1a1108;
+  background: var(--gl-gold);
+  padding: 0.55rem 1.2rem;
+  border-radius: 100px;
+  margin-bottom: 1.8rem;
+  animation: glReveal 0.8s var(--ease) 0.38s both;
 }
 .glHeroCtas {
   display: flex;
   gap: 1rem;
   flex-wrap: wrap;
   margin-bottom: 2.2rem;
-  animation: glReveal 0.8s var(--ease) 0.42s both;
+  animation: glReveal 0.8s var(--ease) 0.46s both;
 }
 .glTrust {
   display: flex;
@@ -249,22 +291,23 @@
   gap: 0.45rem;
   font-size: 0.8rem;
   font-weight: 700;
-  color: #f0dfb8;
+  color: var(--ink-2);
 }
 .glTrust svg {
   width: 16px;
   height: 16px;
   flex-shrink: 0;
+  color: var(--gl-mid);
 }
 
 /* ───────── hero product spotlight ───────── */
 .glSpot {
   position: relative;
   border-radius: 28px;
-  padding: 2.4rem 1.8rem;
-  background: linear-gradient(160deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0.03));
-  border: 1px solid rgba(255, 255, 255, 0.16);
-  backdrop-filter: blur(6px);
+  padding: 2rem 1.6rem 1.8rem;
+  background: #fff;
+  border: 1px solid rgba(185, 134, 47, 0.18);
+  box-shadow: 0 24px 60px rgba(46, 27, 14, 0.14);
   text-align: center;
   animation: glSpotReveal 0.95s var(--ease) 0.32s both, glBob 6s ease-in-out 1.3s infinite;
 }
@@ -274,9 +317,10 @@
 }
 @keyframes glBob {
   0%, 100% { transform: translateY(0); }
-  50% { transform: translateY(-12px); }
+  50% { transform: translateY(-10px); }
 }
 .glSpotVisual {
+  position: relative;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -284,20 +328,33 @@
   margin-bottom: 1.1rem;
 }
 .glSpotVisual img {
-  max-height: 190px;
+  max-height: 210px;
   width: auto;
   border-radius: 12px;
-  filter: drop-shadow(0 12px 20px rgba(24, 13, 5, 0.5));
+  filter: drop-shadow(0 16px 24px rgba(46, 27, 14, 0.25));
+}
+.glSpotCorner {
+  position: absolute;
+  top: -6px;
+  inset-inline-end: 10%;
+  background: linear-gradient(135deg, var(--gl-gold), var(--gl-mid));
+  color: #1a1108;
+  font-weight: 900;
+  font-size: 0.78rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 100px;
+  box-shadow: 0 8px 18px rgba(185, 134, 47, 0.4);
+  animation: glReveal 0.6s var(--ease) 0.85s both;
 }
 .glSpotBrand {
   font-size: 0.68rem;
   letter-spacing: 2px;
   font-weight: 800;
-  color: #f0dfb8;
+  color: var(--gl-mid);
   text-transform: uppercase;
 }
 .glSpotTitle {
-  color: #fff;
+  color: var(--gl-deep);
   font-size: 1.15rem;
   font-weight: 900;
   line-height: 1.4;
@@ -310,19 +367,20 @@
   flex-wrap: wrap;
 }
 .glSpotBadge {
-  font-size: 0.74rem;
+  font-size: 0.72rem;
   font-weight: 800;
   padding: 0.4rem 0.9rem;
   border-radius: 100px;
-  background: rgba(255, 255, 255, 0.12);
-  color: #fff;
-  border: 1px solid rgba(255, 255, 255, 0.22);
+  background: var(--gl-cream);
+  color: var(--gl-deep);
+  border: 1px solid rgba(185, 134, 47, 0.25);
 }
 @media (prefers-reduced-motion: reduce) {
   .glBgGlow,
   .glEyebrow,
   .glHero h1,
   .glHero p.lead,
+  .glPill,
   .glHeroCtas,
   .glTrust,
   .glSpot {
@@ -334,10 +392,118 @@
   .glSpot { max-width: 380px; margin: 0 auto; }
 }
 @media (max-width: 640px) {
-  .glHero { padding: 7rem 1.2rem 3.5rem; }
+  .glHero { padding: 7.5rem 1.2rem 3rem; }
   .glHeroCtas { justify-content: center; }
   .glHero p.lead { margin-inline: auto; }
+  .glPill { margin-inline: auto; }
   .glTrust { justify-content: center; }
+}
+
+/* ───────── highlight block (second "why us" section) ───────── */
+.glHighlight {
+  max-width: none;
+  background: linear-gradient(155deg, var(--gl-cream) 0%, #fbe8c4 100%);
+  padding: 4.5rem 3rem;
+}
+.glHiInner {
+  max-width: 1200px;
+  margin: 0 auto;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 3rem;
+  align-items: center;
+}
+.glHiKicker {
+  font-size: 0.95rem;
+  font-weight: 800;
+  color: var(--gl-mid);
+  margin-bottom: 0.4rem;
+}
+.glHiInner h2 {
+  font-size: clamp(1.5rem, 3.2vw, 2rem);
+  font-weight: 900;
+  color: var(--gl-deep);
+  margin-bottom: 0.9rem;
+  line-height: 1.3;
+}
+.glHiInner > div > p {
+  color: var(--ink-2);
+  font-size: 0.95rem;
+  line-height: 1.8;
+  margin-bottom: 1.4rem;
+  max-width: 480px;
+}
+.glHiBadgeRow {
+  display: flex;
+  align-items: center;
+  gap: 0.8rem;
+  margin-bottom: 1.6rem;
+}
+.glHiChoice {
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+.glHiBest {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.8rem;
+  font-weight: 900;
+  color: #1a1108;
+  background: var(--gl-gold);
+  padding: 0.5rem 1.1rem;
+  border-radius: 100px;
+}
+.glHiBig {
+  font-size: clamp(1.7rem, 3.6vw, 2.5rem);
+  font-weight: 900;
+  color: var(--gl-deep);
+  line-height: 1.28;
+}
+.glHiVisual {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.glHiVisual img {
+  max-width: 240px;
+  width: 100%;
+  height: auto;
+  border-radius: 20px;
+  box-shadow: 0 20px 44px rgba(46, 27, 14, 0.22);
+}
+.glHiRosette {
+  position: absolute;
+  bottom: -14px;
+  inset-inline-start: 6%;
+  background: #fff;
+  border: 1px solid rgba(185, 134, 47, 0.25);
+  border-radius: 18px;
+  padding: 0.7rem 1rem;
+  box-shadow: 0 14px 30px rgba(46, 27, 14, 0.18);
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  max-width: 200px;
+}
+.glHiRosette .ric {
+  font-size: 1.3rem;
+}
+.glHiRosette span {
+  display: block;
+  font-size: 0.7rem;
+  font-weight: 700;
+  color: var(--ink-2);
+  line-height: 1.4;
+}
+@media (max-width: 900px) {
+  .glHighlight { padding: 3.5rem 1.2rem; }
+  .glHiInner { grid-template-columns: 1fr; text-align: center; }
+  .glHiInner > div > p { margin-inline: auto; }
+  .glHiBadgeRow { justify-content: center; }
+  .glHiRosette { position: static; margin-top: 1rem; }
 }
 
 /* ───────── section shell ───────── */
@@ -362,10 +528,10 @@
   border: 1px solid rgba(185, 134, 47, 0.32);
 }
 .glTitle {
-  font-size: clamp(1.6rem, 3.6vw, 2.35rem);
+  font-size: clamp(1.8rem, 4vw, 2.6rem);
   font-weight: 900;
   color: var(--gl-deep);
-  line-height: 1.2;
+  line-height: 1.18;
 }
 .glUnderline {
   width: 70px;

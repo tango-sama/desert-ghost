@@ -6,6 +6,7 @@ import { useDeliveryData } from "@/hooks/use-delivery-data";
 import { TikTokLiveButton } from "@/components/storefront/tiktok-live-button";
 import { Topbar } from "./topbar";
 import { Hero } from "./hero";
+import { Highlight } from "./highlight";
 import { Problems } from "./problems";
 import { Science } from "./science";
 import { Benefits } from "./benefits";
@@ -47,6 +48,7 @@ export function GlutathionePage({
     <div className={styles.glutathione} dir="rtl">
       <Topbar scrolled={topScrolled} />
       <Hero ref={heroRef} onOrder={() => setModalOpen(true)} product={GLUTATHIONE_PRODUCT} />
+      <Highlight product={GLUTATHIONE_PRODUCT} />
       <Problems />
       <Science />
       <Benefits />

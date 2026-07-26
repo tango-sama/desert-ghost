@@ -1,9 +1,10 @@
 import type { GLUTATHIONE_PRODUCT } from "./product";
 import styles from "./glutathione.module.css";
 
-// The hero visual is the real studio product photo (cropped from the live
-// Firestore product doc's image) rather than an illustration — unlike
-// sunguard, a real photo already existed for this product.
+// Restyled per the owner's ad-style reference: light background, a big
+// stacked headline with one word on a solid highlight chip (<mark>), and
+// the real product photo on a plain card instead of a dark illustrated
+// spotlight. The soft radial glow still nods to "glow from within".
 function GlowIcon({ className }: { className: string }) {
   return (
     <svg className={className} viewBox="0 0 100 100" fill="none">
@@ -44,28 +45,26 @@ export function Hero({
   return (
     <section className={styles.glHero} ref={ref}>
       <GlowIcon className={styles.glBgGlow} />
-      <div className={styles.glBubble} style={{ width: 180, height: 180, top: "6%", left: "6%" }} />
-      <div className={styles.glBubble} style={{ width: 110, height: 110, top: "64%", left: "14%", animationDelay: "2s" }} />
-      <div className={styles.glBubble} style={{ width: 140, height: 140, top: "12%", left: "82%", animationDelay: "1.2s" }} />
       <div className={styles.glHeroInner}>
         <div>
           <span className={styles.glEyebrow}>✨ ثلاثية الجلوتاثيون + السيستئين + فيتامين C</span>
           <h1>
-            بشرتكِ تستحق <span>إشراقاً حقيقياً</span> من الداخل
+            بشرتكِ تستحق
+            <br />
+            <mark>إشراقاً حقيقياً</mark>
+            <br />
+            من الداخل
           </h1>
           <p className={styles.lead}>
             مكمل Life Extension يجمع الجلوتاثيون (المُختزل) مع السيستئين وفيتامين C لتفتيح البشرة
             وتوحيد لونها، دعم وظائف الكبد وإزالة السموم، وتعزيز الجهاز المناعي — 100 كبسولة.
           </p>
+          <div className={styles.glPill}>🌿 خالٍ من الجلوتين ومعتمد NON-GMO</div>
           <div className={styles.glHeroCtas}>
             <button type="button" className={styles.glBtn} onClick={onOrder}>
               🛒 اطلبيه الآن
             </button>
-            <a
-              className={styles.glBtnGhost}
-              href="#product"
-              style={{ background: "rgba(255,255,255,.08)", borderColor: "rgba(255,255,255,.25)", color: "#fff" }}
-            >
+            <a className={styles.glBtnGhost} href="#product">
               تفاصيل المنتج
             </a>
           </div>
@@ -97,13 +96,13 @@ export function Hero({
         <div>
           <div className={styles.glSpot}>
             <div className={styles.glSpotVisual}>
+              <span className={styles.glSpotCorner}>✨ {product.size}</span>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img src={product.image} alt={product.title} />
             </div>
             <div className={styles.glSpotBrand}>{product.brand}</div>
             <div className={styles.glSpotTitle}>{product.title}</div>
             <div className={styles.glSpotBadges}>
-              <span className={styles.glSpotBadge}>{product.size}</span>
               <span className={styles.glSpotBadge}>🌿 خالٍ من الجلوتين</span>
               <span className={styles.glSpotBadge}>✅ NON-GMO</span>
             </div>
