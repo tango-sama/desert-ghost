@@ -655,6 +655,73 @@ not the intended state (see `development-workflow.md`).
   working drag-to-reveal sliders; `get_page_text` confirmed all card
   copy intact.
 
+- Glutathione landing page at `/glutathione` (2026-07-26): a third
+  self-contained single-product marketing funnel, same pattern as
+  `/collagen` and `/sunguard` (architecture-context.md — hardcoded product
+  data, own top bar/footer, no shared storefront Nav/CartDrawer). Prompted
+  by the owner wanting to replicate CreaX.io's high-converting single-
+  product landing-page approach — this repo already builds that exact
+  pattern, so this is a new instance of it rather than a new mechanism.
+  Product: "Glutathione, Cysteine & C" (Life Extension), 100 capsules,
+  14,500 د.ج — pulled live from the real Firestore `products/1780283875728`
+  doc (title, price, description, image) via a direct Firestore REST read,
+  then hardcoded into `components/storefront/glutathione/product.ts`
+  (`GLUTATHIONE_PRODUCT`), deliberately separate from the live catalog
+  document per the established funnel convention. This same product already
+  exists as the 5th "special offer" item inside `/collagen`
+  (`col-glutathione`, hardcoded at a different price, 14,000 د.ج) — the two
+  pages are independent and intentionally not kept in sync; only this new
+  page's price was updated to match the current catalog (owner chose the
+  live catalog price over collagen's older special-offer price when asked).
+  Product photo: no clean studio shot existed, so the real (messy, multi-
+  product) Firestore Storage photo was downloaded and cropped in Python/
+  Pillow to isolate just the bottle, saved to
+  `public/assets/glutathione/product-shot.webp` — used for both the hero
+  spotlight and the product section (no illustrated placeholder, unlike
+  sunguard's original hero).
+  Sections: hero, "problems this solves" grid (6 cards: pigmentation, dull
+  skin, toxin buildup/liver fatigue, weak immunity, free-radical aging, weak
+  collagen support), a new "science/ingredient trio" section
+  (`science.tsx` — Glutathione / L-Cysteine / Vitamin C breakdown, copy
+  sourced from the real Firestore product description) used INSTEAD OF a
+  before/after slider, since this is a swallowed supplement with no
+  before/after photography (unlike sunguard/collagen's topical products) —
+  a truthful section beats a fabricated comparison. Benefits grid (4 items),
+  product/order card, how-it-works (ordering steps, not usage instructions —
+  usage directions live in the product bullet list instead), CTA banner,
+  sticky mobile order bar. Order modal (`order-modal.tsx`) reuses the same
+  delivery data layer as collagen/sunguard/checkout (`lib/delivery.ts`,
+  Noest/Yalidine only, same rule as the other two funnels) with a quantity
+  stepper (single SKU, no multi-product picker). Orders save via `saveOrder`
+  with `source: "landing_glutathione"`.
+  Own deep-espresso/amber-gold palette (`glutathione.module.css`, `.gl*`
+  class prefix) — distinct from sunguard's pink and collagen's teal, reuses
+  the `#C9A24A`-family gold hue already established for this exact product's
+  special-offer badge inside `/collagen`.
+  Deliberately NOT done in this step (kept scope to "build the page", same
+  as sunguard's original build before its own admin-editing step came
+  later): no `settings.landingPages` admin-override support (hero/before-
+  after/product editing via the "صفحات الهبوط" admin tab) and no custom-slug
+  redirect wiring in `app/[slug]/page.tsx` — `LandingPageKey` in
+  `lib/firebase.ts` is still `"sunguard" | "collagen"` only. Add "glutathione"
+  to that union plus a `META` entry in `app/[slug]/page.tsx` and a form in
+  `landing-pages-view.tsx` if/when the owner wants it admin-editable.
+  Verified: `npm run lint` and `npm run build` clean (`/glutathione` builds
+  as `force-dynamic`, correct route). Full visual verification via a real
+  (non-virtual-time) headless Chromium instance (Playwright, system browser
+  at `/opt/pw-browsers/chromium`, installed temporarily for this session's
+  verification only — not added to `package.json`/lockfile): screenshotted
+  hero, problems grid, science section, benefits, product/order section, and
+  the order modal opened via a real click. Modal correctly shows the
+  quantity stepper, delivery-type toggle, and a running total of
+  `14,500 د.ج × qty + fee`. The only console errors were the expected
+  Firestore-offline fallback (this sandbox has no outbound Firebase
+  connectivity — same as every other landing-page verification in this
+  file), confirming the storefront-must-render-offline invariant holds. NOT
+  exercised: an actual successful submit against production Firestore —
+  same recommendation as collagen/sunguard, owner should place one real test
+  order through `/glutathione` before fully trusting it.
+
 ## Next Up
 
 
