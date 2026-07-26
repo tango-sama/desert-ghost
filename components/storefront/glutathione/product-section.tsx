@@ -29,6 +29,7 @@ export function ProductSection({
             <div className={styles.glProdBrand}>{product.brand}</div>
             <h3>{product.title}</h3>
             <span className={styles.glProdSize}>{product.size}</span>
+            <span className={styles.glGiftTag}>🎁 + هدية مجانية</span>
             <ul className={styles.glProdBullets}>
               <li>
                 <b>✓</b>

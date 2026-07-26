@@ -6,19 +6,23 @@ import { useDeliveryData } from "@/hooks/use-delivery-data";
 import { TikTokLiveButton } from "@/components/storefront/tiktok-live-button";
 import { Topbar } from "./topbar";
 import { Hero } from "./hero";
-import { Highlight } from "./highlight";
-import { Problems } from "./problems";
-import { Science } from "./science";
 import { Benefits } from "./benefits";
+import { Formula } from "./formula";
+import { Gift } from "./gift";
+import { CareRoutine } from "./care-routine";
 import { ProductSection } from "./product-section";
-import { HowItWorks } from "./how-it-works";
+import { TrustStrip } from "./trust-strip";
+import { Faq } from "./faq";
 import { CtaBanner } from "./cta-banner";
 import { Footer } from "./footer";
 import { StickyBar } from "./sticky-bar";
 import { OrderModal } from "./order-modal";
-import { GLUTATHIONE_PRODUCT } from "./product";
+import { GLUTATHIONE_PRODUCT, GIFT_SOAP } from "./product";
 import styles from "./glutathione.module.css";
 
+// Section order matches the owner's reference mockup: hero, benefits
+// strip, ingredient-formula split, free-gift detail, before/after +
+// usage, product/order card, trust strip, FAQ, final CTA.
 export function GlutathionePage({
   settings,
   isTikTokLive,
@@ -47,13 +51,14 @@ export function GlutathionePage({
   return (
     <div className={styles.glutathione} dir="rtl">
       <Topbar scrolled={topScrolled} />
-      <Hero ref={heroRef} onOrder={() => setModalOpen(true)} product={GLUTATHIONE_PRODUCT} />
-      <Highlight product={GLUTATHIONE_PRODUCT} />
-      <Problems />
-      <Science />
+      <Hero ref={heroRef} onOrder={() => setModalOpen(true)} product={GLUTATHIONE_PRODUCT} gift={GIFT_SOAP} />
       <Benefits />
+      <Formula product={GLUTATHIONE_PRODUCT} />
+      <Gift gift={GIFT_SOAP} />
+      <CareRoutine />
       <ProductSection onOrder={() => setModalOpen(true)} product={GLUTATHIONE_PRODUCT} />
-      <HowItWorks />
+      <TrustStrip />
+      <Faq />
       <CtaBanner onOrder={() => setModalOpen(true)} />
       <Footer />
       <TikTokLiveButton settings={settings} isLive={isTikTokLive} />
@@ -63,6 +68,7 @@ export function GlutathionePage({
         settings={settings}
         cache={cache}
         product={GLUTATHIONE_PRODUCT}
+        gift={GIFT_SOAP}
         onClose={() => setModalOpen(false)}
       />
     </div>

@@ -5,8 +5,13 @@ export function CtaBanner({ onOrder }: { onOrder: () => void }) {
   return (
     <RevealRoot>
       <div className={`${styles.glCta} reveal`}>
-        <h2>استعيدي إشراق بشرتكِ من الداخل</h2>
-        <p>ثلاثية الجلوتاثيون والسيستئين وفيتامين C — الدفع عند الاستلام، وتوصيل لكل الولايات.</p>
+        <h2>ابدئي إشراقتكِ اليوم</h2>
+        <p>Glutathione, Cysteine &amp; Vitamin C — بالإضافة إلى هدية مجانية مع كل طلب.</p>
+        <div className={styles.glCtaChecks}>
+          <span>✅ توصيل سريع</span>
+          <span>✅ الدفع عند الاستلام</span>
+          <span>✅ منتج أصلي 100%</span>
+        </div>
         <button type="button" className={styles.glBtn} onClick={onOrder}>
           🛒 اطلبيه الآن
         </button>

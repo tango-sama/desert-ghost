@@ -763,6 +763,74 @@ not the intended state (see `development-workflow.md`).
   Firestore-offline fallback noted throughout this file (no outbound
   Firebase access in this sandbox).
 
+- `/glutathione` rebuilt again to match a second, much more specific owner
+  reference (2026-07-26, same session): a full mockup made for this exact
+  product (navy + gold, matching the real Life Extension bottle branding).
+  Ported the structure section-by-section: Hero (rewritten to dark navy —
+  palette changed from the earlier espresso-brown to navy/gold, `--gl-deep`
+  now `#0f1f3d`, since the reference's colors match the real bottle),
+  6-column Benefits strip, a new `formula.tsx` (two-column ingredient-trio
+  split with product photo + decorative "molecule" circles, replacing the
+  old 3-card `science.tsx`), a new `gift.tsx` free-gift section, a new
+  `care-routine.tsx` (before/after slider + usage-instructions, two
+  columns, replacing `how-it-works.tsx`'s ordering-steps content), a new
+  `trust-strip.tsx` (dark navy icon row), and a new `faq.tsx`. Deleted the
+  now-unused `problems.tsx`, `science.tsx`, `highlight.tsx`, and
+  `how-it-works.tsx` rather than leaving orphaned files.
+  Three things in the reference were NOT copied as-is because they'd be
+  dishonest claims, per a round of clarifying questions with the owner
+  before building:
+  (1) **Free gift is real, not decorative** — the owner confirmed this is
+  an actual promotion. Found the real catalog product it refers to
+  (Firestore `products/1768441716115`, "صابون حليب الأرز / Jam Rice Milk
+  Soap", 1,700 د.ج) and added `GIFT_SOAP` to `product.ts` with its real
+  photo (`public/assets/glutathione/gift-soap.webp`, downloaded from the
+  live Storage URL). Critically, `order-modal.tsx` now adds the gift as a
+  real zero-price line item (`{id: gift.id, title: "🎁 هدية مجانية: ...",
+  price: 0, qty: 1}`) on every submitted order — not just marketing copy —
+  so fulfillment staff actually see it and pack it; also shown in the
+  modal's totals breakdown ("مجاناً") and a note above the form fields.
+  (2) **Testimonials section omitted entirely** — the reference shows 4
+  named customers with photos and star ratings; this store has no real
+  review data, so fabricating attributed quotes would be fake social
+  proof. Owner chose to omit rather than fake it.
+  (3) **Before/after uses the existing illustrative disclaimer, not a
+  fabricated "real result"** — reused the same dark-spots/pigmentation
+  macro photography already on `/sunguard`
+  (`public/assets/sunguard/ba-spots-{before,after}.webp`) instead of
+  generating a new "real-looking" face-photo pair, since a human face
+  reads as a much stronger implied-real-testimonial claim than an
+  abstract skin patch. Kept the same "توضيحية وليست صوراً حقيقية لعملاء"
+  disclaimer. Also skipped the reference's 5-star rating graphic and
+  "+8K/thousands of customers" trust claim in the hero — no real rating
+  or customer-count data exists for this product, so `glTrust` in the
+  hero only lists verified, generic claims (100% original, COD, delivery
+  nationwide), matching the honesty bar already set on the `/glutathione`
+  and `/sunguard` before/after work above.
+  Found and fixed one real bug during verification: the FAQ's delivery
+  answer had "Yalidine وNoest" (Arabic waw glued directly onto a Latin
+  word with no space) — the bidi algorithm rendered it as garbled
+  "Noestg Yalidine". Fixed by adding the missing space
+  ("Yalidine و Noest"); worth remembering as a recurring mixed-direction
+  gotcha whenever Arabic "و" precedes a Latin word with no space.
+  Verified: `npm run lint` / `npm run build` clean. Full visual
+  verification via headless Chromium: screenshotted hero, benefits,
+  formula split, gift section, care-routine (before/after + usage),
+  product/order card, trust strip, FAQ, and CTA — all render with real
+  content. Confirmed the before/after drag slider is still interactive
+  (dragged it, clip-path moved correctly). Note for next verification
+  pass: a `fullPage: true` Playwright screenshot taken immediately on load
+  showed large blank gaps between sections — this is NOT a bug, it's the
+  existing sitewide scroll-reveal pattern (`RevealRoot`/`.reveal`, opacity
+  0 until an `IntersectionObserver` fires) not having triggered yet for
+  never-scrolled-past sections; confirmed each section renders correctly
+  once actually scrolled into view. Only console errors were the usual
+  expected Firestore-offline fallback (no outbound Firebase access in this
+  sandbox). NOT exercised: an actual successful submit against production
+  Firestore (same outstanding recommendation as every other landing page
+  in this file) — owner should also confirm the gift-soap inventory is
+  ready before this goes live, since every order will now promise it.
+
 ## Next Up
 
 

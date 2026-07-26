@@ -2,10 +2,12 @@ import { RevealRoot } from "@/components/storefront/reveal-root";
 import styles from "./glutathione.module.css";
 
 const ITEMS = [
-  { ic: "🌟", h: "يفتّح ويوحّد لون البشرة", p: "يقلل التصبغات والبقع الداكنة الناتجة عن زيادة الميلانين." },
-  { ic: "🛡️", h: "دعم وظائف الكبد", p: "ينشّط عمليات إزالة السموم الطبيعية ويحمي الكبد من الإجهاد الخلوي." },
-  { ic: "💪", h: "تعزيز الجهاز المناعي", p: "يحمي الخلايا المناعية من الأكسدة ويدعم كفاءتها في مقاومة الأمراض." },
-  { ic: "🧬", h: "يحفّز إنتاج الكولاجين", p: "فيتامين C يعزز إنتاج الكولاجين الطبيعي لبشرة أكثر مرونة ونضارة." },
+  { ic: "✨", t: "تساعد على بشرة أكثر إشراقاً ونضارة" },
+  { ic: "🛡️", t: "دعم قوي لمضادات الأكسدة" },
+  { ic: "💧", t: "تدعم إنتاج الكولاجين" },
+  { ic: "🌿", t: "تساعد على حماية البشرة من الإجهاد التأكسدي" },
+  { ic: "💪", t: "تدعم صحة الجهاز المناعي" },
+  { ic: "☀️", t: "تركيبة يومية للعناية بالجمال والصحة" },
 ];
 
 export function Benefits() {
@@ -14,18 +16,14 @@ export function Benefits() {
       <section className={`${styles.glSec} reveal`}>
         <div className={styles.glSecHead}>
           <span className={styles.glLabel}>فوائد المنتج</span>
-          <h2 className={styles.glTitle}>لماذا هذه التركيبة؟</h2>
+          <h2 className={styles.glTitle}>فوائد رائعة لبشرة وصحة أفضل</h2>
           <div className={styles.glUnderline} />
-          <p className={styles.glSub}>
-            ثلاثية الجلوتاثيون والسيستئين وفيتامين C تجمع بين التفتيح والحماية الداخلية في مكمّل واحد.
-          </p>
         </div>
         <div className={styles.glBenefits}>
-          {ITEMS.map((it) => (
-            <div className={styles.glBenefit} key={it.h}>
+          {ITEMS.map((it, i) => (
+            <div className={styles.glBenefit} key={i}>
               <div className={styles.bic}>{it.ic}</div>
-              <h3>{it.h}</h3>
-              <p>{it.p}</p>
+              <p>{it.t}</p>
             </div>
           ))}
         </div>

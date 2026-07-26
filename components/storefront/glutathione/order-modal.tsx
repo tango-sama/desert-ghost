@@ -16,7 +16,7 @@ import {
   type CarrierCache,
   type DeliveryType,
 } from "@/lib/delivery";
-import type { GLUTATHIONE_PRODUCT } from "./product";
+import type { GLUTATHIONE_PRODUCT, GIFT_SOAP } from "./product";
 import { moneyFmt } from "./product";
 import styles from "./glutathione.module.css";
 
@@ -38,12 +38,14 @@ export function OrderModal({
   settings,
   cache,
   product,
+  gift,
   onClose,
 }: {
   open: boolean;
   settings: SiteSettings;
   cache: CarrierCache;
   product: typeof GLUTATHIONE_PRODUCT;
+  gift: typeof GIFT_SOAP;
   onClose: () => void;
 }) {
   const company = pickCompany(settings);
@@ -125,7 +127,10 @@ export function OrderModal({
       deliveryType: delivery,
       deliveryFee: fee,
       insurance: false,
-      items: [{ id: product.id, title: product.title, price: product.price, qty }],
+      items: [
+        { id: product.id, title: product.title, price: product.price, qty },
+        { id: gift.id, title: `🎁 هدية مجانية: ${gift.title}`, price: 0, qty: 1 },
+      ],
       subtotal,
       total: subtotal + fee,
       source: "landing_glutathione",
@@ -161,8 +166,8 @@ export function OrderModal({
               </div>
               <h4>شكراً لثقتكِ، {success.firstName}!</h4>
               <p>
-                استلمنا طلبكِ لـ {success.qty} {success.qty > 1 ? "علب من جلوتاثيون Life Extension" : "علبة من جلوتاثيون Life Extension"}.
-                سنتصل بكِ قريباً على {success.phone} لتأكيد الطلب وترتيب التوصيل.
+                استلمنا طلبكِ لـ {success.qty} {success.qty > 1 ? "علب من جلوتاثيون Life Extension" : "علبة من جلوتاثيون Life Extension"}
+                {" "}+ هدية صابون حليب الأرز مجاناً. سنتصل بكِ قريباً على {success.phone} لتأكيد الطلب وترتيب التوصيل.
               </p>
               <button type="button" className={styles.glSubmit} onClick={resetAndClose}>
                 تم
@@ -170,6 +175,10 @@ export function OrderModal({
             </div>
           ) : (
             <>
+              <div className={styles.glGiftNote}>
+                <span>🎁</span>
+                هديتكِ المجانية: {gift.title} — تُضاف تلقائياً لطلبكِ
+              </div>
               <div className={styles.glQty}>
                 <span className={styles.glQtyLabel}>{product.title}</span>
                 <div className={styles.glQtyCtrl}>
@@ -283,6 +292,10 @@ export function OrderModal({
                       {product.title} ×{qty}
                     </span>
                     <span>{moneyFmt(subtotal)}</span>
+                  </div>
+                  <div className={styles.tl}>
+                    <span>🎁 {gift.title}</span>
+                    <span>مجاناً</span>
                   </div>
                   <div className={styles.tl}>
                     <span>التوصيل</span>

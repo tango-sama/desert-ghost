@@ -1,65 +1,48 @@
-import type { GLUTATHIONE_PRODUCT } from "./product";
+import type { GLUTATHIONE_PRODUCT, GIFT_SOAP } from "./product";
 import styles from "./glutathione.module.css";
 
-// Restyled per the owner's ad-style reference: light background, a big
-// stacked headline with one word on a solid highlight chip (<mark>), and
-// the real product photo on a plain card instead of a dark illustrated
-// spotlight. The soft radial glow still nods to "glow from within".
-function GlowIcon({ className }: { className: string }) {
-  return (
-    <svg className={className} viewBox="0 0 100 100" fill="none">
-      <defs>
-        <radialGradient id="glGlow" cx="50%" cy="45%" r="60%">
-          <stop offset="0%" stopColor="#FFF3D6" />
-          <stop offset="55%" stopColor="var(--gold)" />
-          <stop offset="100%" stopColor="#8a5a1e" />
-        </radialGradient>
-      </defs>
-      {Array.from({ length: 12 }).map((_, i) => (
-        <rect
-          key={i}
-          x="48"
-          y="2"
-          width="4"
-          height="16"
-          rx="2"
-          fill="#FFF3D6"
-          opacity="0.85"
-          transform={`rotate(${i * 30} 50 50)`}
-        />
-      ))}
-      <circle cx="50" cy="50" r="26" fill="url(#glGlow)" />
-    </svg>
-  );
-}
-
+// Restyled (2026-07-26) to match an owner-provided reference built for
+// this exact product: deep navy background matching the real Life
+// Extension bottle branding, a two-tone headline (white + gold line),
+// and a real free-gift callout (see product.ts — GIFT_SOAP is a real
+// catalog item, not a fabricated offer). No star-rating graphic or
+// customer-count claim — this store has no real review data to back
+// that up (see progress-tracker.md).
 export function Hero({
   onOrder,
   ref,
   product,
+  gift,
 }: {
   onOrder: () => void;
   ref: React.Ref<HTMLElement>;
   product: typeof GLUTATHIONE_PRODUCT;
+  gift: typeof GIFT_SOAP;
 }) {
   return (
     <section className={styles.glHero} ref={ref}>
-      <GlowIcon className={styles.glBgGlow} />
+      <div className={styles.glHeroRay} />
       <div className={styles.glHeroInner}>
         <div>
-          <span className={styles.glEyebrow}>✨ ثلاثية الجلوتاثيون + السيستئين + فيتامين C</span>
-          <h1>
-            بشرتكِ تستحق
-            <br />
-            <mark>إشراقاً حقيقياً</mark>
-            <br />
-            من الداخل
-          </h1>
+          <span className={styles.glEyebrow}>✨ تركيبة متقدمة لدعم جمالكِ من الداخل</span>
+          <h1>اكتشفي إشراقتكِ</h1>
+          <span className={styles.glHeroGold}>الطبيعية من الداخل</span>
+          <span className={styles.glHeroSub}>Glutathione, Cysteine &amp; Vitamin C</span>
           <p className={styles.lead}>
-            مكمل Life Extension يجمع الجلوتاثيون (المُختزل) مع السيستئين وفيتامين C لتفتيح البشرة
-            وتوحيد لونها، دعم وظائف الكبد وإزالة السموم، وتعزيز الجهاز المناعي — 100 كبسولة.
+            تساعد على دعم مضادات الأكسدة وتعزيز صحة البشرة، وتوحيد لونها وتفتيحها، من أجل بشرة أكثر
+            نضارة وحيوية — 100 كبسولة.
           </p>
-          <div className={styles.glPill}>🌿 خالٍ من الجلوتين ومعتمد NON-GMO</div>
+
+          <div className={styles.glGiftBox}>
+            <span className={styles.glGiftIcon}>🎁</span>
+            <div className={styles.glGiftTx}>
+              <h4>هدية مجانية</h4>
+              <p>{gift.title} مع كل طلب — لفترة محدودة</p>
+            </div>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className={styles.glGiftThumb} src={gift.image} alt={gift.title} />
+          </div>
+
           <div className={styles.glHeroCtas}>
             <button type="button" className={styles.glBtn} onClick={onOrder}>
               🛒 اطلبيه الآن
