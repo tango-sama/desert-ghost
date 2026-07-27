@@ -647,7 +647,10 @@ export function OrdersView() {
               // Neon halo marks orders placed by website customers themselves;
               // staff-entered orders (admin phone / seller direct) stay plain.
               // The sunguard landing page gets its own pink neon so it's
-              // visually distinct from other customer-placed orders (blue).
+              // visually distinct from other customer-placed orders (blue) —
+              // checkout, collagen, and glutathione orders all share that
+              // blue halo (#00D1FF), distinguished from each other only by
+              // their badge tag below.
               isSunguardOrder
                 ? {
                     borderColor: "#FF2EC4",
@@ -686,6 +689,11 @@ export function OrdersView() {
                   {o.source === "landing_collagen" && (
                     <span className="mr-1 inline-block rounded-full bg-[var(--teal-bg)] px-[9px] py-[2px] text-[.72rem] font-extrabold text-[var(--teal-ink)]">
                       🧴 صفحة الكولاجين
+                    </span>
+                  )}
+                  {o.source === "landing_glutathione" && (
+                    <span className="mr-1 inline-block rounded-full bg-[var(--cyan-bg)] px-[9px] py-[2px] text-[.72rem] font-extrabold text-[var(--cyan-ink)]">
+                      💊 صفحة الجلوتاثيون
                     </span>
                   )}
                   {isSunguardOrder && (

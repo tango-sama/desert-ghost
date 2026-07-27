@@ -1070,6 +1070,33 @@ not the intended state (see `development-workflow.md`).
   back toward top), i.e. it's actually rotating, not a static gradient,
   with no clipping artifacts and box content still fully legible on top.
 
+- Admin orders view: glutathione orders get a blue neon halo + badge
+  (2026-07-26, same session): owner asked for `/glutathione` orders to
+  have a blue neon border in the admin panel. Checked the existing halo
+  logic in `orders-view.tsx` first — it already gives every
+  non-staff, non-sunguard order (checkout, `landing_collagen`, and thus
+  already `landing_glutathione` too) the shared blue `#00D1FF` neon halo
+  by default, only sunguard opts out into its own pink one — so the
+  border itself needed no code change, glutathione orders already had
+  it. What glutathione was missing (unlike collagen's teal tag and
+  sunguard's pink tag) was its own recognizable badge chip. Added a new
+  `--cyan-ink`/`--cyan-bg` token pair to `app/globals.css` (`.admin` /
+  `.admin.light`, following the exact pattern of the existing
+  `--teal-*`/`--pink-*`/`--purple-*` state-accent tokens — a legible
+  cyan-blue distinct from the muted `--blue` info token already used
+  elsewhere) and a "💊 صفحة الجلوتاثيون" badge for
+  `o.source === "landing_glutathione"` in `orders-view.tsx`, right after
+  the collagen badge.
+  Verified: `npm run lint` / `npm run build` clean. This sandbox has no
+  admin credentials (same constraint noted on every other `/amelhadj`
+  entry in this file), so instead of a real login, rendered the new
+  token values and badge/halo markup in an isolated throwaway HTML file
+  (same colors, same class shapes) and screenshotted it — confirmed the
+  new cyan badge is legible and visually distinct from the existing
+  purple/teal/pink badges, and that the blue halo card style renders
+  correctly. Deleted the throwaway file after. NOT exercised: an actual
+  `/glutathione` order flowing through the real admin panel end to end.
+
 ## Next Up
 
 
