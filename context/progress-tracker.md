@@ -1049,6 +1049,27 @@ not the intended state (see `development-workflow.md`).
   in the card at both, then reverted the temporary code and deleted the
   downloaded file (confirmed via `git diff` / `git status`).
 
+- Animated gold rotating border on the free-gift callout box
+  (2026-07-26, same session): owner circled the `glGiftBox` (hero's
+  "هدية مجانية" row) and asked for a golden animated border. Implemented
+  with the standard rotating-conic-gradient-behind-an-opaque-inset-mask
+  technique rather than animating a gradient angle via `@property`
+  (broader browser support, no feature-detection concerns): `.glGiftBox`
+  gained `position: relative; overflow: hidden` and a new `::before`
+  (an oversized spinning `conic-gradient` in gold tones, clipped to the
+  box's rounded shape by the parent's `overflow: hidden`) plus `::after`
+  (a 2px-inset opaque navy+white-wash fill that masks the gradient down
+  to a thin rotating ring) — replacing the previous static
+  `border: 1px solid rgba(gold, .35)`. New `glGiftSpin` keyframe (3.5s
+  linear infinite `rotate`); added to the existing
+  `prefers-reduced-motion: reduce` block so it can be turned off, same
+  as every other animation on this page.
+  Verified: `npm run lint` / `npm run build` clean. Screenshotted three
+  frames ~0.9s apart and cropped tightly to the box — confirmed the gold
+  arc visibly moves position frame to frame (top-right → bottom-right →
+  back toward top), i.e. it's actually rotating, not a static gradient,
+  with no clipping artifacts and box content still fully legible on top.
+
 ## Next Up
 
 

@@ -265,18 +265,52 @@
   animation: glReveal 0.8s var(--ease) 0.38s both;
 }
 
-/* free-gift callout */
+/* free-gift callout — animated rotating gold border. .glGiftBox::before is
+   an oversized spinning conic-gradient clipped to the box's rounded shape
+   by overflow:hidden; .glGiftBox::after sits 2px inset with an opaque
+   fill, masking everything except a thin rotating gold ring. */
 .glGiftBox {
+  position: relative;
+  z-index: 0;
+  overflow: hidden;
   display: flex;
   align-items: center;
   gap: 1rem;
-  background: rgba(255, 255, 255, 0.06);
-  border: 1px solid rgba(240, 196, 104, 0.35);
   border-radius: 18px;
   padding: 0.9rem 1.2rem;
   margin-bottom: 1.6rem;
   max-width: 460px;
   animation: glReveal 0.8s var(--ease) 0.46s both;
+}
+.glGiftBox::before {
+  content: "";
+  position: absolute;
+  inset: -60%;
+  z-index: -2;
+  background: conic-gradient(
+    from 0deg,
+    transparent 0deg,
+    var(--gl-gold) 50deg,
+    #fff3d6 80deg,
+    var(--gl-gold) 110deg,
+    transparent 190deg,
+    transparent 330deg,
+    var(--gl-gold) 360deg
+  );
+  animation: glGiftSpin 3.5s linear infinite;
+}
+.glGiftBox::after {
+  content: "";
+  position: absolute;
+  inset: 2px;
+  z-index: -1;
+  border-radius: 16px;
+  background: linear-gradient(rgba(255, 255, 255, 0.07), rgba(255, 255, 255, 0.07)), var(--gl-deep);
+}
+@keyframes glGiftSpin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 .glGiftIcon {
   width: 46px;
@@ -419,6 +453,7 @@
   .glHeroSub,
   .glHero p.lead,
   .glGiftBox,
+  .glGiftBox::before,
   .glHeroCtas,
   .glTrust,
   .glSpot {
