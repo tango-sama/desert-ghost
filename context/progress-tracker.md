@@ -1031,6 +1031,24 @@ not the intended state (see `development-workflow.md`).
   Reverted the temporary verification code and asset before committing
   (confirmed via `git diff` / `git status`).
 
+- Hero product photo enlarged (2026-07-26, same session): owner still has
+  the messy uncropped catalog photo set as `hero.image` (flagged earlier
+  this session, not yet cleared/replaced on their end) but this time
+  asked only to make it bigger, not to fix the content — respected that
+  scope exactly. Bumped `.glSpotVisual img` from `max-height: 210px` to
+  `320px` and `.glSpotVisual` from `min-height: 190px` to `300px` in
+  `glutathione.module.css`; width scales proportionally since it's
+  `width: auto`, so this enlarges whatever photo is set (default or
+  override) without changing aspect ratio or cropping.
+  Verified: `npm run lint` / `npm run build` clean. Firebase Storage was
+  actually reachable via a plain `curl` from this sandbox this time
+  (unlike earlier in the session) — downloaded the real live
+  `hero.image` file directly and used it (not a substitute) for a
+  temporary local override in `app/glutathione/page.tsx`, screenshotted
+  at desktop and mobile widths confirming the larger size fits cleanly
+  in the card at both, then reverted the temporary code and deleted the
+  downloaded file (confirmed via `git diff` / `git status`).
+
 ## Next Up
 
 
