@@ -355,11 +355,12 @@ export function SettingsView() {
     setBusyKey("sync", true);
     try {
       const res = await callFn<{
-        result?: Record<string, { wilayas?: number }>;
+        result?: Record<string, { wilayas?: number; centers?: number }>;
       }>("syncCarriers");
       const r = res?.result ?? {};
+      const desks = (r.yalidine?.centers ?? 0) + (r.noest?.centers ?? 0) + (r.zr?.centers ?? 0);
       toast(
-        `تم التحديث ✓ — Yalidine ${r.yalidine?.wilayas ?? 0} ولاية، Noest ${r.noest?.wilayas ?? 0} ولاية، ZR ${r.zr?.wilayas ?? 0} ولاية`
+        `تم التحديث ✓ — Yalidine ${r.yalidine?.wilayas ?? 0} ولاية، Noest ${r.noest?.wilayas ?? 0} ولاية، ZR ${r.zr?.wilayas ?? 0} ولاية — ${desks} مكتب (Stop Desk)`
       );
     } catch (e) {
       console.error("syncCarriers", e);
