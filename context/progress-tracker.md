@@ -1099,11 +1099,23 @@ not the intended state (see `development-workflow.md`).
 
 ## Next Up
 
-
+- Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)
+  to also sync each carrier's stop-desk/agency list into
+  `delivery_data/{carrier}.centers` (shape: `Record<wilayaId, {id, name,
+  address?}[]>`), matching the new `CarrierData.centers` field added in
+  `lib/delivery.ts` this session. Until that lands, the Stop Desk dropdown
+  in checkout/seller-order forms correctly shows "no desks available" for
+  every wilaya instead of the old bug (silently showing communes) — but it
+  has no real desks to show yet.
 
 ## Open Questions
 
-- None. Add one here instead of guessing when a requirement is missing.
+- Real Stop Desk (agency office) data doesn't exist anywhere yet — not in
+  Firestore `delivery_data/{carrier}`, not in the static `delivery-data.ts`
+  fallback. `lib/delivery.ts`'s `centersForCarrier()` is wired up and ready
+  to read `CarrierData.centers`, but that field is only populated once
+  `syncCarriers` is extended (see Next Up). Until then Stop Desk mode is
+  correctly empty rather than wrong.
 
 ## Architecture Decisions
 
@@ -1164,3 +1176,22 @@ not the intended state (see `development-workflow.md`).
   reuse if it recurs: stop the dev server, delete `.next`, `npm run dev`.
   Callable path separately verified healthy (modular-SDK probe of
   `getParcelStatus` → `not-found` for a fake orderId, as expected).
+- 2026-07-29: Fixed the admin/staff order form's Stop Desk bug in
+  `checkout-form.tsx` and `seller-order-modal.tsx` (the two forms where
+  staff explicitly pick a delivery company — gated behind `useIsStaff()`).
+  Root cause: both forms derived a single `communeOptions` list from
+  `communesForCarrier()` and reused it for the البلدية dropdown regardless
+  of delivery type, so Stop Desk mode showed communes because no separate
+  stop-desk data path existed at all — `CarrierData` (`lib/delivery.ts`)
+  only ever had `wilayas`/`communes`/`fees`. Added a `centers` field to
+  `CarrierData` and a `centersForCarrier()` reader (deliberately no
+  static/commune fallback), and branched the dropdown on `deliveryType`:
+  Home → communes, Stop Desk → this carrier's desks in this wilaya only.
+  Also tightened the clearing rules to match spec exactly: changing
+  delivery company now unconditionally clears wilaya + delivery type +
+  commune/desk (previously it only cleared them if the new carrier
+  couldn't resolve the old wilaya); changing delivery type now clears the
+  commune/desk pick too (previously it didn't, so a stale commune string
+  could resurface). Real stop-desk data still needs a backend change — see
+  Next Up / Open Questions — so Stop Desk correctly renders empty
+  ("no مكاتب available") until `syncCarriers` is extended to sync it.

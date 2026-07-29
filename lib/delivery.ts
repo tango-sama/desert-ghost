@@ -18,12 +18,22 @@ export function companyInfo(id: Carrier) {
   return COMPANIES.find((c) => c.id === id)!;
 }
 
+// A stop desk (agency office) belonging to one carrier in one wilaya —
+// synced from that carrier's own "centers" API, never derived from the
+// commune list (a wilaya's stop desks are a small subset of its communes,
+// at carrier-specific addresses).
+export type CarrierCenter = { id: number | string; name: string; address?: string };
+
 // Live per-carrier data synced from Firestore `delivery_data/{carrier}` (see
 // syncCarriers in trinkl/functions/index.js) — overrides the static defaults
-// in delivery-data.ts when present.
+// in delivery-data.ts when present. `centers` is optional because the sync
+// job may not populate it yet for every carrier; callers must NOT fall back
+// to `communes` when it's missing — an empty/loading desk list, not the
+// commune list, is the correct state until real desk data is synced.
 export type CarrierData = {
   wilayas: { id: number | string; ar: string; fr: string }[];
   communes: Record<string, string[]>;
+  centers?: Record<string, CarrierCenter[]>;
   fees: Record<string, { home: number; desk: number }>;
 };
 export type CarrierCache = Partial<Record<Carrier, CarrierData>>;
@@ -69,6 +79,17 @@ export function communesForCarrier(company: Carrier, id: number | string, cache:
   const d = cache[company];
   if (d && d.communes[String(id)]) return d.communes[String(id)];
   return communes(id).map((c) => c.fr || c.ar);
+}
+
+// Stop desks (agency offices) THIS carrier runs in THIS wilaya — the Stop
+// Desk equivalent of communesForCarrier(). Deliberately has no static
+// fallback: unlike communes (which have an offline default grid), stop-desk
+// addresses only exist as each carrier's own live-synced list, so an
+// unsynced/empty result must render as "no desks (yet)", never silently
+// substitute the commune list.
+export function centersForCarrier(company: Carrier, id: number | string, cache: CarrierCache): CarrierCenter[] {
+  const d = cache[company];
+  return d?.centers?.[String(id)] ?? [];
 }
 
 // Owner-confirmed fee corrections that override the synced grid.

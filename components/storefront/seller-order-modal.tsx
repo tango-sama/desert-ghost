@@ -10,6 +10,7 @@ import { generateOrderNumber } from "@/lib/order";
 import {
   CARRIER_ORDER,
   carrierDataReady,
+  centersForCarrier,
   communesForCarrier,
   companyInfo,
   feeForCarrier,
@@ -69,27 +70,29 @@ export function SellerOrderModal({
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
 
-  // Switching carrier swaps the wilaya list and fee grid to that carrier's;
-  // a selection the new carrier doesn't serve is cleared so no stale
-  // wilaya/commune (or its fee) survives the switch.
+  // Switching carrier changes the whole shape of the form underneath it —
+  // a different carrier serves different wilayas, different communes, and
+  // an entirely different stop-desk list — so every downstream selection is
+  // cleared unconditionally rather than carried over.
   function selectCompany(c: Carrier) {
     setSelectedCompany(c);
-    if (!wilayaId) return;
-    if (!carrierDataReady(c, cache)) {
-      // That carrier's real list hasn't loaded yet — don't trust a match
-      // resolved against another carrier's shape; clear and let the user
-      // re-pick once the loading state below resolves.
-      setWilayaId("");
-      setCommune("");
-      return;
-    }
-    const w = wilayaForCarrier(c, wilayaId, cache);
-    if (!w) {
-      setWilayaId("");
-      setCommune("");
-    } else if (commune && !communesForCarrier(c, w.id, cache).includes(commune)) {
-      setCommune("");
-    }
+    setWilayaId("");
+    setDeliveryType("home");
+    setCommune("");
+  }
+
+  // Wilaya change reloads the commune/desk list (derived from selectedWilaya
+  // below) and clears whatever was previously picked from the old wilaya.
+  function selectWilaya(id: string) {
+    setWilayaId(id);
+    setCommune("");
+  }
+
+  // Delivery-type change swaps between two unrelated lists (communes vs.
+  // this carrier's stop desks), so the previous pick can never carry over.
+  function selectDeliveryType(type: DeliveryType) {
+    setDeliveryType(type);
+    setCommune("");
   }
 
   // Never show wilaya/commune options from another carrier's shape (or the
@@ -98,11 +101,22 @@ export function SellerOrderModal({
   const carrierReady = carrierDataReady(company, cache);
   const wilayaList = carrierReady ? wilayasFor(company, cache) : [];
   const selectedWilaya = carrierReady && wilayaId ? wilayaForCarrier(company, wilayaId, cache) : null;
+  // Home and Stop Desk pull from two entirely different lists — communes
+  // are addresses within the wilaya, stop desks are this carrier's own
+  // agency offices in it. Only ONE of these is ever the active list; they
+  // must never be merged or substituted for each other.
   const communeOptions = selectedWilaya ? communesForCarrier(company, selectedWilaya.id, cache) : [];
-  // The commune is only ever valid against the CURRENT carrier's commune
-  // list — carriers serve different communes and their live lists load
-  // async, so validity is derived instead of trusting stale state.
-  const communeValue = communeOptions.includes(commune) ? commune : "";
+  const deskOptions = selectedWilaya ? centersForCarrier(company, selectedWilaya.id, cache) : [];
+  const isOffice = deliveryType === "office";
+  // The selection is only ever valid against the CURRENT carrier+wilaya+
+  // deliveryType's own list — switching any of those invalidates a stale
+  // pick instead of trusting it, since the same string could otherwise
+  // coincidentally match in the new list.
+  const selectedDesk = isOffice ? deskOptions.find((d) => String(d.id) === commune) ?? null : null;
+  const communeValue = isOffice ? (selectedDesk ? commune : "") : communeOptions.includes(commune) ? commune : "";
+  // What actually gets saved/displayed as the destination — the commune
+  // name for Home, the desk's own name for Stop Desk (never its raw id).
+  const communeLabel = isOffice ? selectedDesk?.name ?? "" : communeValue;
   const feeHome = selectedWilaya ? feeForCarrier(company, selectedWilaya.id, "home", cache) : null;
   const feeOffice = selectedWilaya ? feeForCarrier(company, selectedWilaya.id, "office", cache) : null;
   const deliveryFee = selectedWilaya ? feeForCarrier(company, selectedWilaya.id, deliveryType, cache) : 0;
@@ -135,7 +149,7 @@ export function SellerOrderModal({
       wilaya: selectedWilaya?.ar || "",
       wilayaId: selectedWilaya?.id ?? null,
       wilayaFr: selectedWilaya?.fr || "",
-      baladiya: communeValue,
+      baladiya: communeLabel,
       address: deliveryType === "home" ? address.trim() : "",
       deliveryCompany: company,
       deliveryType,
@@ -212,7 +226,7 @@ export function SellerOrderModal({
             <FormField label="الولاية" required>
               <select
                 value={wilayaId}
-                onChange={(e) => { setWilayaId(e.target.value); setCommune(""); }}
+                onChange={(e) => selectWilaya(e.target.value)}
                 disabled={!carrierReady}
                 className={inputClass(errors.wilaya)}
               >
@@ -222,20 +236,32 @@ export function SellerOrderModal({
                 ))}
               </select>
             </FormField>
-            <FormField label="البلدية" required>
+            <FormField label={isOffice ? "المكتب (Stop Desk)" : "البلدية"} required>
               <select value={communeValue} onChange={(e) => setCommune(e.target.value)} disabled={!selectedWilaya} className={inputClass(errors.commune)}>
-                <option value="">{selectedWilaya ? "اختاري البلدية" : "اختاري الولاية أولاً"}</option>
-                {communeOptions.map((n) => <option key={n} value={n}>{n}</option>)}
+                <option value="">
+                  {!selectedWilaya
+                    ? "اختاري الولاية أولاً"
+                    : isOffice
+                      ? deskOptions.length
+                        ? "اختاري المكتب"
+                        : "لا توجد مكاتب متاحة لهذه الولاية"
+                      : "اختاري البلدية"}
+                </option>
+                {isOffice
+                  ? deskOptions.map((d) => (
+                      <option key={d.id} value={String(d.id)}>{d.address ? `${d.name} — ${d.address}` : d.name}</option>
+                    ))
+                  : communeOptions.map((n) => <option key={n} value={n}>{n}</option>)}
               </select>
             </FormField>
           </div>
 
           <FormField label="نوع التوصيل">
             <div className="grid grid-cols-2 gap-2.5">
-              <button type="button" onClick={() => setDeliveryType("home")} style={deliveryType === "home" ? { borderColor: "var(--rose)", background: "var(--rose-tint)", color: "var(--rose-deep)" } : undefined} className="rounded-xl border-[1.5px] border-[var(--line)] p-2.5 text-center text-[0.82rem] font-extrabold">
+              <button type="button" onClick={() => selectDeliveryType("home")} style={deliveryType === "home" ? { borderColor: "var(--rose)", background: "var(--rose-tint)", color: "var(--rose-deep)" } : undefined} className="rounded-xl border-[1.5px] border-[var(--line)] p-2.5 text-center text-[0.82rem] font-extrabold">
                 🏠 للمنزل<small className="mt-0.5 block font-extrabold">{feeHome != null ? priceFmt(feeHome) : "—"}</small>
               </button>
-              <button type="button" onClick={() => setDeliveryType("office")} style={deliveryType === "office" ? { borderColor: "var(--rose)", background: "var(--rose-tint)", color: "var(--rose-deep)" } : undefined} className="rounded-xl border-[1.5px] border-[var(--line)] p-2.5 text-center text-[0.82rem] font-extrabold">
+              <button type="button" onClick={() => selectDeliveryType("office")} style={deliveryType === "office" ? { borderColor: "var(--rose)", background: "var(--rose-tint)", color: "var(--rose-deep)" } : undefined} className="rounded-xl border-[1.5px] border-[var(--line)] p-2.5 text-center text-[0.82rem] font-extrabold">
                 🏢 المكتب (Stop Desk)<small className="mt-0.5 block font-extrabold">{feeOffice != null ? priceFmt(feeOffice) : "—"}</small>
               </button>
             </div>
