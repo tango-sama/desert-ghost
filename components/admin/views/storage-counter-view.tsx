@@ -145,7 +145,9 @@ export function StorageCounterView() {
           <table className="w-full border-collapse">
             <thead>
               <tr>
-                <th className={`${thCls} sticky top-0 z-[5] bg-card`}>الكمية الأساسية</th>
+                <th className={`${thCls} sticky top-0 z-[5] bg-card`} style={{ width: 76 }}>
+                  الكمية الأساسية
+                </th>
                 <th className={`${thCls} sticky top-0 z-[5] bg-card`}>المنتج</th>
                 <th className={`${thCls} sticky top-0 z-[5] bg-card`}>في المحل</th>
                 <th className={`${thCls} sticky top-0 z-[5] bg-card`}>قيد الشحن</th>
@@ -171,7 +173,7 @@ export function StorageCounterView() {
                             const n = Number(e.target.value);
                             if (n !== stock) void saveStock(p.id, n);
                           }}
-                          className="w-20 rounded-[9px] border-[1.5px] border-input bg-[var(--card-2)] px-2 py-1 text-center text-foreground outline-none focus:border-[var(--rose)]"
+                          className="w-14 rounded-[9px] border-[1.5px] border-input bg-[var(--card-2)] px-1 py-1 text-center text-foreground outline-none focus:border-[var(--rose)]"
                         />
                       </td>
                       <td className={tdCls}>
