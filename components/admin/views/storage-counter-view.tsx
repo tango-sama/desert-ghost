@@ -178,6 +178,7 @@ export function StorageCounterView() {
                       </td>
                       <td className={tdCls}>
                         <div className="flex items-center gap-3">
+                          <span className="text-[.72rem]">{p.title ?? p.name}</span>
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
                             src={productImages(p)[0] || transparent()}
@@ -187,7 +188,6 @@ export function StorageCounterView() {
                             }}
                             className="h-[84px] w-[84px] flex-shrink-0 rounded-[9px] bg-[var(--card-2)] object-cover"
                           />
-                          <span className="text-[.72rem]">{p.title ?? p.name}</span>
                         </div>
                       </td>
                       <td className={`${tdCls} num font-extrabold text-[var(--ok-ink)]`}>{closet}</td>
