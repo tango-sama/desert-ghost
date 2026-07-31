@@ -185,9 +185,9 @@ export function StorageCounterView() {
                             onError={(e) => {
                               e.currentTarget.src = transparent();
                             }}
-                            className="h-[42px] w-[42px] flex-shrink-0 rounded-[9px] bg-[var(--card-2)] object-cover"
+                            className="h-[84px] w-[84px] flex-shrink-0 rounded-[9px] bg-[var(--card-2)] object-cover"
                           />
-                          <span>{p.title ?? p.name}</span>
+                          <span className="text-[.72rem]">{p.title ?? p.name}</span>
                         </div>
                       </td>
                       <td className={`${tdCls} num font-extrabold text-[var(--ok-ink)]`}>{closet}</td>
