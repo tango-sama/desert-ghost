@@ -196,7 +196,7 @@ export function StorageCounterView() {
                           className="w-20 rounded-[9px] border-[1.5px] border-input bg-[var(--card-2)] px-2 py-1 text-center text-foreground outline-none focus:border-[var(--rose)]"
                         />
                       </td>
-                      <td className={`${tdCls} num font-extrabold`}>{closet}</td>
+                      <td className={`${tdCls} num font-extrabold text-[var(--ok-ink)]`}>{closet}</td>
                       <td className={`${tdCls} num`}>{stats.sending}</td>
                       <td className={`${tdCls} num text-[var(--ink-3)]`} title="قريباً — سيتم ربطها عند إضافة تعليم الطلبات كمرتجعة">
                         {stats.returned}
