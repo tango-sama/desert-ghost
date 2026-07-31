@@ -145,9 +145,6 @@ export function StorageCounterView() {
           <table className="w-full border-collapse">
             <thead>
               <tr>
-                <th className={`${thCls} sticky top-0 z-[5] bg-card`} style={{ width: 34 }}>
-                  #
-                </th>
                 <th className={`${thCls} sticky top-0 z-[5] bg-card`}>الكمية الأساسية</th>
                 <th className={`${thCls} sticky top-0 z-[5] bg-card`}>المنتج</th>
                 <th className={`${thCls} sticky top-0 z-[5] bg-card`}>في المحل</th>
@@ -158,15 +155,12 @@ export function StorageCounterView() {
             </thead>
             <tbody>
               {pageItems.length ? (
-                pageItems.map((p, i) => {
+                pageItems.map((p) => {
                   const stats = statsById[p.id] ?? EMPTY_STATS;
                   const stock = Number(p.stock ?? 0);
                   const closet = closetFor(stock, stats);
                   return (
                     <tr key={p.id}>
-                      <td className={`${tdCls} num`}>
-                        {(curPage - 1) * PER_PAGE + i + 1}
-                      </td>
                       <td className={tdCls}>
                         <input
                           type="number"
@@ -205,7 +199,7 @@ export function StorageCounterView() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={7}>
+                  <td colSpan={6}>
                     <EmptyState icon="🧮" text="لا توجد منتجات" />
                   </td>
                 </tr>
