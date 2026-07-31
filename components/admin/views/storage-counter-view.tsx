@@ -6,7 +6,6 @@ import { updateDocIn, type Order } from "@/lib/admin";
 import { useAdminStore } from "@/stores/admin-store";
 import {
   sel,
-  tagCls,
   tblWrap,
   thCls,
   tdCls,
@@ -50,12 +49,6 @@ export function StorageCounterView() {
   const [filter, setFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [page, setPage] = useState(1);
-
-  const catMap = useMemo(() => {
-    const m: Record<string, string> = {};
-    categories.forEach((c) => (m[c.id] = c.name));
-    return m;
-  }, [categories]);
 
   // Return tracking doesn't exist yet (order cards have no "mark as failed
   // delivery" flag) — every product's `returned` stays 0 until that future
@@ -156,7 +149,6 @@ export function StorageCounterView() {
                   #
                 </th>
                 <th className={`${thCls} sticky top-0 z-[5] bg-card`}>المنتج</th>
-                <th className={`${thCls} sticky top-0 z-[5] bg-card`}>التصنيف</th>
                 <th className={`${thCls} sticky top-0 z-[5] bg-card`}>الكمية الأساسية</th>
                 <th className={`${thCls} sticky top-0 z-[5] bg-card`}>في المحل</th>
                 <th className={`${thCls} sticky top-0 z-[5] bg-card`}>قيد الشحن</th>
@@ -190,11 +182,6 @@ export function StorageCounterView() {
                         </div>
                       </td>
                       <td className={tdCls}>
-                        <span className={tagCls}>
-                          {catMap[p.category ?? ""] ?? p.category ?? "—"}
-                        </span>
-                      </td>
-                      <td className={tdCls}>
                         <input
                           type="number"
                           min={0}
@@ -218,7 +205,7 @@ export function StorageCounterView() {
                 })
               ) : (
                 <tr>
-                  <td colSpan={8}>
+                  <td colSpan={7}>
                     <EmptyState icon="🧮" text="لا توجد منتجات" />
                   </td>
                 </tr>
