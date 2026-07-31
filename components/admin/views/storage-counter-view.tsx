@@ -148,8 +148,8 @@ export function StorageCounterView() {
                 <th className={`${thCls} sticky top-0 z-[5] bg-card`} style={{ width: 34 }}>
                   #
                 </th>
-                <th className={`${thCls} sticky top-0 z-[5] bg-card`}>المنتج</th>
                 <th className={`${thCls} sticky top-0 z-[5] bg-card`}>الكمية الأساسية</th>
+                <th className={`${thCls} sticky top-0 z-[5] bg-card`}>المنتج</th>
                 <th className={`${thCls} sticky top-0 z-[5] bg-card`}>في المحل</th>
                 <th className={`${thCls} sticky top-0 z-[5] bg-card`}>قيد الشحن</th>
                 <th className={`${thCls} sticky top-0 z-[5] bg-card`}>المرتجعة</th>
@@ -168,6 +168,19 @@ export function StorageCounterView() {
                         {(curPage - 1) * PER_PAGE + i + 1}
                       </td>
                       <td className={tdCls}>
+                        <input
+                          type="number"
+                          min={0}
+                          defaultValue={stock}
+                          key={`${p.id}-${stock}`}
+                          onBlur={(e) => {
+                            const n = Number(e.target.value);
+                            if (n !== stock) void saveStock(p.id, n);
+                          }}
+                          className="w-20 rounded-[9px] border-[1.5px] border-input bg-[var(--card-2)] px-2 py-1 text-center text-foreground outline-none focus:border-[var(--rose)]"
+                        />
+                      </td>
+                      <td className={tdCls}>
                         <div className="flex items-center gap-3">
                           {/* eslint-disable-next-line @next/next/no-img-element */}
                           <img
@@ -180,19 +193,6 @@ export function StorageCounterView() {
                           />
                           <span>{p.title ?? p.name}</span>
                         </div>
-                      </td>
-                      <td className={tdCls}>
-                        <input
-                          type="number"
-                          min={0}
-                          defaultValue={stock}
-                          key={`${p.id}-${stock}`}
-                          onBlur={(e) => {
-                            const n = Number(e.target.value);
-                            if (n !== stock) void saveStock(p.id, n);
-                          }}
-                          className="w-20 rounded-[9px] border-[1.5px] border-input bg-[var(--card-2)] px-2 py-1 text-center text-foreground outline-none focus:border-[var(--rose)]"
-                        />
                       </td>
                       <td className={`${tdCls} num font-extrabold text-[var(--ok-ink)]`}>{closet}</td>
                       <td className={`${tdCls} num text-[var(--info-ink)]`}>{stats.sending}</td>
