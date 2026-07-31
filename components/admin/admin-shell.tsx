@@ -10,6 +10,7 @@ import { ProductsView } from "@/components/admin/views/products-view";
 import { CategoriesView } from "@/components/admin/views/categories-view";
 import { FeaturedView } from "@/components/admin/views/featured-view";
 import { OrdersView } from "@/components/admin/views/orders-view";
+import { StorageCounterView } from "@/components/admin/views/storage-counter-view";
 import { MessagesView } from "@/components/admin/views/messages-view";
 import { IncomeView } from "@/components/admin/views/income-view";
 import { SettingsView } from "@/components/admin/views/settings-view";
@@ -19,6 +20,7 @@ type ViewKey =
   | "products"
   | "categories"
   | "featured"
+  | "storage"
   | "orders"
   | "messages"
   | "income"
@@ -29,6 +31,7 @@ const NAV: { key: ViewKey; icon: string; label: string }[] = [
   { key: "products", icon: "🧴", label: "المنتجات" },
   { key: "categories", icon: "📁", label: "التصنيفات" },
   { key: "featured", icon: "⭐", label: "المميزة" },
+  { key: "storage", icon: "🧮", label: "عداد المخزون" },
   { key: "orders", icon: "📦", label: "الطلبات" },
   { key: "messages", icon: "💬", label: "الرسائل" },
   { key: "income", icon: "💰", label: "الأرباح" },
@@ -40,6 +43,7 @@ const TITLES: Record<ViewKey, string> = {
   products: "المنتجات",
   categories: "التصنيفات",
   featured: "المنتجات المميزة",
+  storage: "عداد المخزون",
   orders: "الطلبات",
   messages: "رسائل الزبائن",
   income: "الأرباح والمصاريف",
@@ -51,6 +55,7 @@ const VIEWS: Record<ViewKey, React.ComponentType> = {
   products: ProductsView,
   categories: CategoriesView,
   featured: FeaturedView,
+  storage: StorageCounterView,
   orders: OrdersView,
   messages: MessagesView,
   income: IncomeView,

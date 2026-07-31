@@ -46,6 +46,14 @@
 - Orders accumulate carrier state in-place: parcel creation writes
   `{ tracking, label }` under a per-carrier key (`yalidine`, `noest`, `zr`) on
   the order doc.
+- `products.stock` (optional number, admin-entered on restock) is the total
+  units ever stocked for a product — not a live closet count. The admin
+  Storage Counter tab (`/amelhadj`) derives "in closet" as
+  `stock - sending - delivered - returned`, where sending/delivered are
+  computed live from `orders[].items[].qty` grouped by each order's
+  `trackingStatus` (same derivation the orders-tracking stepper already
+  uses). "Returned" is a placeholder (always 0) until order cards gain a
+  manual failed-delivery/return flag — a planned follow-up, not yet built.
 
 ## Auth Model
 

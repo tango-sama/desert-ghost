@@ -41,6 +41,10 @@ export type Product = {
   image?: string;
   images?: string[];
   lastModified?: number;
+  // Total units ever stocked (admin-entered on restock) — NOT a live closet
+  // count. The Storage Counter admin tab derives "in closet" from this
+  // minus units currently out (sending/delivered/return).
+  stock?: number;
   [key: string]: unknown;
 };
 

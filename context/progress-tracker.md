@@ -1097,6 +1097,53 @@ not the intended state (see `development-workflow.md`).
   correctly. Deleted the throwaway file after. NOT exercised: an actual
   `/glutathione` order flowing through the real admin panel end to end.
 
+## Completed (this session)
+
+- Admin "عداد المخزون" (Storage Counter) tab added (2026-07-31): new tab in
+  the ghost admin panel (`/amelhadj`) listing every product with its
+  category, an admin-editable "الكمية الأساسية" (total-ever-stocked)
+  number, and three live-computed columns — قيد الشحن (sending), المرتجعة
+  (return), تم التسليم (delivered) — plus a derived "في المحل" (in closet)
+  count, category filter, and a search bar. Owner explicitly chose
+  auto-decrement (asked via AskUserQuestion) over manually retyping a
+  closet count each time: `products.stock` (new optional field,
+  `lib/firebase.ts`) is the total units ever brought into the shop, and "in
+  closet" = `stock - sending - delivered - returned` (clamped at 0),
+  computed live in `components/admin/views/storage-counter-view.tsx` from
+  the already-loaded `orders` store slice — no new writes needed as orders
+  move through delivery. Sending/delivered reuse the exact same
+  `trackingStatus.stage`/`alert` derivation `orders-view.tsx`'s stepper
+  already uses (`stage == null` → still counts as "sending" pending a real
+  return signal; last stage reached with no alert → delivered).
+  The "المرتجعة" (return) column is a placeholder — always 0 — because
+  there's no order-level "mark as failed delivery / return" flag yet; the
+  owner said that's future work on the order cards. Once that field exists,
+  wire it into this same per-product aggregation instead of the hardcoded
+  `0` (see Open Questions below).
+  New tab registered in `components/admin/admin-shell.tsx` (`ViewKey`/`NAV`/
+  `TITLES`/`VIEWS`, icon 🧮). New view file follows `products-view.tsx`'s
+  established list pattern exactly (local `useState` search/filter/page,
+  `useMemo` filtering, shared `tblWrap`/`thCls`/`tdCls`/`tagCls`/`Pager`/
+  `EmptyState` from `components/admin/ui.tsx`, hand-rolled `<table>` — no
+  shadcn Table/Select exist in this repo, kept consistent).
+  Verified: `npm run lint` / `npm run build` clean. This sandbox has no
+  admin credentials (same recurring constraint as every other `/amelhadj`
+  entry in this file), so instead of a real login, seeded the Zustand admin
+  store with fake products/categories/orders on a temporary throwaway route
+  (deleted before committing, confirmed via `git status`) and screenshotted
+  it with a temporarily-installed Playwright (`--no-save`, removed after,
+  `package-lock.json` reverted via `git checkout`) against the real system
+  Chromium — confirmed the table renders with correct dark RTL styling,
+  search narrows results, category filter works, and the closet/sending/
+  delivered math is exactly correct against hand-computed expected values
+  (e.g. stock 50, one order qty 5 delivered + one order qty 3 in-transit →
+  closet 42 / sending 3 / delivered 5). Also confirmed editing the base
+  stock number updates the computed closet count live (optimistic store
+  patch) with no console errors. NOT exercised: an actual write round-trip
+  against production Firestore, and the real admin UI end-to-end through a
+  real login — same standing recommendation as every other `/amelhadj`
+  tab in this file.
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)
@@ -1110,6 +1157,15 @@ not the intended state (see `development-workflow.md`).
 
 ## Open Questions
 
+- Storage Counter's "المرتجعة" (return) column is a hardcoded 0 — the owner
+  wants a future feature where an order card gets an explicit "mark as
+  failed delivery / return" state (owner note: returns usually take ~3
+  weeks to physically get back to the closet). No schema field or UI for
+  that exists yet. Once it's built (likely a boolean/state field on
+  `Order`, set from `orders-view.tsx`), update
+  `components/admin/views/storage-counter-view.tsx`'s `classifyOrder()` to
+  read it instead of the placeholder — the aggregation, closet-math, and
+  table column are already wired and waiting for a real signal.
 - Real Stop Desk (agency office) data doesn't exist anywhere yet — not in
   Firestore `delivery_data/{carrier}`, not in the static `delivery-data.ts`
   fallback. `lib/delivery.ts`'s `centersForCarrier()` is wired up and ready
