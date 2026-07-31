@@ -130,20 +130,27 @@ export function StorageCounterView() {
       </div>
 
       <div className={tblWrap}>
-        <div className="overflow-x-auto">
+        {/* Bounded + independently scrollable (both axes) so the sticky
+            header has a real scroll container to stick within — a header
+            made `sticky` inside a plain `overflow-x-auto` div never sticks,
+            because that div's forced `overflow-y: auto` (a side effect of
+            setting `overflow-x`) still becomes the header's containing
+            scroll box, and that box's own scrollTop never moves since the
+            page scrolls around it instead. */}
+        <div className="max-h-[65vh] overflow-auto">
           <table className="w-full border-collapse">
             <thead>
               <tr>
-                <th className={thCls} style={{ width: 34 }}>
+                <th className={`${thCls} sticky top-0 z-[5] bg-card`} style={{ width: 34 }}>
                   #
                 </th>
-                <th className={thCls}>المنتج</th>
-                <th className={thCls}>التصنيف</th>
-                <th className={thCls}>الكمية الأساسية</th>
-                <th className={thCls}>في المحل</th>
-                <th className={thCls}>قيد الشحن</th>
-                <th className={thCls}>المرتجعة</th>
-                <th className={thCls}>تم التسليم</th>
+                <th className={`${thCls} sticky top-0 z-[5] bg-card`}>المنتج</th>
+                <th className={`${thCls} sticky top-0 z-[5] bg-card`}>التصنيف</th>
+                <th className={`${thCls} sticky top-0 z-[5] bg-card`}>الكمية الأساسية</th>
+                <th className={`${thCls} sticky top-0 z-[5] bg-card`}>في المحل</th>
+                <th className={`${thCls} sticky top-0 z-[5] bg-card`}>قيد الشحن</th>
+                <th className={`${thCls} sticky top-0 z-[5] bg-card`}>المرتجعة</th>
+                <th className={`${thCls} sticky top-0 z-[5] bg-card`}>تم التسليم</th>
               </tr>
             </thead>
             <tbody>

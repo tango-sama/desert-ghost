@@ -1144,6 +1144,39 @@ not the intended state (see `development-workflow.md`).
   real login — same standing recommendation as every other `/amelhadj`
   tab in this file.
 
+- Storage Counter tab: sticky table header (2026-07-31, same feature,
+  follow-up): owner asked for the product table's header row to stay
+  visible while scrolling. Found a real bug while verifying the first
+  attempt (`sticky` + `top-16` on each `<th>`, matching the topbar's
+  height): it didn't stick at all — screenshotted proof, header just
+  scrolled away with the rows. Root cause is a CSS overflow-computation
+  quirk, not a typo: the table's `.overflow-x-auto` wrapper (needed for
+  horizontal scroll on narrow admin screens) forces its computed
+  `overflow-y` to `auto` too (per spec, pairing a non-`visible` overflow-x
+  with a `visible` overflow-y computes the latter as `auto`), which makes
+  that div — not the page/window — the nearest scroll container for any
+  sticky descendant. Since that div's own `scrollTop` never moves (its
+  height is intrinsic, nothing forces it to scroll), a `sticky` element
+  inside it never sticks relative to the page.
+  Fixed by giving that wrapper a real, bounded scroll box instead of
+  relying on window scroll: `max-h-[65vh] overflow-auto` (both axes) so it
+  becomes the actual scrolling context, and pinning each `<th>` (still
+  `components/admin/views/storage-counter-view.tsx`) to `sticky top-0
+  z-[5] bg-card` within it (the standard "sticky header, cell-level not
+  thead-level" technique for `border-collapse` tables) — table now scrolls
+  internally past ~65% of the viewport height instead of the whole page
+  scrolling through it, with search/filter and the pager staying outside
+  that box, always visible.
+  Verified: `npm run lint` / `npm run build` clean. Same throwaway-route +
+  seeded-store technique as the original tab's verification (20 fake
+  products, deleted before committing, confirmed via `git status`);
+  measured the header `<th>`'s bounding rect via Playwright before and
+  after fixing — first attempt: header scrolled to a negative/off-screen
+  `top` after scrolling; after the fix: header's `top` stays exactly equal
+  to its scroll container's `top` (offset 0) after scrolling the container
+  400px, and a screenshot confirms it visually — rows 7-11 scroll under an
+  opaque, pinned header row with no see-through or clipping.
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)
