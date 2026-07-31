@@ -173,10 +173,10 @@ export function AdminShell() {
         </div>
       </aside>
 
-      <main className="mr-[230px] min-h-screen px-8 py-7 pt-0 max-[860px]:mr-0">
+      <main className="mr-[230px] min-h-screen px-3 py-7 pt-0 max-[860px]:mr-0">
         {/* sticky topbar: title (+ the orders search box) stay visible
             while scrolling the list */}
-        <div className="sticky top-0 z-10 -mx-8 mb-4 flex flex-wrap items-center justify-between gap-4 bg-background/95 px-8 py-4 backdrop-blur max-[860px]:ps-[calc(42px+.9rem)]">
+        <div className="sticky top-0 z-10 -mx-3 mb-4 flex flex-wrap items-center justify-between gap-4 bg-background/95 px-3 py-4 backdrop-blur max-[860px]:ps-[calc(42px+.9rem)]">
           {/* stays fixed while scrolling on mobile, above the sidebar so it
               can close it too */}
           <button
