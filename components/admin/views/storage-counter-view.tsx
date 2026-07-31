@@ -145,7 +145,7 @@ export function StorageCounterView() {
           <table className="w-full border-collapse">
             <thead>
               <tr>
-                <th className={`${thCls} sticky top-0 z-[5] bg-card`} style={{ width: 76 }}>
+                <th className={`${thCls} sticky top-0 z-[5] bg-card !px-2`} style={{ width: 70 }}>
                   الكمية الأساسية
                 </th>
                 <th className={`${thCls} sticky top-0 z-[5] bg-card`}>المنتج</th>
@@ -163,7 +163,7 @@ export function StorageCounterView() {
                   const closet = closetFor(stock, stats);
                   return (
                     <tr key={p.id}>
-                      <td className={tdCls}>
+                      <td className={`${tdCls} !px-2`}>
                         <input
                           type="number"
                           min={0}
