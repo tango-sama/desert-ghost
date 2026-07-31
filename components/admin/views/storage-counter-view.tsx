@@ -24,6 +24,12 @@ function itemQty(it: { qty?: number; quantity?: number }): number {
   return it.qty ?? it.quantity ?? 1;
 }
 
+function closetFor(stock: number, stats: Stats): number {
+  return Math.max(0, stock - stats.sending - stats.delivered - stats.returned);
+}
+
+const EMPTY_STATS: Stats = { sending: 0, delivered: 0, returned: 0 };
+
 // Same delivered/return derivation orders-view.tsx's stepper uses:
 // stage == null → return/cancel; last stage reached with no alert → delivered;
 // everything else placed-but-not-yet-resolved → sending.
@@ -75,8 +81,13 @@ export function StorageCounterView() {
       const q = search.toLowerCase();
       l = l.filter((p) => String(p.title ?? "").toLowerCase().includes(q));
     }
-    return l.sort((a, b) => String(a.title ?? "").localeCompare(String(b.title ?? "")));
-  }, [products, filter, search]);
+    // High to low by "في المحل" (computed closet quantity).
+    return l.sort((a, b) => {
+      const aCloset = closetFor(Number(a.stock ?? 0), statsById[a.id] ?? EMPTY_STATS);
+      const bCloset = closetFor(Number(b.stock ?? 0), statsById[b.id] ?? EMPTY_STATS);
+      return bCloset - aCloset;
+    });
+  }, [products, filter, search, statsById]);
 
   const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
   const curPage = Math.min(page, pages);
@@ -156,9 +167,9 @@ export function StorageCounterView() {
             <tbody>
               {pageItems.length ? (
                 pageItems.map((p, i) => {
-                  const stats = statsById[p.id] ?? { sending: 0, delivered: 0, returned: 0 };
+                  const stats = statsById[p.id] ?? EMPTY_STATS;
                   const stock = Number(p.stock ?? 0);
-                  const closet = Math.max(0, stock - stats.sending - stats.delivered - stats.returned);
+                  const closet = closetFor(stock, stats);
                   return (
                     <tr key={p.id}>
                       <td className={`${tdCls} num`}>
@@ -197,8 +208,8 @@ export function StorageCounterView() {
                         />
                       </td>
                       <td className={`${tdCls} num font-extrabold text-[var(--ok-ink)]`}>{closet}</td>
-                      <td className={`${tdCls} num`}>{stats.sending}</td>
-                      <td className={`${tdCls} num text-[var(--ink-3)]`} title="قريباً — سيتم ربطها عند إضافة تعليم الطلبات كمرتجعة">
+                      <td className={`${tdCls} num text-[var(--info-ink)]`}>{stats.sending}</td>
+                      <td className={`${tdCls} num text-[var(--alert-ink)]`} title="قريباً — سيتم ربطها عند إضافة تعليم الطلبات كمرتجعة">
                         {stats.returned}
                       </td>
                       <td className={`${tdCls} num`}>{stats.delivered}</td>
