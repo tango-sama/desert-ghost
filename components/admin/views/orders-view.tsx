@@ -626,15 +626,21 @@ export function OrdersView() {
   }
 
   async function toggleFulfilled(o: Order) {
-    const carrier = orderCarrier(o);
-    // "تعليم كجديد" on an order that already has a created parcel: also
-    // clear the label/parcel/tracking data, so the order goes back to its
-    // starting state and a fresh label can be created with ANY delivery
-    // company again — not just re-toggled back onto the same carrier.
-    if (o.fulfilled && carrier) {
+    if (o.fulfilled) {
+      // "تعليم كجديد": always clear the delivery label / parcel price / any
+      // created carrier tracking, so the order goes back to its starting
+      // state — regardless of whether a parcel was actually created. The
+      // label can be typed into the note field (saved on blur) before a
+      // parcel ever exists, so it must be cleared even when there's no
+      // carrier tracking to clear alongside it.
+      const carrier = orderCarrier(o);
+      const hasDeliveryData = !!(o.deliveryLabel || o.parcelPrice != null || carrier);
       if (
+        hasDeliveryData &&
         !confirm(
-          `سيتم حذف وصل ${CO[carrier].name} الحالي (رقم التتبع) لهذا الطلب حتى تتمكني من إنشاء وصل جديد بأي شركة توصيل. متابعة؟`
+          carrier
+            ? `سيتم حذف وصل ${CO[carrier].name} الحالي (رقم التتبع) واسم المنتج على الوصل لهذا الطلب حتى تتمكني من إنشاء وصل جديد بأي شركة توصيل. متابعة؟`
+            : "سيتم حذف اسم المنتج على الوصل لهذا الطلب حتى تتمكني من إدخاله من جديد. متابعة؟"
         )
       )
         return;
