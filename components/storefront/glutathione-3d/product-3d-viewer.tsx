@@ -98,6 +98,12 @@ export function Product3DViewer({
         "camera-controls": true,
         // Zoomable: no disable-zoom, so scroll/pinch zooms the camera in
         // on the product (camera-controls alone only covers drag-rotate).
+        // Locked to the center: disable-pan turns off right-click-drag/
+        // two-finger-drag panning, which otherwise shifts the camera
+        // target off the model — orbit (rotate) and zoom are the only
+        // interactions left, camera-target stays "auto" (the model's own
+        // center) since it's never set explicitly.
+        "disable-pan": true,
         "shadow-intensity": "1.3",
         "shadow-softness": "0.9",
         // model-viewer's shadow is a soft contact shadow cast onto an

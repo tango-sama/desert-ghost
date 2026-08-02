@@ -1405,3 +1405,18 @@ not the intended state (see `development-workflow.md`).
   sandboxed tab's environment, not the app; not exercised end-to-end in an
   ordinary top-level browser tab in this session — worth a real click
   before fully trusting it.
+- 2026-08-02 (same day, third follow-up): owner asked to lock the model
+  to the center — rotation and zoom only, no x/y movement.
+  `product-3d-viewer.tsx`: added `disable-pan` to the model-viewer
+  element. model-viewer's `camera-controls` otherwise also enables a pan
+  gesture (right-click-drag / two-finger-drag) that shifts the camera
+  *target* off the model; `disable-pan` turns that off while leaving
+  orbit (drag-rotate) and zoom untouched. `camera-target` was never set
+  explicitly so it already defaulted to "auto" (the model's own center),
+  and stays there now with no way to drag it off.
+  Verified: `tsc --noEmit` and `npm run build` clean. Real Chrome session:
+  confirmed `disable-pan` is present on the live element, then simulated
+  a right-mouse-button drag directly via `PointerEvent`s (the same input
+  path model-viewer's pan gesture listens on) and read `getCameraTarget()`
+  / `getCameraOrbit()` before and after — both identical, confirming pan
+  is fully inert while the element is otherwise interactive.
