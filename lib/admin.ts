@@ -81,6 +81,8 @@ export type Order = {
   customer?: string;
   phone?: string;
   wilaya?: string;
+  wilayaId?: string | number | null;
+  wilayaFr?: string;
   baladiya?: string;
   address?: string;
   deliveryType?: string;
@@ -94,11 +96,11 @@ export type Order = {
   source?: string;
   placedAt?: { seconds?: number };
   createdAt?: number;
-  yalidine?: ParcelInfo;
-  noest?: ParcelInfo;
-  zr?: ParcelInfo;
-  trackingStatus?: TrackingStatus;
-  deliveryLabel?: string;
+  yalidine?: ParcelInfo | null;
+  noest?: ParcelInfo | null;
+  zr?: ParcelInfo | null;
+  trackingStatus?: TrackingStatus | null;
+  deliveryLabel?: string | null;
   parcelPrice?: number | null;
   [key: string]: unknown;
 };

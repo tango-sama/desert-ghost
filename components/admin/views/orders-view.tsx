@@ -33,6 +33,13 @@ import {
   startsFolded,
 } from "@/components/admin/carriers";
 import { nowMs } from "@/lib/time";
+import { useDeliveryData } from "@/hooks/use-delivery-data";
+import {
+  centersForCarrier,
+  wilayasFor,
+  type Carrier,
+  type CarrierCache,
+} from "@/lib/delivery";
 
 const TRACK_ICONS = ["📥", "📦", "🏭", "🚚", "✅"];
 // ⚠️ marker sits on the line between "خرج للتوصيل" and the final step
@@ -359,6 +366,24 @@ function orderHaystack(o: Order): string {
     .toLowerCase();
 }
 
+// The order's wilaya id is normally saved directly at order time
+// (selectedWilaya.id) — older orders that predate that field are resolved
+// by matching the saved wilaya name against the target carrier's own list;
+// Algeria's 58 wilaya codes are the same official numbering every carrier
+// uses, so this is only ever a name lookup, never a cross-carrier translation.
+function resolveOrderWilayaId(
+  o: Order,
+  co: Carrier,
+  cache: CarrierCache
+): string | number | null {
+  const raw = o.wilayaId;
+  if (typeof raw === "string" || typeof raw === "number") return raw;
+  const match = wilayasFor(co, cache).find(
+    (w) => w.ar === o.wilaya || w.fr === o.wilayaFr
+  );
+  return match ? match.id : null;
+}
+
 export function OrdersView() {
   const orders = useAdminStore((s) => s.orders);
   const products = useAdminStore((s) => s.products);
@@ -374,6 +399,19 @@ export function OrdersView() {
   // user fold/unfold overrides; without one, a card starts folded when the
   // order is old news (placed over 7 days ago or already delivered)
   const [folds, setFolds] = useState<Record<string, boolean>>({});
+
+  const cache = useDeliveryData();
+  // When a Stop Desk order's delivery company is switched to one other than
+  // the customer's original pick, the desk already saved on the order
+  // belongs to the OLD carrier's own agency list and means nothing to the
+  // new one — this prompts the admin to pick a real desk from the new
+  // carrier's own list (in the order's wilaya) before a parcel is created.
+  const [deskPrompt, setDeskPrompt] = useState<{
+    orderId: string;
+    co: CarrierKey;
+    deskId: string;
+  } | null>(null);
+  const [deskSaving, setDeskSaving] = useState(false);
 
   // Orders are listed by date placed, newest first; the sticky topbar
   // search narrows the list (and what refresh-all touches) live.
@@ -552,7 +590,73 @@ export function OrdersView() {
     }
   }
 
+  // A carrier button was clicked to create a parcel. For a Stop Desk order
+  // where the admin is choosing a DIFFERENT company than the customer's
+  // original pick, the desk already saved on the order belongs to that
+  // original carrier's own agency list, not this one's — ask which of THIS
+  // carrier's desks (in the order's wilaya) to use before creating the parcel.
+  function requestCreateParcel(co: CarrierKey, o: Order) {
+    const isOffice = o.deliveryType === "office";
+    const switchingCompany = !!o.deliveryCompany && o.deliveryCompany !== co;
+    if (isOffice && switchingCompany) {
+      setDeskPrompt({ orderId: String(o.id), co, deskId: "" });
+      return;
+    }
+    createParcel(co, String(o.id));
+  }
+
+  async function confirmDeskAndCreateParcel(
+    o: Order,
+    co: CarrierKey,
+    desk: { id: number | string; name: string }
+  ) {
+    setDeskSaving(true);
+    try {
+      const patch = { baladiya: desk.name, deliveryCompany: co };
+      await updateDocIn("orders", o.id, patch);
+      patchOrder(o.id, patch);
+      setDeskPrompt(null);
+      createParcel(co, String(o.id));
+    } catch (err) {
+      console.error(err);
+      toast("تعذّر حفظ المكتب المختار");
+    } finally {
+      setDeskSaving(false);
+    }
+  }
+
   async function toggleFulfilled(o: Order) {
+    const carrier = orderCarrier(o);
+    // "تعليم كجديد" on an order that already has a created parcel: also
+    // clear the label/parcel/tracking data, so the order goes back to its
+    // starting state and a fresh label can be created with ANY delivery
+    // company again — not just re-toggled back onto the same carrier.
+    if (o.fulfilled && carrier) {
+      if (
+        !confirm(
+          `سيتم حذف وصل ${CO[carrier].name} الحالي (رقم التتبع) لهذا الطلب حتى تتمكني من إنشاء وصل جديد بأي شركة توصيل. متابعة؟`
+        )
+      )
+        return;
+      const patch: Partial<Order> = {
+        fulfilled: false,
+        status: "New",
+        deliveryLabel: null,
+        parcelPrice: null,
+        yalidine: null,
+        noest: null,
+        zr: null,
+        trackingStatus: null,
+      };
+      try {
+        await updateDocIn("orders", o.id, patch);
+        patchOrder(o.id, patch);
+      } catch (e) {
+        console.error(e);
+        toast("فشل");
+      }
+      return;
+    }
     const v = !o.fulfilled;
     try {
       await updateDocIn("orders", o.id, { fulfilled: v, status: v ? "Done" : "New" });
@@ -614,6 +718,76 @@ export function OrdersView() {
           </button>
         </div>
       )}
+
+      {deskPrompt &&
+        (() => {
+          const o = orders.find((x) => String(x.id) === deskPrompt.orderId);
+          if (!o) return null;
+          const co = deskPrompt.co;
+          const wid = resolveOrderWilayaId(o, co, cache);
+          const desks = wid != null ? centersForCarrier(co, wid, cache) : [];
+          const prevCoName = o.deliveryCompany
+            ? (CO[o.deliveryCompany as CarrierKey]?.name ?? o.deliveryCompany)
+            : "—";
+          return (
+            <div
+              className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 p-6"
+              onClick={(e) => e.target === e.currentTarget && setDeskPrompt(null)}
+            >
+              <div className="w-full max-w-[440px] rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-lg)]">
+                <h3 className="mb-2 text-[1.05rem] font-extrabold">
+                  🏢 تغيير شركة التوصيل — اختيار المكتب
+                </h3>
+                <p className="mb-4 text-[.82rem] leading-relaxed text-[var(--ink-3)]">
+                  هذا الطلب توصيل لمكتب (Stop Desk) واخترتِ {CO[co].name} بدلاً
+                  من {prevCoName}. اختاري المكتب المناسب في ولاية{" "}
+                  {o.wilaya || "—"} لدى {CO[co].name}:
+                </p>
+                <select
+                  className={cn(inp, "px-3.5 py-[.55rem] text-[.85rem]")}
+                  value={deskPrompt.deskId}
+                  onChange={(e) =>
+                    setDeskPrompt((d) => (d ? { ...d, deskId: e.target.value } : d))
+                  }
+                >
+                  <option value="">
+                    {desks.length
+                      ? "اختاري المكتب"
+                      : "لا توجد مكاتب متاحة لهذه الولاية لدى هذه الشركة"}
+                  </option>
+                  {desks.map((d) => (
+                    <option key={d.id} value={String(d.id)}>
+                      {d.address ? `${d.name} — ${d.address}` : d.name}
+                    </option>
+                  ))}
+                </select>
+                <div className={cn(rowActions, "mt-4 justify-end")}>
+                  <button
+                    type="button"
+                    className={btn("gray", true)}
+                    onClick={() => setDeskPrompt(null)}
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="button"
+                    disabled={!deskPrompt.deskId || deskSaving}
+                    className={btn("blue", true)}
+                    onClick={() => {
+                      const desk = desks.find(
+                        (d) => String(d.id) === deskPrompt.deskId
+                      );
+                      if (!desk) return;
+                      confirmDeskAndCreateParcel(o, co, desk);
+                    }}
+                  >
+                    {deskSaving ? "⏳ جاري الحفظ..." : "تأكيد وإنشاء الطرد"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
 
       {list.map((o) => {
         const oid = String(o.id);
@@ -956,7 +1130,7 @@ export function OrdersView() {
                                   ? `الزبون اختار ${CO[o.deliveryCompany as CarrierKey]?.name ?? o.deliveryCompany}`
                                   : ""
                             }
-                            onClick={() => createParcel(co, oid)}
+                            onClick={() => requestCreateParcel(co, o)}
                             className={btn("blue", true)}
                             style={{
                               background: CO[co].color,

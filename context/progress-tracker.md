@@ -1177,6 +1177,61 @@ not the intended state (see `development-workflow.md`).
   400px, and a screenshot confirms it visually — rows 7-11 scroll under an
   opaque, pinned header row with no see-through or clipping.
 
+- Admin orders: "تعليم كجديد" now resets a fulfilled order all the way back
+  to its pre-parcel starting state, and Stop Desk orders prompt for a new
+  desk when the admin switches carriers (2026-08-03, owner-requested).
+  `components/admin/views/orders-view.tsx`'s `toggleFulfilled`: when marking
+  a fulfilled order with an already-created parcel back to "New", it now
+  also clears `deliveryLabel`, `parcelPrice`, `yalidine`/`noest`/`zr` (whichever
+  carrier's tracking existed), and `trackingStatus` — not just the
+  fulfilled/status flags as before — behind a `confirm()` since it's
+  destructive locally (does NOT cancel anything already created on the
+  carrier's own side, just this app's record of it). This makes `orderCarrier(o)`
+  go back to `null`, which is what un-hides the carrier-picker button row, so
+  a fresh label can be created with any company again — exactly the
+  "starting state" the owner asked for. Left `deliveryCompany` (the
+  customer's original pick) untouched; only the carrier-specific parcel data
+  is cleared.
+  Second part: for a `deliveryType === "office"` (Stop Desk) order, if the
+  admin clicks a carrier button that differs from `o.deliveryCompany`, the
+  desk name already saved in `o.baladiya` belongs to the OLD carrier's own
+  agency list and is meaningless for the new one (each carrier runs its own
+  stop-desk network). New `requestCreateParcel()` detects this case and
+  opens a popup (instead of creating the parcel immediately) asking which of
+  the NEW carrier's own desks — filtered to the order's wilaya via
+  `centersForCarrier(co, wilayaId, cache)` (`lib/delivery.ts`, already built
+  for the customer-facing checkout/seller forms) — to use. New
+  `resolveOrderWilayaId()` reads the order's saved `wilayaId` (present on
+  every order since the original delivery-data-layer build) with a
+  name-matching fallback (`o.wilaya`/`o.wilayaFr` against the new carrier's
+  own wilaya list) for any older order that predates that field. Confirming
+  the popup awaits writing `{baladiya: desk.name, deliveryCompany: co}` to
+  Firestore FIRST (must land before the create-parcel callable reads the
+  order server-side, otherwise it would still see the stale desk), then
+  proceeds into the existing `createParcel()` flow unchanged. Home-delivery
+  orders, and any case where the admin re-picks the SAME company the
+  customer already chose, are unaffected — parcel creation happens
+  immediately with no popup, exactly as before.
+  Added `wilayaId`/`wilayaFr` to the `Order` type (`lib/admin.ts`, previously
+  only reachable through its catch-all index signature) and widened
+  `yalidine`/`noest`/`zr`/`trackingStatus`/`deliveryLabel` to accept `null`
+  (needed to actually clear those fields in Firestore — `updateDoc` rejects
+  `undefined` field values, so `null` is the only way to blank a field, same
+  as the pre-existing `parcelPrice: number | null`).
+  Depends on real Stop Desk data existing in `delivery_data/{carrier}.centers`
+  (see "Next Up"/"Open Questions" below) — until `syncCarriers` is extended,
+  the new popup correctly shows "لا توجد مكاتب متاحة" rather than any wrong
+  data, same empty-state convention `centersForCarrier` already had in the
+  customer-facing forms.
+  Verified: `tsc --noEmit`, `npm run lint`, and `npm run build` all clean.
+  NOT exercised against a real credentialed admin session (no live Firebase
+  Auth in this environment) — owner should click through both flows once:
+  mark a test parcel-having order back to "new" and confirm the label/parcel
+  info disappears and the carrier buttons reappear; then, on a Stop Desk
+  order, click a carrier other than the customer's original pick and confirm
+  the desk-selection popup appears (it will show "no مكاتب" until real desk
+  data is synced — that's the expected/correct state, not a bug).
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)
