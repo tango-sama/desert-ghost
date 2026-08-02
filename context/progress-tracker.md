@@ -1336,3 +1336,29 @@ not the intended state (see `development-workflow.md`).
   recommendation as every other landing page in this file — this page reuses
   the already-verified `OrderModal`/`saveOrder` path unchanged, so the risk
   is low, but one real test order is still worth doing before trusting it).
+- 2026-08-02 (same day, follow-up): owner asked to drop the white card
+  behind the 3D model, make it zoomable, and use a "shadow catcher plane."
+  `components/storefront/glutathione-3d/product-3d-viewer.tsx`: removed
+  `disable-zoom` (camera-controls alone only covers drag-rotate — scroll/
+  pinch now zooms too); model-viewer's `shadow-intensity`/`shadow-softness`
+  (already set) ARE its built-in shadow-catcher-plane implementation — an
+  invisible ground plane that only renders the object's contact shadow —
+  so no new geometry/library was needed. The bigger change is CSS: the
+  hero spotlight no longer reuses `/glutathione`'s shared `.glSpot`
+  (opaque white card) — `glutathione-3d.module.css` now has its own
+  `.spot`/`.spotVisual`/`.spotCorner`/`.spotBrand`/`.spotTitle`/
+  `.spotBadges`/`.spotBadge` (structurally mirroring the shared ones but
+  `background: transparent`, `box-shadow: none`, title/brand text
+  recolored to white/gold so they stay legible directly on the navy hero
+  gradient instead of on a white surface); `hero.tsx` updated to use these
+  local classes instead of the shared module's. Result: the bottle floats
+  directly on the hero background with only its own ground shadow, no
+  card frame. Also dropped the CSS `filter: drop-shadow(...)` that was on
+  `.model3d` — redundant/conflicting now that model-viewer's own 3D shadow
+  is the real shadow.
+  Verified: `tsc --noEmit`, `npm run build` clean. Interactive check via a
+  real Chrome session: confirmed visually the white card is gone (bottle
+  floats on the navy gradient, badges still legible), scroll-wheel over
+  the model zooms the camera in (confirmed via before/after screenshots),
+  and drag-to-rotate still works. No new console errors (only the same
+  expected offline-Firestore fallback noted throughout this file).

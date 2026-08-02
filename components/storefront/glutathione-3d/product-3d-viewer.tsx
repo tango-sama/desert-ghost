@@ -50,9 +50,15 @@ export function Product3DViewer({
     "auto-rotate-delay": 0,
     "rotation-per-second": "16deg",
     "camera-controls": true,
-    "disable-zoom": true,
+    // Zoomable: no disable-zoom, so scroll/pinch zooms the camera in on
+    // the product (camera-controls alone only covers drag-to-rotate).
     "shadow-intensity": "1.3",
     "shadow-softness": "0.9",
+    // model-viewer's shadow is a soft contact shadow cast onto an
+    // invisible ground plane beneath the model (its own "shadow catcher")
+    // — no environment-image/skybox is set, so the rest of the element
+    // stays fully transparent and only the product + its ground shadow
+    // show through onto the page background.
     exposure: "1.05",
     "interaction-prompt": "none",
     loading: "eager",

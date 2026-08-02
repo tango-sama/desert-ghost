@@ -96,17 +96,17 @@ export function Hero({
           </div>
         </div>
         <div>
-          <div className={styles.glSpot}>
-            <div className={styles.glSpotVisual}>
-              <span className={styles.glSpotCorner}>✨ {product.size}</span>
+          <div className={gl3d.spot}>
+            <div className={gl3d.spotVisual}>
+              <span className={gl3d.spotCorner}>✨ {product.size}</span>
               <Product3DViewer src={MODEL_SRC} poster={heroImage} alt={product.title} className={gl3d.model3d} />
-              <span className={gl3d.spin3dHint}>🔄 اسحبي للتدوير 360°</span>
+              <span className={gl3d.spin3dHint}>🔍 قابل للتكبير · اسحبي للتدوير 360°</span>
             </div>
-            <div className={styles.glSpotBrand}>{product.brand}</div>
-            <div className={styles.glSpotTitle}>{product.title}</div>
-            <div className={styles.glSpotBadges}>
-              <span className={styles.glSpotBadge}>🌿 خالٍ من الجلوتين</span>
-              <span className={styles.glSpotBadge}>✅ NON-GMO</span>
+            <div className={gl3d.spotBrand}>{product.brand}</div>
+            <div className={gl3d.spotTitle}>{product.title}</div>
+            <div className={gl3d.spotBadges}>
+              <span className={gl3d.spotBadge}>🌿 خالٍ من الجلوتين</span>
+              <span className={gl3d.spotBadge}>✅ NON-GMO</span>
             </div>
           </div>
         </div>

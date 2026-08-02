@@ -2,13 +2,77 @@
    this page reuses components/storefront/glutathione's shared module
    (glutathione.module.css) unchanged, since this is the same brand system
    as the ad reference, just with the hero photo swapped for an
-   interactive 3D model. */
+   interactive 3D model.
+
+   The spotlight card itself is NOT reused from the shared module here:
+   the shared .glSpot is an opaque white card (right for a flat product
+   photo), but the 3D model should float directly on the hero's navy
+   background with only its own built-in ground shadow underneath (see
+   product-3d-viewer.tsx — model-viewer's shadow-intensity IS a shadow-
+   catcher plane, no card/backdrop needed to "catch" it). So this file
+   defines its own spot/brand/title/badge rules with a transparent
+   background and light text, structurally mirroring .glSpot but without
+   the white surface. */
+
+.spot {
+  position: relative;
+  padding: 1rem 1.6rem 1.8rem;
+  background: transparent;
+  box-shadow: none;
+  text-align: center;
+  animation: spotReveal 0.95s var(--ease) 0.32s both, spotBob 6s ease-in-out 1.3s infinite;
+}
+@keyframes spotReveal {
+  from { opacity: 0; transform: translateY(36px) scale(0.94); filter: blur(16px); }
+  to { opacity: 1; transform: translateY(0) scale(1); filter: blur(0); }
+}
+@keyframes spotBob {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-10px); }
+}
+@keyframes spotBadgeReveal {
+  from { opacity: 0; transform: translateY(24px); filter: blur(10px); }
+  to { opacity: 1; transform: translateY(0); filter: blur(0); }
+}
+
+.spotVisual {
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  margin-bottom: 1.1rem;
+}
+
+/* Poster-image fallback (shown briefly before model-viewer's JS is ready —
+   see product-3d-viewer.tsx) needs its own framing since it's a flat photo,
+   not a floating 3D object with a built-in ground shadow. */
+.spotVisual img {
+  max-height: 320px;
+  width: auto;
+  border-radius: 12px;
+  filter: drop-shadow(0 16px 24px rgba(46, 27, 14, 0.25));
+}
 
 .model3d {
   width: 100%;
   height: 320px;
   --poster-color: transparent;
-  filter: drop-shadow(0 16px 24px rgba(46, 27, 14, 0.25));
+}
+
+.spotCorner {
+  position: absolute;
+  z-index: 2;
+  top: -6px;
+  inset-inline-end: 10%;
+  background: linear-gradient(135deg, var(--gl-gold), var(--gl-mid));
+  color: #1a1108;
+  font-weight: 900;
+  font-size: 0.78rem;
+  padding: 0.5rem 0.9rem;
+  border-radius: 100px;
+  box-shadow: 0 8px 18px rgba(185, 134, 47, 0.4);
+  animation: spotBadgeReveal 0.6s var(--ease) 0.85s both;
 }
 
 .spin3dHint {
@@ -28,6 +92,48 @@
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
 }
 
+.spotBrand {
+  font-size: 0.68rem;
+  letter-spacing: 2px;
+  font-weight: 800;
+  color: var(--gl-gold);
+  text-transform: uppercase;
+}
+.spotTitle {
+  color: #fff9ee;
+  font-size: 1.15rem;
+  font-weight: 900;
+  line-height: 1.4;
+  margin: 0.4rem 0 1rem;
+}
+.spotBadges {
+  display: flex;
+  justify-content: center;
+  gap: 0.6rem;
+  flex-wrap: wrap;
+}
+.spotBadge {
+  font-size: 0.72rem;
+  font-weight: 800;
+  padding: 0.4rem 0.9rem;
+  border-radius: 100px;
+  background: var(--gl-cream);
+  color: var(--gl-deep);
+  border: 1px solid rgba(185, 134, 47, 0.25);
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .spot,
+  .spotCorner {
+    animation: none;
+  }
+}
+@media (max-width: 980px) {
+  .spot {
+    max-width: 380px;
+    margin: 0 auto;
+  }
+}
 @media (max-width: 640px) {
   .model3d {
     height: 260px;
