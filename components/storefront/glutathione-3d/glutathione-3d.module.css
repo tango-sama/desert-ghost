@@ -1,0 +1,35 @@
+/* Additive styles for the /glutathione-3d hero only — everything else on
+   this page reuses components/storefront/glutathione's shared module
+   (glutathione.module.css) unchanged, since this is the same brand system
+   as the ad reference, just with the hero photo swapped for an
+   interactive 3D model. */
+
+.model3d {
+  width: 100%;
+  height: 320px;
+  --poster-color: transparent;
+  filter: drop-shadow(0 16px 24px rgba(46, 27, 14, 0.25));
+}
+
+.spin3dHint {
+  position: absolute;
+  bottom: -0.4rem;
+  inset-inline-end: -0.2rem;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.35rem;
+  padding: 0.4rem 0.85rem;
+  border-radius: 100px;
+  background: #1a1108;
+  color: #fff9ee;
+  font-size: 0.68rem;
+  font-weight: 800;
+  box-shadow: 0 10px 20px rgba(0, 0, 0, 0.25);
+}
+
+@media (max-width: 640px) {
+  .model3d {
+    height: 260px;
+  }
+}
