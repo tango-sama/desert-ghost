@@ -35,7 +35,7 @@ export function Hero({
   return (
     <section className={styles.glHero} ref={ref}>
       <div className={styles.glHeroRay} />
-      <div className={styles.glHeroInner}>
+      <div className={`${styles.glHeroInner} ${gl3d.heroInner}`}>
         <div>
           <span className={styles.glEyebrow}>✨ تركيبة متقدمة لدعم جمالكِ من الداخل</span>
           {title ? (
@@ -99,7 +99,13 @@ export function Hero({
           <div className={gl3d.spot}>
             <div className={gl3d.spotVisual}>
               <span className={gl3d.spotCorner}>✨ {product.size}</span>
-              <Product3DViewer src={MODEL_SRC} poster={heroImage} alt={product.title} className={gl3d.model3d} />
+              <Product3DViewer
+                src={MODEL_SRC}
+                poster={heroImage}
+                alt={product.title}
+                className={gl3d.model3d}
+                fullscreenButtonClassName={gl3d.fsBtn}
+              />
               <span className={gl3d.spin3dHint}>🔍 قابل للتكبير · اسحبي للتدوير 360°</span>
             </div>
             <div className={gl3d.spotBrand}>{product.brand}</div>

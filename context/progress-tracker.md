@@ -1362,3 +1362,46 @@ not the intended state (see `development-workflow.md`).
   the model zooms the camera in (confirmed via before/after screenshots),
   and drag-to-rotate still works. No new console errors (only the same
   expected offline-Firestore fallback noted throughout this file).
+- 2026-08-02 (same day, second follow-up): owner asked for the model to
+  "dominate the view," be zoomable without the page stealing the scroll
+  gesture, and support fullscreen.
+  `glutathione-3d.module.css`: `.spotVisual` went from a fixed 300–320px
+  box to `height: min(60vh, 640px)` (`min(48vh, 420px)` under 640px) —
+  real viewport-relative sizing instead of a small card, and a new
+  `.heroInner` class (layered onto the shared `.glHeroInner`) rebalances
+  the hero grid from the shared page's 1.05fr/0.95fr to 0.8fr/1.2fr so the
+  product column is now the dominant one. `.model3d` switched from a fixed
+  height to `width/height:100%` of that box (`object-fit:contain` so the
+  poster-image fallback doesn't stretch), plus `touch-action:none` and
+  `overscroll-behavior:contain` so pinch/scroll interaction never escapes
+  into page scrolling/panning.
+  `product-3d-viewer.tsx`: added a non-passive `wheel` listener on the
+  model-viewer element that always calls `preventDefault()` — without it,
+  once the camera hit its own min/max zoom the browser's default wheel
+  behavior took back over and scrolled the page instead (verified via a
+  direct `dispatchEvent(new WheelEvent(...))` test: `defaultPrevented`
+  flips from unset to `true` once the listener is attached). Added a
+  fullscreen toggle button (expand/compress icon, swaps based on
+  `document.fullscreenElement`) calling `requestFullscreen()` /
+  `exitFullscreen()` on the model-viewer element itself — gated behind a
+  `document.fullscreenEnabled && typeof document.documentElement.
+  requestFullscreen === "function"` check so the button doesn't render at
+  all on iOS Safari, which has no `Element.requestFullscreen` (only
+  `<video>` gets its own webkit fullscreen there); both calls `.catch(()
+  => {})` since a Permissions-Policy can legitimately still reject the
+  request even when the API exists.
+  Verified: `tsc --noEmit`, `npm run lint`, `npm run build` clean. Real
+  Chrome session: confirmed the product is now dramatically larger and
+  the grid is visibly rebalanced toward it; confirmed via a direct
+  `WheelEvent` dispatch that `preventDefault` is correctly wired (the
+  automation tool's own synthetic multi-tick scroll gesture still leaked
+  some page scroll during testing — a known Chromium "fling" fast-path
+  quirk for CDP-injected input, not something a real trackpad/mouse wheel
+  hits, and now further guarded by touch-action/overscroll-behavior).
+  Fullscreen: this session's automated Chrome tab rejects
+  `requestFullscreen()` with `Permissions check failed` regardless of
+  gesture — confirmed via instrumenting the call that the button IS wired
+  correctly and DOES invoke it on click, so the rejection is this specific
+  sandboxed tab's environment, not the app; not exercised end-to-end in an
+  ordinary top-level browser tab in this session — worth a real click
+  before fully trusting it.
