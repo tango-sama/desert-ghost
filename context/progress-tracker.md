@@ -1524,6 +1524,43 @@ not the intended state (see `development-workflow.md`).
   should confirm the next real delivered ZR order shows "تم الاستلام"
   correctly.
 
+- Fixed a real production bug the owner hit from the "deleted at carrier"
+  feature two entries above (2026-08-03, owner report: "on mobile it
+  looks like a side white page" after pressing تحديث on a Noest order
+  they believed was deleted). Root cause, confirmed once the owner pasted
+  the exact alert text: the new `notFoundAtCarrier` alert message is a
+  full sentence (~100+ characters), but the badge that renders any
+  `trackingStatus.alert` (`TrackStepper` in `orders-view.tsx`, both the
+  `isReturn` and `hasAlert` branches) used `whitespace-nowrap` — fine for
+  the short alerts this component was originally built for (e.g. "مرتجع /
+  ملغى — تحتاج متابعة"), but it forces ANY text onto one unbroken line
+  no matter how long, so the long new sentence pushed the badge (and the
+  page) far wider than a mobile viewport, producing exactly the
+  described horizontal-scroll-into-blank-space symptom. Two-part fix,
+  matching "fix the class of bug, not just this one message" since a
+  future long alert could hit the same thing again: (1) ghost —
+  `whitespace-nowrap` → `max-w-full break-words` on both alert badges, so
+  long text wraps within the available width instead of forcing overflow
+  (left the third badge, `stageAr`, on `whitespace-nowrap` since it only
+  ever renders a short fixed `STAGE_LABELS` entry); (2) trinkl — per
+  owner's explicit request, shortened `deletedAtCarrierStatus()`'s alert
+  from the full explanatory sentence down to just `'تم حذف هذا الطرد'`
+  (deployed `getParcelStatus`, isolated worktree `.claude/worktrees/
+  shorten-deleted-alert`, commit `05882a6`, same fast-forward-then-verify-
+  CI flow as every entry above).
+  Also swept the rest of `components/admin/` for the same
+  `whitespace-nowrap`-on-variable-length-text pattern — the only other
+  hits (`income-view.tsx` table cells, a `landing-pages-view.tsx` URL
+  display) are pre-existing, unrelated, and intentional (numeric/URL
+  columns that legitimately shouldn't wrap), so left untouched.
+  Verified: `tsc --noEmit`, `npm run lint` (only the same pre-existing
+  unrelated warnings), `npm run build` all clean on ghost; trinkl CI
+  deploy succeeded. NOT re-verified in an actual mobile browser against
+  the live fix (no credentialed admin session in this sandbox) — the
+  owner's own bug report supplied the exact failing string, which is
+  what made this fixable without guessing; worth a quick real-device
+  check next time this scenario comes up.
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)

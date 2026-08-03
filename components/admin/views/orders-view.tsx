@@ -261,11 +261,11 @@ function TrackStepper({
       <div className="mt-3 flex flex-col gap-1.5 text-[.72rem] text-[var(--ink-3)]">
         <div className="flex flex-wrap items-center gap-2">
           {isReturn ? (
-            <span className="whitespace-nowrap rounded-full bg-[rgba(229,72,77,.2)] px-2.5 py-1 text-[.75rem] font-extrabold text-[var(--alert-ink)]">
+            <span className="max-w-full rounded-xl bg-[rgba(229,72,77,.2)] px-2.5 py-1 text-[.75rem] font-extrabold break-words text-[var(--alert-ink)]">
               ⚠️ {ts.alert || "—"}
             </span>
           ) : hasAlert ? (
-            <span className="whitespace-nowrap rounded-full bg-[var(--alert-bg)] px-2.5 py-1 text-[.75rem] font-extrabold text-[var(--alert-ink)]">
+            <span className="max-w-full rounded-xl bg-[var(--alert-bg)] px-2.5 py-1 text-[.75rem] font-extrabold break-words text-[var(--alert-ink)]">
               🔺 {ts.alert}
             </span>
           ) : stageAr ? (
