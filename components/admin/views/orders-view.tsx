@@ -29,6 +29,7 @@ import {
   CANCEL_FN,
   CO,
   CREATE_FN,
+  isPastCancelWindow,
   orderCarrier,
   orderDate,
   startsFolded,
@@ -1214,18 +1215,28 @@ export function OrdersView() {
                           </button>
                         );
                       })}
-                    <button
-                      type="button"
-                      className={btn("gray", true)}
-                      disabled={!!busy[`reset:${oid}`]}
-                      onClick={() => toggleFulfilled(o)}
-                    >
-                      {busy[`reset:${oid}`]
-                        ? "⏳ جاري الإلغاء..."
-                        : o.fulfilled
-                          ? "↩ تعليم كجديد"
-                          : "✓ تم التنفيذ"}
-                    </button>
+                    {(() => {
+                      const locked = o.fulfilled && isPastCancelWindow(o);
+                      return (
+                        <button
+                          type="button"
+                          className={btn("gray", true)}
+                          disabled={!!busy[`reset:${oid}`] || locked}
+                          title={
+                            locked
+                              ? `تم تأكيد الطرد لدى ${carrier ? CO[carrier].name : "شركة التوصيل"} ولم يعد قابلاً للإلغاء`
+                              : undefined
+                          }
+                          onClick={() => toggleFulfilled(o)}
+                        >
+                          {busy[`reset:${oid}`]
+                            ? "⏳ جاري الإلغاء..."
+                            : o.fulfilled
+                              ? "↩ تعليم كجديد"
+                              : "✓ تم التنفيذ"}
+                        </button>
+                      );
+                    })()}
                     <button
                       type="button"
                       className={btn("danger", true)}

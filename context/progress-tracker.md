@@ -1387,6 +1387,46 @@ not the intended state (see `development-workflow.md`).
   message this fix now surfaces instead of the generic one. Owner should
   retry and report back the new (hopefully specific) error text.
 
+- "تعليم كجديد" now disables itself once a parcel can no longer actually
+  be cancelled with the carrier (2026-08-03, owner-requested — the owner
+  pointed out the button should be unclickable the moment the parcel is
+  confirmed/shipped, not just fail loudly when clicked). New
+  `isPastCancelWindow(o)` in `components/admin/carriers.ts`, wired into
+  the button's `disabled`/`title` in `orders-view.tsx` (only for the
+  "mark as new" direction — "✓ تم التنفيذ" is untouched). Per-carrier
+  signal, matching what the owner described from actually using each
+  carrier's dashboard: **Noest** — `o.noest.validated` (already tracked)
+  or the shared stage normalizer reaching stage 1 ("traitement" maps
+  there); **Yalidine** — exposes no separate validation step at all, so
+  ANY real tracking update is treated as the point of no return (their
+  API only allows deleting a parcel while "En préparation", and once it's
+  moved even once we can't tell that apart from what comes after);
+  **ZR Express** — the trickiest one: `zrNormalize` (already deployed
+  server-side) buckets "just received" and "Prêt à expédier" into the
+  same stage-0 step, because ZR's workflow state NAMES are configurable
+  per-tenant rather than a fixed enum — confirmed by reading ZR's own
+  OpenAPI reference rather than assuming, so a numeric stage boundary
+  can't tell those two apart. Falls back to matching the RAW status text
+  (`trackingStatus.lastLabel`, which already carries the carrier's literal
+  state name) against "Prêt à expédier" specifically (the exact term the
+  owner used); anything genuinely further along is still caught by
+  `stage >= 1` as before.
+  Explicitly a UX shortcut, not a new safety boundary: the real guarantee
+  is still the cancel-then-clear flow from the entry above (`toggleFulfilled`
+  awaits the carrier's cancel call and aborts, deleting nothing, if it
+  fails) — this only saves the admin a doomed round-trip and gives instant
+  feedback via the tooltip instead of an alert after the fact. If ZR's raw
+  "Prêt à expédier" wording turns out to differ from what's matched
+  (their state names are configurable, so this is a real risk), the worst
+  case is unchanged: the button stays clickable a little longer than
+  ideal, and the existing cancel-call safety net still catches it.
+  Verified: `tsc --noEmit`, `npm run lint` (only the same pre-existing
+  unrelated warnings), `npm run build` all clean. NOT exercised against a
+  real validated/en-traitement/Prêt-à-expédier order in any carrier — no
+  live admin session in this sandbox; owner should confirm the button
+  actually greys out at the right moment for at least one real order per
+  carrier.
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)

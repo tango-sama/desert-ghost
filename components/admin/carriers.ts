@@ -86,3 +86,48 @@ export function startsFolded(o: Order): boolean {
     isDelivered(o)
   );
 }
+
+// Once a parcel is confirmed with the carrier, it can no longer be
+// cancelled through their API — "تعليم كجديد" would only fail — so the
+// button should be disabled at that point rather than let the admin
+// attempt (and fail) a cancel that can never succeed. This is a UX
+// shortcut, not the safety net itself: toggleFulfilled's own cancel call
+// already aborts cleanly and deletes nothing on failure regardless.
+// Each carrier signals "confirmed" differently:
+//   - Noest: explicitly "validated" (moved out of "prêt à expédier" into
+//     "en traitement") — we already track this as o.noest.validated, and
+//     the shared stage normalizer maps "traitement" to stage 1 as a
+//     backup signal.
+//   - ZR Express: their own stage normalizer buckets "just received" and
+//     "Prêt à expédier" into the same stage-0 step (their workflow state
+//     names are per-tenant/configurable, not a fixed enum, so a numeric
+//     stage boundary can't distinguish them) — matching on the raw status
+//     text is the only reliable signal for "Prêt à expédier" itself;
+//     anything genuinely further along is still caught by stage >= 1.
+//   - Yalidine: exposes no separate validation step at all — their API
+//     only allows deleting a parcel while it's still "En préparation",
+//     and once even one real tracking update comes back we can no longer
+//     tell that apart from what comes after, so any update at all is
+//     treated as the point of no return.
+export function isPastCancelWindow(o: Order): boolean {
+  const carrier = orderCarrier(o);
+  if (!carrier) return false;
+  const ts = o.trackingStatus;
+  const tsCurrent =
+    !!ts && ts.carrier === carrier && ts.tracking === o[carrier]?.tracking;
+
+  if (carrier === "yalidine") return tsCurrent;
+
+  if (carrier === "noest")
+    return !!o.noest?.validated || (tsCurrent && ts!.stage != null && ts!.stage >= 1);
+
+  if (carrier === "zr") {
+    if (!tsCurrent) return false;
+    if (ts!.stage != null && ts!.stage >= 1) return true;
+    return /pr[êe]t\s*[àa]\s*exp[ée]dier|ready\s*to\s*dispatch|readytodispatch/i.test(
+      String(ts!.lastLabel || "")
+    );
+  }
+
+  return false;
+}
