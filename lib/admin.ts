@@ -63,6 +63,11 @@ export type TrackingStatus = {
   lastLocation?: string;
   updatedAt?: number;
   noestValidated?: boolean;
+  // The carrier no longer has this parcel at all (deleted directly from
+  // their own dashboard, outside this app) — set only once it's been
+  // missing long enough that "just created, not indexed yet" is ruled
+  // out. See getParcelStatus in the trinkl functions.
+  notFoundAtCarrier?: boolean;
   events?: TrackEvent[];
 };
 

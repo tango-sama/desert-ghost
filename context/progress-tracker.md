@@ -1427,6 +1427,55 @@ not the intended state (see `development-workflow.md`).
   actually greys out at the right moment for at least one real order per
   carrier.
 
+- Detect a parcel deleted directly from the carrier's own dashboard
+  (2026-08-03, owner-requested — pressing "🔄 تحديث" on a parcel that was
+  deleted at Yalidine/Noest/ZR outside this app just showed "waiting to be
+  processed" forever, with no indication anything was actually wrong).
+  Root cause: all three carrier status fetchers in `getParcelStatus`
+  (`fetchNoestStatus`/`fetchYalidineStatus`/`fetchZrStatus`,
+  `functions/index.js`) treat "carrier doesn't have this parcel" as
+  meaning ONE thing only — "just created, not indexed yet" — which is the
+  normal/common case right after creation, but is IDENTICAL to what a
+  genuinely deleted parcel looks like forever after. Fixed by gating on
+  age: new `parcelIsStale(o, carrier)` / `NOT_FOUND_GRACE_MS` (15 minutes
+  — real parcels get indexed within seconds to a couple minutes, so this
+  is a conservative buffer against false positives) — still-fresh "not
+  found" keeps the existing "still pending" status unchanged; a parcel
+  missing well past that age now returns a `notFoundAtCarrier: true`
+  status (`stage: null`, a clear alert naming the carrier and telling the
+  admin to press "تعليم كجديد") via new `deletedAtCarrierStatus()`.
+  Needed no new UI code on the ghost side to SHOW this — `stage: null` +
+  `alert` already renders through `TrackStepper`'s existing return/cancel
+  banner path (`isReturn = ts.stage == null`), the exact same mechanism
+  already used for actual returns/cancellations.
+  Two things had to change to make the reset ACTUALLY completable once
+  detected, not just visible: (1) `isPastCancelWindow()`
+  (`components/admin/carriers.ts`) now unlocks "تعليم كجديد" whenever
+  `trackingStatus.notFoundAtCarrier` is true, regardless of carrier —
+  there's nothing left to protect against once it's confirmed gone; (2)
+  all three `cancel*Parcel` functions now treat "already not found" as
+  SUCCESS rather than failure (Yalidine/ZR return a real 404; Noest's
+  tracking-info endpoint answers "not found" as a 200 with a French
+  message rather than an HTTP 404, so its cancel function checks both
+  shapes) — otherwise clicking "تعليم كجديد" on an already-deleted parcel
+  would itself fail trying to cancel something that no longer exists,
+  blocking the exact reset this whole feature exists to unblock. Added
+  `TrackingStatus.notFoundAtCarrier?: boolean` to `lib/admin.ts`.
+  Deployed (isolated worktree `.claude/worktrees/carrier-not-found-
+  handling`, commit `766ad88`, fast-forward-merged onto trinkl's
+  `origin/main` and pushed the same way as every entry above — deploy
+  four functions first, then push, then verify via `gh run watch`):
+  `getParcelStatus`, `cancelYalidineParcel`, `cancelNoestParcel`,
+  `cancelZrParcel`.
+  Verified: `tsc --noEmit`, `npm run lint` (only the same pre-existing
+  unrelated warnings), `npm run build` all clean on ghost; the trinkl CI
+  deploy run succeeded end-to-end. NOT exercised against a REAL deleted
+  parcel with any carrier (would need an actual parcel manually removed
+  from a carrier's dashboard and 15+ minutes of wait, not reproducible in
+  this sandbox) — owner should verify this once when the opportunity
+  naturally comes up, rather than manufacture a test deletion against a
+  real carrier account.
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)

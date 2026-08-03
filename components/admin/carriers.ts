@@ -116,6 +116,11 @@ export function isPastCancelWindow(o: Order): boolean {
   const tsCurrent =
     !!ts && ts.carrier === carrier && ts.tracking === o[carrier]?.tracking;
 
+  // Confirmed gone at the carrier — nothing left to protect against, so the
+  // button should be usable again so the order can go back to its starting
+  // state (the cancel call itself is now a no-op success in this case too).
+  if (tsCurrent && ts!.notFoundAtCarrier) return false;
+
   if (carrier === "yalidine") return tsCurrent;
 
   if (carrier === "noest")
