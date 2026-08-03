@@ -37,9 +37,11 @@ import { nowMs } from "@/lib/time";
 import { useDeliveryData } from "@/hooks/use-delivery-data";
 import {
   centersForCarrier,
+  feeForCarrier,
   wilayasFor,
   type Carrier,
   type CarrierCache,
+  type DeliveryType,
 } from "@/lib/delivery";
 
 const TRACK_ICONS = ["📥", "📦", "🏭", "🚚", "✅"];
@@ -609,11 +611,26 @@ export function OrdersView() {
   async function confirmDeskAndCreateParcel(
     o: Order,
     co: CarrierKey,
-    desk: { id: number | string; name: string }
+    desk: { id: number | string; name: string },
+    newFee: number | null
   ) {
     setDeskSaving(true);
     try {
-      const patch = { baladiya: desk.name, deliveryCompany: co };
+      // Different carriers charge different Stop Desk fees for the same
+      // wilaya, so switching carrier can change the price the customer
+      // owes — recompute deliveryFee/total for the NEW carrier instead of
+      // silently keeping the old carrier's fee.
+      const baseSubtotal =
+        o.subtotal != null
+          ? o.subtotal
+          : o.total != null && o.deliveryFee != null
+            ? o.total - o.deliveryFee
+            : (o.total ?? 0);
+      const patch: Partial<Order> = {
+        baladiya: desk.name,
+        deliveryCompany: co,
+        ...(newFee != null ? { deliveryFee: newFee, total: baseSubtotal + newFee } : {}),
+      };
       await updateDocIn("orders", o.id, patch);
       patchOrder(o.id, patch);
       setDeskPrompt(null);
@@ -761,6 +778,14 @@ export function OrdersView() {
           const prevCoName = o.deliveryCompany
             ? (CO[o.deliveryCompany as CarrierKey]?.name ?? o.deliveryCompany)
             : "—";
+          // Each carrier prices Stop Desk delivery differently for the same
+          // wilaya — switching carrier can change what the customer owes,
+          // so recompute it here instead of silently keeping the old fee.
+          const newFee =
+            wid != null
+              ? feeForCarrier(co, wid, (o.deliveryType as DeliveryType) || "office", cache)
+              : null;
+          const feeChanged = newFee != null && o.deliveryFee != null && newFee !== o.deliveryFee;
           return (
             <div
               className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 p-6"
@@ -793,6 +818,18 @@ export function OrdersView() {
                     </option>
                   ))}
                 </select>
+                <div className="mt-3 rounded-lg bg-[var(--card-2)] px-3 py-2 text-[.8rem]">
+                  💰 رسم التوصيل لدى {CO[co].name}:{" "}
+                  <b className="text-foreground">
+                    {newFee != null ? priceFmt(newFee) : "—"}
+                  </b>
+                  {feeChanged && (
+                    <span className="text-[var(--ink-3)]">
+                      {" "}
+                      (بدلاً من {priceFmt(o.deliveryFee!)} لدى {prevCoName})
+                    </span>
+                  )}
+                </div>
                 <div className={cn(rowActions, "mt-4 justify-end")}>
                   <button
                     type="button"
@@ -810,7 +847,7 @@ export function OrdersView() {
                         (d) => String(d.id) === deskPrompt.deskId
                       );
                       if (!desk) return;
-                      confirmDeskAndCreateParcel(o, co, desk);
+                      confirmDeskAndCreateParcel(o, co, desk, newFee);
                     }}
                   >
                     {deskSaving ? "⏳ جاري الحفظ..." : "تأكيد وإنشاء الطرد"}

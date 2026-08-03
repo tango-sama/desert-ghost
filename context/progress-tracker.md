@@ -1330,6 +1330,32 @@ not the intended state (see `development-workflow.md`).
   orphaned-functions error. `firebase functions:list` confirms all 7
   functions (3 cancel + 4 webhook) live and healthy in `us-central1`.
 
+- Stop Desk carrier-switch popup now recomputes the delivery fee
+  (2026-08-03, owner-requested follow-up — different carriers charge
+  different Stop Desk rates for the same wilaya, so switching carrier can
+  change what the customer owes, not just which desk they pick up from).
+  `orders-view.tsx`'s desk-prompt popup now calls the existing
+  `feeForCarrier(co, wilayaId, deliveryType, cache)` (`lib/delivery.ts` —
+  already the single source of truth for every other order surface) for
+  the NEW carrier, shows it in the popup ("💰 رسم التوصيل لدى Yalidine: X
+  د.ج (بدلاً من Y د.ج لدى Noest)" when it actually differs, no
+  parenthetical when it doesn't), and `confirmDeskAndCreateParcel` now
+  writes the recomputed `deliveryFee` and `total` (`subtotal + newFee`,
+  deriving `subtotal` from `total - deliveryFee` for older orders that
+  never stored `subtotal` directly) onto the order alongside the desk/
+  company change — previously it silently kept the OLD carrier's stale
+  fee. Scoped exactly to the Stop Desk carrier-switch popup, matching what
+  was asked; a Home-delivery carrier switch still goes straight through
+  `createParcel` with no popup and no fee recompute — the same
+  "fee can differ per carrier" gap exists there too but wasn't in scope
+  here (flagged to the owner, not fixed).
+  Verified: `tsc --noEmit`, `npm run lint` (only the same pre-existing
+  unrelated warnings elsewhere in the repo), `npm run build` all clean.
+  NOT exercised through a real admin session — same sandbox constraint as
+  the rest of this feature; owner should confirm the shown fee matches
+  the new carrier's real synced rate for a couple of wilayas once
+  real Stop Desk fee data exists.
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)
