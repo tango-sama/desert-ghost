@@ -1293,6 +1293,43 @@ not the intended state (see `development-workflow.md`).
   trusting this, especially Yalidine's "only before pickup" restriction
   and ZR's exchange/return-parcel restriction.
 
+- Fixed a pre-existing, unrelated trinkl CI failure surfaced by the
+  cancel-functions push above (2026-08-03, same session): the owner got a
+  "Deploy to Firebase on merge" GitHub Actions failure email right after
+  the fast-forward push — `firebase deploy` (full, unscoped) found
+  `registerYalidineWebhook`/`registerZrWebhook`/`yalidineWebhook`/
+  `zrWebhook` live in production but absent from `main`'s source, and
+  aborted rather than silently delete them non-interactively. Root cause
+  predates this session entirely: the earlier carrier-webhooks work
+  (`context/progress-tracker.md`'s own 2026-07-20 entry already flagged
+  "MERGE webhooks INTO MAIN so deployed == main again" as outstanding) was
+  deployed manually from its own branch/worktree at the time but that
+  branch (`webhooks`, commit `32df793`) was never actually merged into
+  `main` — confirmed this isn't something the cancel-functions push
+  broke: the immediately-preceding CI run on `main` (the `syncCarriers`
+  commit, 2026-07-30) had failed with the exact same error, so any push
+  to main would have hit this.
+  Fixed the same way as the cancel functions: reviewed the `webhooks`
+  branch's diff first (admin-gated `registerZrWebhook`/
+  `registerYalidineWebhook` via a `requireAdmin()` matching
+  `firestore.rules`' `isAdmin()`, per-carrier webhook secrets read from
+  server-only `private/*` docs, timing-safe HMAC/Svix signature checks,
+  replay-window guard on ZR's Svix timestamp — no red flags), then merged
+  `origin/webhooks` into a fresh worktree based on `origin/main`
+  (`.claude/worktrees/merge-webhooks-main`) — a clean automatic merge, no
+  conflicts. Manually deployed the 4 previously-orphaned functions from
+  that merged source first (`firebase deploy --only
+  functions:zrWebhook,functions:registerZrWebhook,functions:yalidineWebhook,
+  functions:registerYalidineWebhook`) to confirm they update cleanly and
+  bring production back in sync with source, THEN fast-forward-pushed the
+  merge onto `origin/main` (`8b26667`) — deliberately in that order, so
+  the CI's next automatic full deploy wouldn't be the first real test of
+  whether this diff deploys cleanly.
+  Verified: watched the resulting "Deploy to Firebase on merge" run
+  (`gh run watch`) to completion — succeeded end-to-end this time, no
+  orphaned-functions error. `firebase functions:list` confirms all 7
+  functions (3 cancel + 4 webhook) live and healthy in `us-central1`.
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)
