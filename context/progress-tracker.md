@@ -1356,6 +1356,37 @@ not the intended state (see `development-workflow.md`).
   the new carrier's real synced rate for a couple of wilayas once
   real Stop Desk fee data exists.
 
+- Diagnosed (not yet fully resolved) a real "تعذّر إنشاء طرد ZR Express"
+  failure the owner hit (2026-08-03): confirmed via `git diff` that
+  `createZrParcel`'s own function body is byte-identical to before any of
+  this session's trinkl changes — the failure isn't a regression from the
+  cancel-functions/webhooks work. `firebase functions:log`'s plain-text
+  formatter showed blank content for the actual error lines (no `gcloud`
+  CLI available in this sandbox to pull the full structured payload), so
+  diagnosis relied on a screenshot of the real admin-panel alert instead:
+  `رفضت ZR Express الطرد: One or more validation errors occurred`. Root
+  cause of THAT unhelpful message (not necessarily of the underlying order
+  problem itself): `zrErrMsg()` in `functions/index.js` checked
+  `body.detail` before `body.errors` — ZR's 400 responses always carry
+  that same generic "One or more validation errors occurred" wrapper text
+  in `detail`, while the actual actionable per-field problem (which field,
+  why) sits in `errors[]` — so EVERY ZR validation failure surfaced this
+  identical useless message regardless of what was actually wrong,
+  swallowing the real diagnostic. Fixed (isolated worktree
+  `.claude/worktrees/fix-zr-error-message`, commit `90901e4`, deployed and
+  fast-forward-merged onto `origin/main` the same way as the two entries
+  above — deploy-then-push order, verified via `gh run watch`): `errors[]`
+  is now checked first, falling back to `detail`/`title` only when it's
+  empty. Redeployed the 5 functions that share this helper:
+  `createZrParcel`, `cancelZrParcel`, `getParcelStatus`, `syncCarriers`,
+  `registerZrWebhook`.
+  NOT resolved: the actual underlying reason ZR is rejecting THIS order
+  (a real field validation problem on the order data sent to
+  `POST /parcels`) — that only becomes visible once the owner retries
+  parcel creation on the SAME failing order and we see the specific
+  message this fix now surfaces instead of the generic one. Owner should
+  retry and report back the new (hopefully specific) error text.
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)
