@@ -1476,6 +1476,54 @@ not the intended state (see `development-workflow.md`).
   naturally comes up, rather than manufacture a test deletion against a
   real carrier account.
 
+- Fixed ZR Express's "encaisse" status (delivered) reporting as "just
+  created", plus a related normalizer ordering bug (2026-08-03,
+  owner-reported: "حالة ZR Express: encaisse — this state means the
+  parcel is delivered successfully"). Pure trinkl-side fix, no ghost
+  files touched. Root cause confirmed by isolating and unit-testing
+  `zrNormalize` directly (`node -e`, not just reading the regex): the
+  function had no branch matching "encaisse"/"Encaissé" (COD payment
+  collected, which only happens once delivered) at all, so it fell
+  through the entire chain to the catch-all `{stage: 0}` — a delivered
+  ZR parcel showed as "تم إنشاء الطلب" (order just created) in the
+  tracker. Fixed by adding it to the same branch as "delivered"/"livré"
+  (stage 4).
+  While testing found a SECOND, related bug in the same function: "Prêt
+  à expédier" (not yet shipped) was incorrectly landing on stage 1
+  (dispatched) because "expédie" is a substring of "expédier", so it
+  matched the dispatched-parcel regex before ever reaching the intended
+  pre-shipping bucket — confirmed this is the exact same class of bug
+  `yalidineNormalize` already has an explicit fix + comment for
+  ("Pre-shipping FIRST..."), just never applied to `zrNormalize`.
+  Reordered so the pre-shipping check runs first, matching Yalidine's
+  existing pattern. This actually changes (corrects) the signal
+  `isPastCancelWindow`'s ZR branch (added two entries above) relies on —
+  before this fix, "Prêt à expédier" accidentally already tripped the
+  `stage >= 1` half of that check (for the wrong reason); after this fix
+  it correctly falls through to the raw-text match instead, which was
+  always the intended path. No ghost-side change needed as a result —
+  just noting the two are no longer coincidentally-double-covering the
+  same case.
+  Also hardened the catch-all itself: unrecognized ZR status text now
+  signals `stage: -1` (was `0`) so both callers (`fetchZrStatus`,
+  `zrWebhook`) fall back to the previously known stage instead of
+  visibly regressing an in-progress parcel back to "just created" the
+  next time ZR uses wording this mapping doesn't recognize — mirrors how
+  `noestNormalize`'s existing `-1` signal already works. Both callers log
+  the raw unrecognized text (`console.log`) so a future gap in this
+  mapping is visible in Cloud Functions logs instead of silently
+  misreporting, same visibility Noest's fetcher already had.
+  Deployed (isolated worktree `.claude/worktrees/fix-zr-encaisse-status`,
+  commit `1e42e38`, fast-forward-merged onto trinkl's `origin/main` and
+  pushed the same way as every entry above): `getParcelStatus`,
+  `zrWebhook`. CI deploy run verified via `gh run watch`.
+  NOT exercised against a real ZR order reaching "encaisse" in
+  production — verified via isolated unit-testing of the extracted
+  `zrNormalize` function only (real inputs, real regex, just not run
+  inside an actual Cloud Function invocation against live data). Owner
+  should confirm the next real delivered ZR order shows "تم الاستلام"
+  correctly.
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)
