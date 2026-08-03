@@ -1256,44 +1256,45 @@ not the intended state (see `development-workflow.md`).
   credentials/auth, clearing only its own order field
   (`yalidine`/`noest`/`zr` via `FieldValue.delete()`) on success — on
   failure the order is left completely untouched so a parcel that's still
-  live with the carrier is never silently forgotten locally. NOT committed
-  to the trinkl repo's real `main` yet: the local reference clone at
-  `C:\Users\Tango\Desktop\desert shop` had uncommitted changes to
-  `functions/index.js` and was diverged from `origin/main` (7 ahead / 38
-  behind) when this was built, so per the owner's explicit choice, the new
-  functions were built in an isolated git worktree
+  live with the carrier is never silently forgotten locally.
+  Deployed and live (owner chose "merge to main and deploy now" when
+  asked): the local reference clone at `C:\Users\Tango\Desktop\desert shop`
+  had uncommitted changes to `functions/index.js` and was diverged from
+  `origin/main` (7 ahead / 38 behind), so it was never touched. Instead,
+  the new functions were built in an isolated git worktree
   (`.claude/worktrees/cancel-parcel-apis`, branch `claude/cancel-parcel-
-  apis`) based on `origin/main`, committed there (`8c55c9a`), and
-  deliberately NOT merged/pushed/deployed — needs the owner's review and a
-  `firebase deploy --only functions` from that repo before any of this
-  actually works in production.
+  apis`) based on `origin/main`, committed there (`8c55c9a`), pushed as a
+  branch, then fast-forward-merged directly onto `origin/main` (a clean
+  fast-forward since the branch was exactly `origin/main` + one commit —
+  no interaction with the dirty local working tree at all) and deployed
+  with `firebase deploy --only functions:cancelYalidineParcel,
+  functions:cancelNoestParcel,functions:cancelZrParcel --project
+  desert-shop-24af9`. All three now show as live `v2 callable` functions
+  in `us-central1` (`firebase functions:list`).
   Ghost side: `components/admin/carriers.ts` gained a `CANCEL_FN` map
   (mirroring `CREATE_FN`); `orders-view.tsx`'s `toggleFulfilled` now calls
   `callFn(CANCEL_FN[carrier], {orderId})` and AWAITS success before
   clearing anything locally — if the cancel call throws (carrier already
-  shipped it, function not yet deployed, etc.) the whole reset aborts with
-  an alert naming the carrier and telling the admin to cancel manually via
-  that carrier's dashboard, and nothing is deleted. The confirm-dialog
-  copy was updated to say a real cancellation will be attempted first.
-  Until the trinkl functions above are actually deployed, clicking
-  "تعليم كجديد" on a parcel-having order will show that same error alert
-  (Cloud Functions `not-found`) and correctly change nothing — a safe
-  failure mode, not a silent one.
-  Verified: `tsc --noEmit`, `npm run build` clean on the ghost side; the
-  new trinkl functions pass `node --check` (syntax only — no live carrier
-  credentials available in this sandbox to exercise them for real). NOT
-  exercised end-to-end against a real parcel with any of the three
-  carriers — the owner should test each carrier once after the trinkl
-  functions are deployed (ideally against a real but low-stakes test
-  order) before trusting this fully, especially Yalidine's "only before
-  pickup" restriction and ZR's exchange/return-parcel restriction.
+  shipped it, etc.) the whole reset aborts with an alert naming the
+  carrier and telling the admin to cancel manually via that carrier's
+  dashboard, and nothing is deleted. The confirm-dialog copy was updated
+  to say a real cancellation will be attempted first.
+  Verified: `tsc --noEmit`, `npm run build` clean on the ghost side.
+  Deployed functions verified live (not just syntax-checked) via a direct
+  Node probe using the same public web SDK config `lib/firebase.ts` uses —
+  called all three with a deliberately bogus/nonexistent orderId and got
+  the expected `functions/not-found: Order not found` from every one,
+  confirming each is reachable, correctly wired to Firestore, and fails
+  the way the code says it should — without touching any real order or
+  carrier credential. NOT exercised end-to-end against a REAL parcel with
+  any of the three carriers (that requires an actual live order — no test
+  parcel was created/cancelled in this session). The owner should test
+  each carrier once against a real but low-stakes test order before fully
+  trusting this, especially Yalidine's "only before pickup" restriction
+  and ZR's exchange/return-parcel restriction.
 
 ## Next Up
 
-- Merge/push `claude/cancel-parcel-apis` (in the trinkl repo) into `main`
-  and run `firebase deploy --only functions` — the three new cancel
-  functions above are committed but not live yet, so "تعليم كجديد" can't
-  actually cancel anything with a carrier until this deploy happens.
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)
   to also sync each carrier's stop-desk/agency list into
   `delivery_data/{carrier}.centers` (shape: `Record<wilayaId, {id, name,
