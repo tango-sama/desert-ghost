@@ -36,6 +36,12 @@ export const CREATE_FN: Record<CarrierKey, string> = {
   zr: "createZrParcel",
 };
 
+export const CANCEL_FN: Record<CarrierKey, string> = {
+  yalidine: "cancelYalidineParcel",
+  noest: "cancelNoestParcel",
+  zr: "cancelZrParcel",
+};
+
 // Pending orders sort before confirmed ones; confirmed sort by most
 // recently created parcel.
 export function confirmStamp(o: Order): number {

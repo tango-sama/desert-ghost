@@ -26,6 +26,7 @@ import {
   waIntl,
 } from "@/components/admin/ui";
 import {
+  CANCEL_FN,
   CO,
   CREATE_FN,
   orderCarrier,
@@ -639,11 +640,34 @@ export function OrdersView() {
         hasDeliveryData &&
         !confirm(
           carrier
-            ? `سيتم حذف وصل ${CO[carrier].name} الحالي (رقم التتبع) واسم المنتج على الوصل لهذا الطلب حتى تتمكني من إنشاء وصل جديد بأي شركة توصيل. متابعة؟`
+            ? `سيتم محاولة إلغاء طرد ${CO[carrier].name} لدى شركة التوصيل عبر الـ API، ثم حذف بيانات الوصل من هذا الطلب حتى تتمكني من إنشاء وصل جديد بأي شركة توصيل. إذا تعذّر الإلغاء (مثلاً لأن الطرد بدأ الشحن بالفعل) فلن يُحذف شيء. متابعة؟`
             : "سيتم حذف اسم المنتج على الوصل لهذا الطلب حتى تتمكني من إدخاله من جديد. متابعة؟"
         )
       )
         return;
+
+      const key = `reset:${o.id}`;
+      setBusyKey(key, true);
+      // Cancel with the carrier FIRST — only clear our own record of the
+      // parcel once it's confirmed gone on their side. If cancellation
+      // fails (e.g. it already shipped), abort entirely and leave the
+      // order untouched, so we never lose track of a parcel that's still
+      // live with the carrier.
+      if (carrier) {
+        try {
+          await callFn(CANCEL_FN[carrier], { orderId: o.id });
+        } catch (err) {
+          console.error(CANCEL_FN[carrier], err);
+          setBusyKey(key, false);
+          alert(
+            `تعذّر إلغاء طرد ${CO[carrier].name} لدى شركة التوصيل:\n` +
+              ((err as Error | null)?.message ?? "خطأ غير معروف") +
+              `\n\nلم يتم حذف أي شيء — يمكنك إلغاء الطرد يدوياً من لوحة ${CO[carrier].name} ثم إعادة المحاولة.`
+          );
+          return;
+        }
+      }
+
       const patch: Partial<Order> = {
         fulfilled: false,
         status: "New",
@@ -660,6 +684,8 @@ export function OrdersView() {
       } catch (e) {
         console.error(e);
         toast("فشل");
+      } finally {
+        setBusyKey(key, false);
       }
       return;
     }
@@ -1154,9 +1180,14 @@ export function OrdersView() {
                     <button
                       type="button"
                       className={btn("gray", true)}
+                      disabled={!!busy[`reset:${oid}`]}
                       onClick={() => toggleFulfilled(o)}
                     >
-                      {o.fulfilled ? "↩ تعليم كجديد" : "✓ تم التنفيذ"}
+                      {busy[`reset:${oid}`]
+                        ? "⏳ جاري الإلغاء..."
+                        : o.fulfilled
+                          ? "↩ تعليم كجديد"
+                          : "✓ تم التنفيذ"}
                     </button>
                     <button
                       type="button"
