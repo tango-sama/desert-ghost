@@ -1023,8 +1023,20 @@ export function OrdersView() {
               </div>
             </div>
 
-            {isOpen && (
-              <>
+            {/* grid-rows 0fr→1fr is the CSS trick for animating to/from an
+                intrinsic ("auto") height — a plain max-height transition
+                would need a guessed cap and either clip tall carts or
+                animate a lot of empty space. */}
+            <div
+              className={cn(
+                "grid transition-[grid-template-rows] duration-300 ease-in-out",
+                isOpen ? "grid-rows-[1fr]" : "grid-rows-[0fr]"
+              )}
+            >
+              {/* inert while folded — the content is still in the DOM for
+                  the height animation, but must stay untabbable and
+                  invisible to screen readers, same as when it was unmounted. */}
+              <div className="overflow-hidden" inert={!isOpen}>
                 <div className={dimCls}>
                   {picList.length > 0 && (
                     <>
@@ -1271,8 +1283,8 @@ export function OrdersView() {
                     </button>
                   </div>
                 </div>
-              </>
-            )}
+              </div>
+            </div>
           </div>
         );
       })}
