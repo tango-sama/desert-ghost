@@ -311,7 +311,12 @@ function TrackStepper({
                 const bits: React.ReactNode[] = [];
                 if (e.by) bits.push(`🚚 ${e.by}`);
                 if (e.center) bits.push(`🏢 ${e.center}`);
-                if (e.location) bits.push(`📍 ${e.location}`);
+                if (e.location)
+                  bits.push(
+                    <span key="loc" className="text-[var(--teal-ink)]">
+                      📍 {e.location}
+                    </span>
+                  );
                 if (e.causer) bits.push(`causer: ${e.causer}`);
                 if (e.content)
                   bits.push(
