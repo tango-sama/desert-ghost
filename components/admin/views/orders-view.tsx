@@ -433,8 +433,9 @@ export function OrdersView() {
     setBusy((b) => ({ ...b, [key]: on }));
   }
 
-  // After a refresh, drop the order's fold override so the default folding
-  // applies again — a parcel that just turned "delivered" folds right away.
+  // After a bulk refresh, drop the order's fold override so the default
+  // folding applies again — a parcel that just turned "delivered" folds
+  // right away, decluttering the list once the batch is done.
   function clearFold(oid: string) {
     setFolds((f) => {
       if (!(oid in f)) return f;
@@ -442,6 +443,14 @@ export function OrdersView() {
       delete n[oid];
       return n;
     });
+  }
+
+  // A single-order refresh is always triggered from inside that order's own
+  // (already open) card — force it to stay open even if the result is
+  // "delivered", so the admin actually sees the stepper land on the final
+  // step instead of the card folding out from under them.
+  function forceOpen(oid: string) {
+    setFolds((f) => ({ ...f, [oid]: true }));
   }
 
   async function refreshTracking(orderId: string) {
@@ -453,7 +462,7 @@ export function OrdersView() {
         (x) => String(x.id) === String(orderId)
       );
       if (o) patchOrder(orderId, applyTrackingResult(o, status));
-      clearFold(orderId);
+      forceOpen(orderId);
       scrollTrackerToCurrent(orderId);
     } catch (err) {
       console.error("getParcelStatus", err);
