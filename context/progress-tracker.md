@@ -1804,3 +1804,19 @@ not the intended state (see `development-workflow.md`).
   path model-viewer's pan gesture listens on) and read `getCameraTarget()`
   / `getCameraOrbit()` before and after — both identical, confirming pan
   is fully inert while the element is otherwise interactive.
+- 2026-08-04: admin orders tab — renamed the per-order tracking-check
+  button from "🔄 تحديث" to "🔄 تتبع" (`orders-view.tsx`'s `TrackStepper`),
+  then added bulk order deletion: a `selected` map (order id → checked)
+  drives a checkbox on each card (in the header row, `stopPropagation`d so
+  it doesn't also toggle fold/unfold), a "☑️ تحديد الكل" / "✕ إلغاء تحديد
+  الكل" toggle in the toolbar (selects/deselects everything in the current
+  filtered `list`, not the full unfiltered order set), and a floating
+  "🗑️ حذف المحدد (N)" button (bottom-right, `bg-destructive`, separate
+  corner from the existing Noest-print floating bar so the two don't
+  overlap) that confirms once, deletes all selected via
+  `Promise.allSettled(deleteDocIn(...))`, and reports how many succeeded
+  vs. failed in the toast.
+  Verified: file parses clean via `esbuild --loader=tsx` (no local
+  `node_modules` in this session, so `tsc`/`npm run build` couldn't run —
+  worth a real `tsc --noEmit` / `npm run build` pass before fully
+  trusting it); not exercised in a live browser session.
