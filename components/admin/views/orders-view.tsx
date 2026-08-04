@@ -175,7 +175,7 @@ function TrackStepper({
       className={cn(btn("blue", true), "mr-auto")}
       style={{ background: color }}
     >
-      {busy ? "⏳ جاري التحقق..." : "🔄 تحديث"}
+      {busy ? "⏳ جاري التحقق..." : "🔄 تتبع"}
     </button>
   );
 
