@@ -22,7 +22,9 @@ export default async function HomePage() {
         <FeatureStrip />
         <CategoryGrid categories={categories} />
       </RevealRoot>
-      <FeaturedCarousel items={featured} />
+      <RevealRoot>
+        <FeaturedCarousel items={featured} />
+      </RevealRoot>
       <RevealRoot>
         <ProductGrid products={products} categories={categories} />
         <ContactForm settings={settings} />

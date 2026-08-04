@@ -1820,3 +1820,24 @@ not the intended state (see `development-workflow.md`).
   `node_modules` in this session, so `tsc`/`npm run build` couldn't run —
   worth a real `tsc --noEmit` / `npm run build` pass before fully
   trusting it); not exercised in a live browser session.
+- 2026-08-04: Fixed the home page's "المنتجات المميزة" (featured products)
+  section not appearing at all. It WAS already positioned correctly (right
+  after the category section, in `app/(storefront)/page.tsx`) and had
+  correct data-fetch logic — the bug was scroll-reveal wiring: `<
+  FeaturedCarousel>`'s root `<section>` carries the `reveal` CSS class
+  (`opacity:0` until an `IntersectionObserver` adds `.in`, see
+  `app/globals.css`), but `useReveal` (`hooks/use-reveal.ts`) only scans for
+  `.reveal` descendants inside the specific `<RevealRoot>` div it's attached
+  to, on mount. `FeaturedCarousel` was rendered as a bare sibling between two
+  `<RevealRoot>` blocks, not inside one, so no observer ever watched it and
+  it stayed permanently invisible (`opacity:0`, translated 30px down) even
+  when `featured_products` had real data — a silent, permanent-not-rendered
+  bug rather than an empty-data or positioning issue. Fix: wrapped
+  `<FeaturedCarousel items={featured} />` in its own `<RevealRoot>` in
+  `app/(storefront)/page.tsx`, matching the pattern used for every other
+  section on the page.
+  Verified: `esbuild --loader:.tsx=tsx` parses the changed file clean (no
+  local `node_modules` in this session, so `npm run lint`/`build` couldn't
+  run — worth a real `npm run build` + browser check before fully trusting
+  it, and worth confirming at least one row exists in `featured_products` so
+  there's something to see).
