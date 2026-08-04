@@ -36,6 +36,16 @@ export type ParcelInfo = {
   label?: string | null;
   validated?: boolean;
   createdAt?: number;
+  // ZR Express Swap usage — see swapZrParcel in the trinkl functions.
+  // Absent on every doc created before this feature and on non-ZR
+  // parcels; max 2 entries per the swap-per-order limit.
+  swapCount?: number;
+  lastSwapAt?: number;
+  swapHistory?: {
+    at: number;
+    requestId?: string;
+    changes?: Record<string, unknown>;
+  }[];
 };
 
 // One carrier activity event as normalized by getParcelStatus — agent,
@@ -69,6 +79,15 @@ export type TrackingStatus = {
   // out. See getParcelStatus in the trinkl functions.
   notFoundAtCarrier?: boolean;
   events?: TrackEvent[];
+  // ZR Express only — read from the SAME GET /parcels/{id} the 🔄 refresh
+  // button already fetches (see fetchZrStatus in the trinkl functions).
+  // zrSwapEligible only turns true once a manual refresh reveals an
+  // eligible situation AND there is no already-pending modification
+  // request — this is what makes the existing refresh button double as
+  // the Swap button's eligibility check.
+  zrSwapEligible?: boolean;
+  zrSituationName?: string | null;
+  zrHasPendingSwap?: boolean;
 };
 
 export type OrderItem = {

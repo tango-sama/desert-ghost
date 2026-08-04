@@ -39,7 +39,9 @@ import { nowMs } from "@/lib/time";
 import { useDeliveryData } from "@/hooks/use-delivery-data";
 import {
   centersForCarrier,
+  communesForCarrier,
   feeForCarrier,
+  isValidPhone,
   wilayasFor,
   type Carrier,
   type CarrierCache,
@@ -49,6 +51,13 @@ import {
 const TRACK_ICONS = ["📥", "📦", "🏭", "🚚", "✅"];
 // ⚠️ marker sits on the line between "خرج للتوصيل" and the final step
 const WARN_IDX = 3;
+
+// ZR Express "Swap" — these 11 wilayas only allow a same-wilaya swap, never
+// cross-wilaya (mirrored from the trinkl functions' own copy, which is the
+// enforcement of record; this client-side copy only drives the warning in
+// the swap modal below). Keep both lists in sync if ZR's rule ever changes.
+const ZR_SWAP_SAME_WILAYA_ONLY_IDS = new Set([1, 8, 11, 30, 32, 45, 49, 52, 53, 54, 58]);
+const ZR_MAX_SWAPS = 2;
 
 function patchOrder(id: string, patch: Partial<Order>) {
   useAdminStore.setState((s) => ({
@@ -146,10 +155,12 @@ function TrackStepper({
   o,
   busy,
   onRefresh,
+  onSwap,
 }: {
   o: Order;
   busy: boolean;
   onRefresh: () => void;
+  onSwap?: () => void;
 }) {
   const carrier = orderCarrier(o);
   if (!carrier) return null;
@@ -181,6 +192,27 @@ function TrackStepper({
       </div>
     );
   }
+
+  // Swap only ever appears once a manual 🔄 refresh has confirmed the
+  // parcel's CURRENT situation is eligible — zrSwapEligible is only ever
+  // set inside this fresh-`ts` branch, never as a default, so there is no
+  // separate polling mechanism driving this button.
+  const swapCount = Number((o.zr?.swapCount as number | undefined) || 0);
+  const showSwap =
+    carrier === "zr" &&
+    !!ts.zrSwapEligible &&
+    swapCount < ZR_MAX_SWAPS &&
+    !!onSwap;
+  const swapBtn = showSwap && (
+    <button
+      type="button"
+      onClick={onSwap}
+      className={cn(btn("blue", true))}
+      style={{ background: CO.zr.color }}
+    >
+      🔄↔️ Swap ({swapCount}/{ZR_MAX_SWAPS})
+    </button>
+  );
 
   const labels = ts.stageLabels ?? [];
   const hasAlert = !!ts.alert;
@@ -300,7 +332,10 @@ function TrackStepper({
         </div>
       </div>
 
-      <div className={`${rowActions} mt-3`}>{refreshBtn}</div>
+      <div className={`${rowActions} mt-3`}>
+        {refreshBtn}
+        {swapBtn}
+      </div>
 
       {/* Activity details from the carrier API — agent, hub, causer and the
           reason — folded by default; click "تفاصيل الشحنة" to expand. */}
@@ -439,6 +474,19 @@ export function OrdersView() {
   } | null>(null);
   const [deskSaving, setDeskSaving] = useState(false);
 
+  // ZR Express "Swap" prompt — opened from the Swap button in TrackStepper
+  // (only rendered once a refresh confirms eligibility). All four fields
+  // are independently optional, matching ZR's own dashboard Swap menu.
+  const [swapPrompt, setSwapPrompt] = useState<{
+    orderId: string;
+    amount: string;
+    phone1: string;
+    phone2: string;
+    wilayaId: string;
+    communeName: string;
+  } | null>(null);
+  const [swapSaving, setSwapSaving] = useState(false);
+
   // Orders are listed by date placed, newest first; the sticky topbar
   // search narrows the list (and what refresh-all touches) live.
   const q = ordersSearch.trim().toLowerCase();
@@ -493,6 +541,107 @@ export function OrdersView() {
       );
     } finally {
       setBusyKey(key, false);
+    }
+  }
+
+  function requestSwap(o: Order) {
+    setSwapPrompt({
+      orderId: String(o.id),
+      amount: "",
+      phone1: "",
+      phone2: "",
+      wilayaId: "",
+      communeName: "",
+    });
+  }
+
+  async function submitSwap() {
+    if (!swapPrompt) return;
+    const o = orders.find((x) => String(x.id) === swapPrompt.orderId);
+    if (!o) return;
+
+    const amountRaw = swapPrompt.amount.trim();
+    const phone1 = swapPrompt.phone1.trim();
+    const phone2 = swapPrompt.phone2.trim();
+    const wilayaId = swapPrompt.wilayaId.trim();
+    const communeName = swapPrompt.communeName.trim();
+
+    if (!amountRaw && !phone1 && !phone2 && !wilayaId) {
+      toast("اختاري تغييراً واحداً على الأقل: سعر، هاتف، أو ولاية جديدة");
+      return;
+    }
+    let amount: number | null = null;
+    if (amountRaw) {
+      amount = Number(amountRaw);
+      if (isNaN(amount) || amount < 0 || amount > 150000) {
+        toast("سعر غير صالح");
+        return;
+      }
+    }
+    if (phone1 && !isValidPhone(phone1)) {
+      toast("رقم الهاتف الجديد غير صالح");
+      return;
+    }
+    if (phone2 && !isValidPhone(phone2)) {
+      toast("رقم الهاتف الاحتياطي غير صالح");
+      return;
+    }
+    if (wilayaId && !communeName) {
+      toast("اختاري البلدية الجديدة");
+      return;
+    }
+
+    const oldWid = Number(o.wilayaId);
+    const newWid = wilayaId ? Number(wilayaId) : null;
+    const crossWilaya = newWid != null && (!oldWid || newWid !== oldWid);
+    if (crossWilaya && ZR_SWAP_SAME_WILAYA_ONLY_IDS.has(oldWid)) {
+      toast("هذه الولاية لا تسمح إلا بالتبديل داخل نفس الولاية");
+      return;
+    }
+
+    const parts: string[] = [];
+    if (amount != null) parts.push(`السعر الجديد: ${amount} د.ج`);
+    if (phone1) parts.push(`هاتف جديد: ${phone1}`);
+    if (phone2) parts.push(`هاتف احتياطي: ${phone2}`);
+    if (newWid != null) {
+      const w = wilayasFor("zr", cache).find((w) => Number(w.id) === newWid);
+      parts.push(`ولاية جديدة: ${w?.ar ?? newWid} - ${communeName}`);
+      parts.push(
+        crossWilaya
+          ? "رسوم التبديل: 100 د.ج (ولاية مختلفة)"
+          : "رسوم التبديل: 50 د.ج (نفس الولاية)"
+      );
+    }
+    if (!confirm(`تبديل طرد ZR Express (Swap)؟\n${parts.join("\n")}`)) return;
+
+    setSwapSaving(true);
+    try {
+      const res = await callFn<{ ok: true; requestId: string; swapCount: number }>(
+        "swapZrParcel",
+        {
+          orderId: o.id,
+          amount: amount ?? undefined,
+          phone1: phone1 || undefined,
+          phone2: phone2 || undefined,
+          wilayaId: newWid ?? undefined,
+          communeName: communeName || undefined,
+        }
+      );
+      patchOrder(o.id, {
+        zr: { ...o.zr, swapCount: res.swapCount },
+        ...(phone1 ? { phone: phone1 } : {}),
+      });
+      setSwapPrompt(null);
+      toast(`تم إرسال طلب التبديل ✓ (${res.swapCount}/${ZR_MAX_SWAPS})`);
+      await refreshTracking(String(o.id));
+    } catch (err) {
+      console.error("swapZrParcel", err);
+      alert(
+        "تعذّر إرسال طلب التبديل:\n" +
+          ((err as Error | null)?.message ?? "خطأ غير معروف")
+      );
+    } finally {
+      setSwapSaving(false);
     }
   }
 
@@ -890,6 +1039,149 @@ export function OrdersView() {
           );
         })()}
 
+      {swapPrompt &&
+        (() => {
+          const o = orders.find((x) => String(x.id) === swapPrompt.orderId);
+          if (!o) return null;
+          const wid = swapPrompt.wilayaId ? Number(swapPrompt.wilayaId) : null;
+          const communes = wid != null ? communesForCarrier("zr", wid, cache) : [];
+          const oldWid = Number(o.wilayaId);
+          const crossWilaya = wid != null && (!oldWid || wid !== oldWid);
+          const restricted = crossWilaya && ZR_SWAP_SAME_WILAYA_ONLY_IDS.has(oldWid);
+          const swapCount = Number(o.zr?.swapCount || 0);
+          return (
+            <div
+              className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 p-6"
+              onClick={(e) => e.target === e.currentTarget && setSwapPrompt(null)}
+            >
+              <div className="w-full max-w-[440px] rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-lg)]">
+                <h3 className="mb-2 text-[1.05rem] font-extrabold">
+                  🔄↔️ تبديل طرد ZR Express (Swap)
+                </h3>
+                <p className="mb-4 text-[.82rem] leading-relaxed text-[var(--ink-3)]">
+                  الاستخدام: {swapCount}/{ZR_MAX_SWAPS} — اختاري تغييراً واحداً أو أكثر:
+                </p>
+
+                <label className="mb-1.5 block text-[.74rem] font-extrabold text-[var(--ink-2)]">
+                  سعر جديد (اختياري)
+                </label>
+                <input
+                  className={cn(inp, "mb-3 px-3.5 py-[.55rem] text-[.85rem]")}
+                  type="number"
+                  min={0}
+                  max={150000}
+                  inputMode="numeric"
+                  value={swapPrompt.amount}
+                  onChange={(e) =>
+                    setSwapPrompt((s) => (s ? { ...s, amount: e.target.value } : s))
+                  }
+                />
+
+                <label className="mb-1.5 block text-[.74rem] font-extrabold text-[var(--ink-2)]">
+                  هاتف رئيسي جديد (اختياري)
+                </label>
+                <input
+                  className={cn(inp, "mb-3 px-3.5 py-[.55rem] text-[.85rem]")}
+                  inputMode="tel"
+                  value={swapPrompt.phone1}
+                  onChange={(e) =>
+                    setSwapPrompt((s) => (s ? { ...s, phone1: e.target.value } : s))
+                  }
+                />
+
+                <label className="mb-1.5 block text-[.74rem] font-extrabold text-[var(--ink-2)]">
+                  هاتف احتياطي (اختياري)
+                </label>
+                <input
+                  className={cn(inp, "mb-3 px-3.5 py-[.55rem] text-[.85rem]")}
+                  inputMode="tel"
+                  value={swapPrompt.phone2}
+                  onChange={(e) =>
+                    setSwapPrompt((s) => (s ? { ...s, phone2: e.target.value } : s))
+                  }
+                />
+
+                <label className="mb-1.5 block text-[.74rem] font-extrabold text-[var(--ink-2)]">
+                  ولاية جديدة (اختياري)
+                </label>
+                <select
+                  className={cn(inp, "mb-3 px-3.5 py-[.55rem] text-[.85rem]")}
+                  value={swapPrompt.wilayaId}
+                  onChange={(e) =>
+                    setSwapPrompt((s) =>
+                      s ? { ...s, wilayaId: e.target.value, communeName: "" } : s
+                    )
+                  }
+                >
+                  <option value="">بدون تغيير</option>
+                  {wilayasFor("zr", cache).map((w) => (
+                    <option key={w.id} value={String(w.id)}>
+                      {w.ar}
+                    </option>
+                  ))}
+                </select>
+
+                {wid != null && (
+                  <>
+                    <label className="mb-1.5 block text-[.74rem] font-extrabold text-[var(--ink-2)]">
+                      بلدية جديدة
+                    </label>
+                    <select
+                      className={cn(inp, "mb-3 px-3.5 py-[.55rem] text-[.85rem]")}
+                      value={swapPrompt.communeName}
+                      onChange={(e) =>
+                        setSwapPrompt((s) =>
+                          s ? { ...s, communeName: e.target.value } : s
+                        )
+                      }
+                    >
+                      <option value="">اختاري البلدية</option>
+                      {communes.map((c) => (
+                        <option key={c} value={c}>
+                          {c}
+                        </option>
+                      ))}
+                    </select>
+
+                    {restricted ? (
+                      <div className="mb-3 rounded-lg bg-[var(--alert-bg)] px-3 py-2 text-[.8rem] font-bold text-[var(--alert-ink)]">
+                        ⚠️ هذه الولاية لا تسمح إلا بالتبديل داخل نفس الولاية
+                      </div>
+                    ) : (
+                      <div className="mb-3 rounded-lg bg-[var(--card-2)] px-3 py-2 text-[.8rem]">
+                        💰 رسوم التبديل:{" "}
+                        <b className="text-foreground">
+                          {crossWilaya
+                            ? "100 د.ج (ولاية مختلفة)"
+                            : "50 د.ج (نفس الولاية)"}
+                        </b>
+                      </div>
+                    )}
+                  </>
+                )}
+
+                <div className={cn(rowActions, "mt-4 justify-end")}>
+                  <button
+                    type="button"
+                    className={btn("gray", true)}
+                    onClick={() => setSwapPrompt(null)}
+                  >
+                    إلغاء
+                  </button>
+                  <button
+                    type="button"
+                    disabled={swapSaving || restricted}
+                    className={btn("blue", true)}
+                    onClick={submitSwap}
+                  >
+                    {swapSaving ? "⏳ جاري الإرسال..." : "تأكيد وطلب التبديل"}
+                  </button>
+                </div>
+              </div>
+            </div>
+          );
+        })()}
+
       {list.map((o) => {
         const oid = String(o.id);
         const oco = CO[(o.deliveryCompany as CarrierKey) ?? "yalidine"] ?? CO.yalidine;
@@ -1164,6 +1456,7 @@ export function OrdersView() {
                   o={o}
                   busy={!!busy[`track:${oid}`]}
                   onRefresh={() => refreshTracking(oid)}
+                  onSwap={() => requestSwap(o)}
                 />
 
                 <div className={dimCls}>
