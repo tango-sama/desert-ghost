@@ -29,6 +29,7 @@ import {
   CANCEL_FN,
   CO,
   CREATE_FN,
+  isDelivered,
   isPastCancelWindow,
   orderCarrier,
   orderDate,
@@ -922,7 +923,22 @@ export function OrdersView() {
             {/* always-visible summary — click to fold/unfold */}
             <div
               className="cursor-pointer select-none"
-              onClick={() => setFolds((f) => ({ ...f, [oid]: !isOpen }))}
+              onClick={() =>
+                setFolds((f) => {
+                  const next = { ...f, [oid]: !isOpen };
+                  // Expanding a card collapses every other already-delivered
+                  // order, so opening one parcel doesn't leave a wall of
+                  // finished ones stuck open alongside it.
+                  if (!isOpen) {
+                    for (const other of list) {
+                      const otherId = String(other.id);
+                      if (otherId !== oid && isDelivered(other))
+                        next[otherId] = false;
+                    }
+                  }
+                  return next;
+                })
+              }
             >
               <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                 <div>
