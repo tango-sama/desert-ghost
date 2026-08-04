@@ -88,6 +88,16 @@ const CLR_INK: Record<string, string> = {
   info: "text-[var(--info-ink)]",
 };
 
+// A carrier's own badge only classifies the STATE ("out for delivery",
+// "delivered"...) — the free-text reason attached to it isn't reliably
+// classified the same way (e.g. Noest hands back "Client ne répond pas"
+// with no special badge at all, since the state itself is still just
+// "delivery attempt"). Catch the reason text directly so a real delivery
+// problem is never left in the same plain color as a routine update, no
+// matter what the surrounding event's badge says.
+const URGENT_REASON =
+  /ne r[ée]pond pas|injoignable|absent|refus[ée]?|annul[ée]?|report[ée]|adresse (erron[ée]e|incorrecte|introuvable)|num[ée]ro (erron[ée]|incorrect)|hors zone|endommag[ée]|colis perdu/i;
+
 // Horizontally centre a stepper on its current/last-reached step by
 // adjusting only the stepper's own scroll — never the page (delta-based,
 // works in RTL too).
@@ -320,7 +330,13 @@ function TrackStepper({
                 if (e.causer) bits.push(`causer: ${e.causer}`);
                 if (e.content)
                   bits.push(
-                    <span key="c" className={cn("font-bold", CLR_INK[cls])}>
+                    <span
+                      key="c"
+                      className={cn(
+                        "font-bold",
+                        URGENT_REASON.test(e.content) ? CLR_INK.bad : CLR_INK[cls]
+                      )}
+                    >
                       content: {e.content}
                     </span>
                   );
