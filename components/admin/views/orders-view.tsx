@@ -1235,8 +1235,13 @@ export function OrdersView() {
           >
             {/* always-visible summary — click to fold/unfold */}
             <div
-              className="cursor-pointer select-none"
-              onClick={() =>
+              className="cursor-pointer"
+              onClick={() => {
+                // A text selection (e.g. copying the customer's name or
+                // phone number) wins over the fold/unfold toggle — otherwise
+                // finishing a drag-select on this header would also
+                // collapse/expand the card out from under the selection.
+                if (window.getSelection()?.toString()) return;
                 setFolds((f) => {
                   const next = { ...f, [oid]: !isOpen };
                   // Expanding a card collapses every other already-delivered
@@ -1250,8 +1255,8 @@ export function OrdersView() {
                     }
                   }
                   return next;
-                })
-              }
+                });
+              }}
             >
               <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                 <div>
