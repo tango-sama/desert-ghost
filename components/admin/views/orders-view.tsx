@@ -454,6 +454,7 @@ export function OrdersView() {
   const [busy, setBusy] = useState<Record<string, boolean>>({});
   const [refreshAllLabel, setRefreshAllLabel] = useState<string | null>(null);
   const [noestSel, setNoestSel] = useState<Record<string, boolean>>({});
+  const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [drafts, setDrafts] = useState<
     Record<string, { note?: string; price?: string }>
   >({});
@@ -498,6 +499,20 @@ export function OrdersView() {
   const anyTracked = list.some((o) => !!orderCarrier(o));
   const openTracked = list.filter((o) => orderCarrier(o) && cardOpen(o));
   const selectedNoest = Object.keys(noestSel).filter((k) => noestSel[k]);
+  const selectedIds = Object.keys(selected).filter((k) => selected[k]);
+  const allSelected = list.length > 0 && list.every((o) => selected[String(o.id)]);
+
+  function toggleSelectAll() {
+    setSelected((s) => {
+      const n = { ...s };
+      if (list.every((o) => n[String(o.id)])) {
+        for (const o of list) delete n[String(o.id)];
+      } else {
+        for (const o of list) n[String(o.id)] = true;
+      }
+      return n;
+    });
+  }
 
   function setBusyKey(key: string, on: boolean) {
     setBusy((b) => ({ ...b, [key]: on }));
@@ -911,6 +926,33 @@ export function OrdersView() {
     }
   }
 
+  async function deleteSelected() {
+    const ids = selectedIds;
+    if (!ids.length) return;
+    if (!confirm(`حذف ${ids.length} طلب${ids.length > 1 ? "ات" : ""}؟`)) return;
+    setBusyKey("bulk-delete", true);
+    try {
+      const results = await Promise.allSettled(
+        ids.map((id) => deleteDocIn("orders", id))
+      );
+      const deleted = ids.filter((_, i) => results[i].status === "fulfilled");
+      const failed = ids.length - deleted.length;
+      useAdminStore.setState((s) => ({
+        orders: s.orders.filter((x) => !deleted.includes(String(x.id))),
+      }));
+      setSelected((s) => {
+        const n = { ...s };
+        for (const id of deleted) delete n[id];
+        return n;
+      });
+      toast(
+        `تم حذف ${deleted.length} طلب` + (failed ? ` — تعذّر حذف ${failed}` : "")
+      );
+    } finally {
+      setBusyKey("bulk-delete", false);
+    }
+  }
+
   if (!list.length)
     return q ? (
       <EmptyState icon="🔍" text="لا توجد طلبات مطابقة للبحث" />
@@ -920,8 +962,8 @@ export function OrdersView() {
 
   return (
     <div>
-      {anyTracked && (
-        <div className="mb-4">
+      <div className="mb-4 flex flex-wrap items-center gap-2">
+        {anyTracked && (
           <button
             type="button"
             className={btn("blue", true)}
@@ -930,6 +972,24 @@ export function OrdersView() {
           >
             {refreshAllLabel ??
               `🔄 تحديث حالة الطرود المفتوحة (${openTracked.length})`}
+          </button>
+        )}
+        <button type="button" className={btn("gray", true)} onClick={toggleSelectAll}>
+          {allSelected ? "✕ إلغاء تحديد الكل" : `☑️ تحديد الكل (${list.length})`}
+        </button>
+      </div>
+
+      {selectedIds.length > 0 && (
+        <div className="fixed bottom-5 right-5 z-[300] rounded-full bg-destructive px-2 py-1.5 shadow-[0_10px_30px_rgba(0,0,0,.35)]">
+          <button
+            type="button"
+            disabled={!!busy["bulk-delete"]}
+            onClick={deleteSelected}
+            className="cursor-pointer bg-transparent px-3 py-1 text-[.78rem] font-extrabold text-white"
+          >
+            {busy["bulk-delete"]
+              ? "⏳ جاري الحذف..."
+              : `🗑️ حذف المحدد (${selectedIds.length})`}
           </button>
         </div>
       )}
@@ -1260,6 +1320,20 @@ export function OrdersView() {
             >
               <div className="mb-3 flex flex-wrap items-start justify-between gap-3">
                 <div>
+                  <span
+                    onClick={(e) => e.stopPropagation()}
+                    className="mr-1 inline-block align-middle"
+                  >
+                    <input
+                      type="checkbox"
+                      title="تحديد الطلب"
+                      checked={!!selected[oid]}
+                      onChange={(e) =>
+                        setSelected((s) => ({ ...s, [oid]: e.target.checked }))
+                      }
+                      className="h-[17px] w-[17px] cursor-pointer accent-destructive"
+                    />
+                  </span>
                   <span className={o.fulfilled ? tagOk : tagInfo}>
                     {o.fulfilled ? "تم التنفيذ" : "جديد"}
                   </span>
