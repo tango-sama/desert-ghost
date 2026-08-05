@@ -49,8 +49,9 @@ export function FeaturedCarousel({ items }: { items: Featured[] }) {
             className="flex gap-5 overflow-x-auto scroll-smooth pb-5 [scroll-snap-type:x_mandatory] [scrollbar-width:thin]"
           >
             {items.map((f) => (
-              <div
+              <Link
                 key={f.id}
+                href={f.productLink || "/products"}
                 data-fcard
                 className="flex w-[250px] shrink-0 flex-col overflow-hidden rounded-[20px] border border-[var(--line-2)] bg-card shadow-[var(--shadow)] [scroll-snap-align:start]"
               >
@@ -67,14 +68,11 @@ export function FeaturedCarousel({ items }: { items: Featured[] }) {
                       {f.rightText || f.leftText}
                     </div>
                   )}
-                  <Link
-                    href={f.productLink || "/products"}
-                    className="mt-auto rounded-full bg-gradient-to-br from-[var(--rose)] to-[var(--rose-deep)] py-2.5 text-center text-[0.84rem] font-extrabold text-white"
-                  >
+                  <span className="mt-auto rounded-full bg-gradient-to-br from-[var(--rose)] to-[var(--rose-deep)] py-2.5 text-center text-[0.84rem] font-extrabold text-white">
                     {f.ctaText || "تفاصيل أكثر"}
-                  </Link>
+                  </span>
                 </div>
-              </div>
+              </Link>
             ))}
           </div>
         </div>

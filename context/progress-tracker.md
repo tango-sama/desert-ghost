@@ -1841,3 +1841,23 @@ not the intended state (see `development-workflow.md`).
   run — worth a real `npm run build` + browser check before fully trusting
   it, and worth confirming at least one row exists in `featured_products` so
   there's something to see).
+- 2026-08-05: Made the whole card in the home page's "المنتجات المميزة"
+  (featured products) carousel clickable, not just the CTA button —
+  `components/storefront/featured-carousel.tsx`. Previously only the
+  bottom `Link` (the "تفاصيل أكثر" button) navigated to `f.productLink`;
+  clicking the image or the product-name text did nothing. Restructured
+  so the outer card itself (`data-fcard`) is the `Link` wrapping the
+  image, name, description, and CTA, and turned the former nested CTA
+  `Link` into a `span` styled identically (avoids invalid nested `<a>`
+  tags). `data-fcard` stayed on the same element so the arrow-button
+  scroll-step logic in the same file (`querySelector("[data-fcard]")` →
+  `offsetWidth`) is unaffected. Regular product cards
+  (`components/storefront/product-card.tsx`) already had this pattern
+  (multiple `Link`s covering image/title, only the add-to-cart `button`
+  excluded) — no change needed there.
+  Verified: `npm run lint` clean (pre-existing unrelated warning/error in
+  `cart-drawer.tsx`/`sunguard/product-section.tsx`, not touched here),
+  `npm run build` clean, and a real `npm run dev` + `curl` check of the
+  rendered HTML confirmed each featured card is now a single `<a
+  href="/...">` wrapping the image/title/CTA (previously only the CTA
+  span-equivalent carried the href).
