@@ -1861,3 +1861,33 @@ not the intended state (see `development-workflow.md`).
   rendered HTML confirmed each featured card is now a single `<a
   href="/...">` wrapping the image/title/CTA (previously only the CTA
   span-equivalent carried the href).
+
+- 2026-08-05: Added a header search icon next to the cart icon, sitewide
+  (`components/storefront/nav.tsx`) — clicking it toggles a slide-down
+  search bar (same visual slot/z-index as the mobile menu panel, but
+  shown at all breakpoints since the trigger icon itself isn't
+  `md:hidden`); submitting navigates to `/products?q=<query>`. Reused the
+  existing `/products` in-memory filtering (`components/storefront/
+  products-browser.tsx`) rather than building a second search mechanism:
+  `ProductsPage` now reads a `q` searchParam alongside the existing `cat`
+  one and passes it as `ProductsBrowser`'s new `initialQuery` prop, which
+  seeds the page's own search box — so the header search and the
+  in-page search box are the same state, just two entry points into it.
+  Broadened the match itself so "search anything on the site" is
+  meaningfully true for the catalog: the filter predicate now also
+  matches the product's category name (`catMap[p.category]`), not just
+  title/subtitle as before — a query like "عطور" now surfaces every
+  product in that category even if the word never appears in an
+  individual product's own title. (Scope note: this searches the product
+  catalog — title, subtitle, category — which is the site's only
+  structured, indexable content; the three single-product landing pages
+  `/collagen`, `/sunguard`, `/glutathione` are separate marketing funnels
+  with hardcoded copy, not part of this index, same boundary the funnels
+  already keep from the main catalog per architecture-context.md.)
+  Verified: `npm run lint` clean (same two pre-existing, unrelated
+  findings as the prior entry — `cart-drawer.tsx`/`sunguard/
+  product-section.tsx` — nothing new introduced here), `npm run build`
+  clean, and a real `npm run dev` + `curl` check confirmed the search
+  icon renders in the nav (`aria-label="بحث"`) and that
+  `/products?q=عطر` server-renders the search input pre-filled with
+  `value="عطر"`.

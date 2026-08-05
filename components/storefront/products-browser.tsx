@@ -14,14 +14,16 @@ export function ProductsBrowser({
   products,
   categories,
   initialCat,
+  initialQuery = "",
 }: {
   products: Product[];
   categories: Category[];
   initialCat: string;
+  initialQuery?: string;
 }) {
   const router = useRouter();
   const [activeCat, setActiveCat] = useState(initialCat);
-  const [search, setSearch] = useState("");
+  const [search, setSearch] = useState(initialQuery);
   const [sort, setSort] = useState<Sort>("new");
 
   const catMap = useMemo(
@@ -36,7 +38,9 @@ export function ProductsBrowser({
     if (search.trim()) {
       const q = search.trim().toLowerCase();
       items = items.filter((p) =>
-        `${p.title || p.name || ""} ${p.subtitle || ""}`.toLowerCase().includes(q)
+        `${p.title || p.name || ""} ${p.subtitle || ""} ${catMap[p.category ?? ""] || ""}`
+          .toLowerCase()
+          .includes(q)
       );
     }
     if (sort === "price-asc") items.sort((a, b) => priceNum(a.price) - priceNum(b.price));
@@ -48,7 +52,7 @@ export function ProductsBrowser({
         (a, b) => (Number(b.lastModified ?? b.id) || 0) - (Number(a.lastModified ?? a.id) || 0)
       );
     return items;
-  }, [products, activeCat, search, sort]);
+  }, [products, activeCat, search, sort, catMap]);
 
   const title = activeCat === "all" ? "كل المنتجات" : catMap[activeCat] || "المنتجات";
 
