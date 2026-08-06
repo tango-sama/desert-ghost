@@ -9,6 +9,17 @@ import styles from "./glutathione.module.css";
 // catalog item, not a fabricated offer). No star-rating graphic or
 // customer-count claim — this store has no real review data to back
 // that up (see progress-tracker.md).
+
+// Hero spotlight default photo (2026-08-06, owner request): the
+// "قوة الجلوتاثيون" ingredient/molecule infographic — the same asset
+// already used as the admin-set `formulaImage` override before this
+// change, downloaded from its live Firebase Storage URL so the code
+// default and the admin's own upload stay byte-identical. The owner asked
+// for this to swap places with the bottle+soap combo photo (see
+// formula.tsx's comment) — that combo photo is NOT this component's
+// default anymore.
+const HERO_IMAGE = "/assets/glutathione/formula-infographic.webp";
+
 export function Hero({
   onOrder,
   ref,
@@ -24,7 +35,7 @@ export function Hero({
 }) {
   const title = content?.title?.trim();
   const lead = content?.lead?.trim();
-  const heroImage = content?.image?.trim() || product.image;
+  const heroImage = content?.image?.trim() || HERO_IMAGE;
   return (
     <section className={styles.glHero} ref={ref}>
       <div className={styles.glHeroRay} />

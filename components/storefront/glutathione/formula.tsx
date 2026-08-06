@@ -10,6 +10,14 @@ import styles from "./glutathione.module.css";
 //    (owner's choice, 2026-07-26) — used only when the supplied image is
 //    itself a complete, legible, accurate graphic; loses independent
 //    text-editability for this section in exchange for that visual.
+//    2026-08-06: owner asked to swap this section's image with the hero's
+//    — `formulaImage` (set via /amelhadj → صفحات الهبوط) should point at
+//    the bottle+soap combo photo, `public/assets/glutathione/
+//    hero-shot.webp`, now that the "قوة الجلوتاثيون" infographic moved to
+//    hero.tsx's own default. No code default photo lives here (this
+//    section still falls back to the orbit diagram, not a static photo,
+//    when `formulaImage` is unset) — setting `formulaImage` is a content
+//    edit in the admin panel, not a code change.
 const TRIO = [
   {
     ic: "🧬",

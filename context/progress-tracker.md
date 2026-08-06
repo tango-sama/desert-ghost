@@ -1591,6 +1591,63 @@ not the intended state (see `development-workflow.md`).
   gift badge and the gift detail section confirm the new product name and
   the new product photo (red Nawarna soap box) render correctly.
 
+- `/glutathione` hero photo swapped (2026-08-06, same day): owner supplied
+  a new real photo (the supplement bottle + the Nawarna gift soap box
+  together) via chat upload, converted to
+  `public/assets/glutathione/hero-shot.webp` (Pillow, quality 90). Kept
+  this deliberately separate from `GLUTATHIONE_PRODUCT.image` (still the
+  bottle-only shot in `product.ts`, used by `product-section.tsx` and
+  `formula.tsx`) rather than overwriting the shared constant — the owner
+  asked specifically for "the hero picture", and those other two sections
+  already itemize the gift box separately, so showing both boxes there too
+  would be redundant. New `HERO_IMAGE` constant added directly in
+  `hero.tsx`, used as the fallback in the existing
+  `content?.image?.trim() || HERO_IMAGE` admin-override expression (was
+  `|| product.image`) — no signature/behavior change to the override path.
+  IMPORTANT caveat found during verification: a real Firestore REST read of
+  `site_settings` showed `landingPages.glutathione.hero.image` already has
+  an owner-set override (uploaded via the "صفحات الهبوط" admin tab,
+  2026-07-27) — that override still wins over this new code default on the
+  actual deployed site. This session has no Firestore write credentials to
+  clear it; owner confirmed they'll clear that field themselves in
+  `/amelhadj` → صفحات الهبوط → Glutathione when asked.
+  Verified: `npm run lint` / `npm run build` clean. Confirmed
+  `/assets/glutathione/hero-shot.webp` serves 200. Did NOT get a visual
+  confirmation of the fallback actually rendering — every render during
+  this session (dev server + headless Chromium) picked up the live
+  Firestore override instead of the code default, per the caveat above —
+  so this rests on reading `hero.tsx`'s existing, already-proven
+  `content?.image?.trim() || <fallback>` expression rather than a fresh
+  screenshot. Owner should confirm the new photo appears once the override
+  is cleared.
+
+- `/glutathione` hero ↔ formula image swap (2026-08-06, same day,
+  supersedes "clear the override" above): owner sent a screenshot of the
+  live page's Formula section (the "قوة الجلوتاثيون" ingredient/molecule
+  infographic) and asked for it to swap places with the hero photo from
+  the entry above. Downloaded that infographic from its own live Firebase
+  Storage URL (it was already the owner's `formulaImage` admin override,
+  set 2026-07-27 — same asset, not re-created) into
+  `public/assets/glutathione/formula-infographic.webp`, and repointed
+  `hero.tsx`'s `HERO_IMAGE` default at it (was `hero-shot.webp`). The
+  bottle+soap combo photo (`hero-shot.webp`, from the prior entry) is no
+  longer any component's default — per the swap, it belongs in the Formula
+  section instead now.
+  Formula section has no code-level default *photo* to repoint the same
+  way — `formula.tsx` only shows a full-bleed image when the admin
+  `formulaImage` override is set; with it unset the section falls back to
+  a designed SVG "orbit" diagram (a deliberate replacement for an inferior
+  AI graphic, see 2026-07-26 entry above), not a photo. Left that fallback
+  untouched (no request to remove it) and added a comment in `formula.tsx`
+  pointing at `hero-shot.webp` as the intended asset. Net effect: the
+  owner needs one admin-panel content edit to finish the swap — in
+  `/amelhadj` → صفحات الهبوط → Glutathione, set the hero image field to
+  clear/blank (or leave unset) so the new infographic default shows, and
+  set the formula image field to `hero-shot.webp`'s content (re-upload the
+  combo photo there). No further code change needed for either side of the
+  swap.
+  Verified: `npm run lint` / `npm run build` clean.
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)
