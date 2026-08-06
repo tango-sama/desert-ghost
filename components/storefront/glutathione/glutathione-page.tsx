@@ -6,10 +6,8 @@ import { useDeliveryData } from "@/hooks/use-delivery-data";
 import { TikTokLiveButton } from "@/components/storefront/tiktok-live-button";
 import { Topbar } from "./topbar";
 import { Hero } from "./hero";
-import { FormulaBackgroundSection } from "./formula-background-section";
-import { BannerSection } from "./banner-section";
 import { Benefits } from "./benefits";
-import { ProductSpotSection } from "./product-spot-section";
+import { Formula } from "./formula";
 import { Gift } from "./gift";
 import { CareRoutine } from "./care-routine";
 import { ProductSection } from "./product-section";
@@ -22,15 +20,9 @@ import { OrderModal } from "./order-modal";
 import { GLUTATHIONE_PRODUCT, GIFT_SOAP } from "./product";
 import styles from "./glutathione.module.css";
 
-// Section order (2026-08-06 update): hero (showing the ingredient-formula
-// diagram — see hero.tsx), an optional formulaImage picture-break section
-// right after it (FormulaBackgroundSection — empty, picture as its own
-// background, no overlay; renders nothing when `formulaImage` is unset),
-// an optional standalone banner picture (BannerSection, admin
-// `bannerImage`, also a no-op when unset), benefits strip, the floating
-// product card in its own section (was the formula split before the
-// swap), free-gift detail, before/after + usage, product/order card,
-// trust strip, FAQ, final CTA.
+// Section order matches the owner's reference mockup: hero, benefits
+// strip, ingredient-formula split, free-gift detail, before/after +
+// usage, product/order card, trust strip, FAQ, final CTA.
 export function GlutathionePage({
   settings,
   isTikTokLive,
@@ -57,11 +49,14 @@ export function GlutathionePage({
   const [modalOpen, setModalOpen] = useState(false);
   const landing = settings.landingPages?.glutathione;
   const override = landing?.product;
-  // Merged once and threaded everywhere below (hero, product-spot
-  // section, product card, order modal) so an admin-edited name/price can
-  // never disagree between what's displayed and what's charged at
-  // checkout — same fix applied to sunguard/collagen (see
-  // progress-tracker.md).
+  // Merged once and threaded everywhere below (hero, formula, product
+  // card, order modal) so an admin-edited name/price can never disagree
+  // between what's displayed and what's charged at checkout — same fix
+  // applied to sunguard/collagen (see progress-tracker.md). The photo is
+  // the exception: hero and formula each accept their own independent
+  // image override (content.image / formulaImage) that falls back to
+  // this shared product.image when blank — image choice doesn't affect
+  // what's charged, so there's no consistency risk in letting it vary.
   const product = {
     ...GLUTATHIONE_PRODUCT,
     title: override?.title?.trim() || GLUTATHIONE_PRODUCT.title,
@@ -72,17 +67,9 @@ export function GlutathionePage({
   return (
     <div className={styles.glutathione} dir="rtl">
       <Topbar scrolled={topScrolled} />
-      <Hero
-        ref={heroRef}
-        onOrder={() => setModalOpen(true)}
-        product={product}
-        gift={GIFT_SOAP}
-        content={landing?.hero}
-      />
-      <FormulaBackgroundSection image={landing?.formulaImage} />
-      <BannerSection image={landing?.bannerImage} />
+      <Hero ref={heroRef} onOrder={() => setModalOpen(true)} product={product} gift={GIFT_SOAP} content={landing?.hero} />
       <Benefits />
-      <ProductSpotSection product={product} />
+      <Formula product={product} image={landing?.formulaImage} />
       <Gift gift={GIFT_SOAP} />
       <CareRoutine />
       <ProductSection onOrder={() => setModalOpen(true)} product={product} />

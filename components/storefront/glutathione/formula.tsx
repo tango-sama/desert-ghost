@@ -10,25 +10,7 @@ import styles from "./glutathione.module.css";
 //    (owner's choice, 2026-07-26) — used only when the supplied image is
 //    itself a complete, legible, accurate graphic; loses independent
 //    text-editability for this section in exchange for that visual.
-//    2026-08-06: owner asked to swap this section's image with the hero's
-//    — `formulaImage` (set via /amelhadj → صفحات الهبوط) should point at
-//    the bottle+soap combo photo, `public/assets/glutathione/
-//    hero-shot.webp`, now that the "قوة الجلوتاثيون" infographic moved to
-//    hero.tsx's own default. No code default photo lives here (this
-//    section still falls back to the orbit diagram, not a static photo,
-//    when `formulaImage` is unset) — setting `formulaImage` is a content
-//    edit in the admin panel, not a code change.
-//    2026-08-06, follow-up: owner asked for a further, structural swap on
-//    /glutathione itself — this section's whole visual (diagram or
-//    formulaImage) now renders inside the hero instead of its own
-//    section, and the hero's old floating card moved to a standalone
-//    section in its place. See hero.tsx / formula-visual.tsx /
-//    product-spot-section.tsx and glutathione-page.tsx's new section
-//    order. This component (the full section, with heading) is
-//    untouched and still powers /glutathione-3d's own Formula section —
-//    TRIO/OrbitRing are exported below purely so formula-visual.tsx can
-//    reuse them instead of duplicating the ingredient copy.
-export const TRIO = [
+const TRIO = [
   {
     ic: "🧬",
     h: "جلوتاثيون",
@@ -49,7 +31,7 @@ export const TRIO = [
   },
 ];
 
-export function OrbitRing() {
+function OrbitRing() {
   return (
     <svg viewBox="0 0 200 200" fill="none" className={styles.glOrbitRing}>
       <defs>

@@ -3,10 +3,10 @@
    components/storefront/sunguard and components/storefront/collagen.
    Restyled (2026-07-26) to match an owner-provided reference mockup made
    specifically for this product: deep navy + gold, matching the real
-   Life Extension bottle's own branding, with a real free-gift offer, an
-   ingredient-science split section, and an honest FAQ/trust strip.
-   Shared brand tokens (--gold, --ink-2, --ink-3, --line, --ease) come
-   from app/globals.css :root. */
+   Life Extension bottle's own branding, with a promo bar, a real free-gift
+   offer, an ingredient-science split section, and an honest FAQ/trust
+   strip. Shared brand tokens (--gold, --ink-2, --ink-3, --line, --ease)
+   come from app/globals.css :root. */
 
 .glutathione {
   --gl-deep: #0f1f3d;
@@ -61,7 +61,9 @@
   transition: all 0.3s;
 }
 
-/* ───────── fixed header (brand nav) ───────── */
+/* ───────── promo/trust bar + top bar (stacked fixed header) ─────────
+   Only verified, real claims go here (no fabricated customer counts) —
+   see product.ts and progress-tracker.md. */
 .glHeader {
   position: fixed;
   top: 0;
@@ -69,6 +71,32 @@
   z-index: 200;
   display: flex;
   flex-direction: column;
+}
+.glPromo {
+  height: 38px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 1.6rem;
+  background: #091326;
+  color: var(--gl-gold);
+  font-size: 0.72rem;
+  font-weight: 800;
+  overflow-x: auto;
+  white-space: nowrap;
+  padding: 0 1rem;
+  transition: height 0.35s var(--ease), opacity 0.35s var(--ease);
+}
+.glHeader.scrolled .glPromo {
+  height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+.glPromo span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex-shrink: 0;
 }
 .glTop {
   width: 100%;
@@ -131,6 +159,13 @@
     padding: 0.6rem 1.1rem;
   }
   .brandTx {
+    display: none;
+  }
+  .glPromo {
+    gap: 1rem;
+    font-size: 0.66rem;
+  }
+  .glPromo span:last-child {
     display: none;
   }
 }
@@ -336,33 +371,7 @@
   color: var(--gl-gold);
 }
 
-/* hero/formula visual swap (2026-08-06, owner request) — the hero's
-   floating product card and the formula section's orbit diagram trade
-   places: this fills the hero's visual column (see formula-visual.tsx /
-   hero.tsx), and .glFormulaSpot (further below) centers the floating
-   card in its new standalone section (see product-spot-section.tsx).
-   Stretched to the full row height (.glHeroVisualCol overrides
-   glHeroInner's align-items: center for just this column) with no card
-   look. (The formulaImage picture itself no longer appears in the hero
-   at all, foreground or background — it moved through a few iterations
-   same day before landing in its own dedicated section right after the
-   hero; see formula-background-section.tsx and progress-tracker.md.) */
-.glHeroVisualCol {
-  align-self: stretch;
-  display: flex;
-}
-.glHeroOrbitCard {
-  flex: 1;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  min-height: 340px;
-  background: linear-gradient(180deg, #eef3fb 0%, #fff 100%);
-  padding: 2rem 1.5rem;
-}
-
-/* ───────── hero product spotlight (also reused standalone — see
-   .glFormulaSpot below and product-spot-section.tsx) ───────── */
+/* ───────── hero product spotlight ───────── */
 .glSpot {
   position: relative;
   border-radius: 28px;
@@ -455,13 +464,6 @@
   .glHeroInner { grid-template-columns: 1fr; }
   .glSpot { max-width: 380px; margin: 0 auto; }
 }
-/* the floating card, standalone in its own section now (see
-   product-spot-section.tsx) — .glSpot has no width of its own outside the
-   hero's old grid column, so cap and center it here too. */
-.glFormulaSpot {
-  max-width: 380px;
-  margin: 0 auto;
-}
 @media (max-width: 640px) {
   .glHero { padding: 7.5rem 1.2rem 3rem; }
   .glHeroCtas { justify-content: center; }
@@ -512,44 +514,6 @@
 }
 @media (max-width: 640px) {
   .glSec { padding: 3.5rem 1.2rem; }
-}
-
-/* ───────── standalone banner picture (2026-08-06, owner request) —
-   picture-only section right before Benefits, full-bleed, no boundaries
-   (no max-width, no padding, no radius, no shadow) — see
-   banner-section.tsx. ───────── */
-.glBanner {
-  max-width: none;
-  padding: 0;
-  line-height: 0;
-  background: none;
-}
-.glBannerImage {
-  width: 100%;
-  max-width: none;
-  height: auto;
-  display: block;
-  border-radius: 0;
-  box-shadow: none;
-}
-
-/* ───────── formulaImage picture-break, right after the hero
-   (2026-08-06, owner request) — an otherwise-empty section with the
-   picture as its own CSS background: no text, no buttons, no overlay,
-   just the picture. Unlike .glBanner (a foreground <img>, height set by
-   its own aspect ratio), an empty section has no content to derive
-   height from, so this needs an explicit height instead — viewport-
-   relative so it stays a substantial, clearly-visible break on any
-   screen size. See formula-background-section.tsx. ───────── */
-.glPictureBreak {
-  max-width: none;
-  height: 60vh;
-  min-height: 380px;
-  background-size: cover;
-  background-position: center;
-}
-@media (max-width: 640px) {
-  .glPictureBreak { height: 45vh; min-height: 300px; }
 }
 
 /* ───────── benefits strip (6 columns) ───────── */
