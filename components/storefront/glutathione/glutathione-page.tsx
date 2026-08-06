@@ -21,9 +21,13 @@ import { OrderModal } from "./order-modal";
 import { GLUTATHIONE_PRODUCT, GIFT_SOAP } from "./product";
 import styles from "./glutathione.module.css";
 
-// Section order matches the owner's reference mockup: hero, benefits
-// strip, ingredient-formula split, free-gift detail, before/after +
-// usage, product/order card, trust strip, FAQ, final CTA.
+// Section order (last touched 2026-08-06, owner request): hero, product
+// spotlight card, benefits strip, ingredient-formula split, free-gift
+// detail, before/after + usage, product/order card, trust strip, FAQ,
+// final CTA. Diverged from the original reference mockup's hero→benefits
+// ordering once the spotlight card moved out of the hero (see
+// product-spot-section.tsx) and the owner asked for benefits to land
+// after it instead of before.
 export function GlutathionePage({
   settings,
   isTikTokLive,
@@ -69,8 +73,8 @@ export function GlutathionePage({
     <div className={styles.glutathione} dir="rtl">
       <Topbar scrolled={topScrolled} />
       <Hero ref={heroRef} onOrder={() => setModalOpen(true)} gift={GIFT_SOAP} content={landing?.hero} />
-      <Benefits />
       <ProductSpotSection product={product} image={landing?.hero?.image} />
+      <Benefits />
       <Formula image={landing?.formulaImage} />
       <Gift gift={GIFT_SOAP} />
       <CareRoutine />

@@ -1647,6 +1647,26 @@ not the intended state (see `development-workflow.md`).
   immediately after Benefits contains `.glSpotStandalone`, before
   Formula.
 
+- Reordered `/glutathione` so Benefits comes after the product-spotlight
+  card instead of before it (owner request, 2026-08-06 — "benefits
+  after the picture of the power of glutathione"): swapped
+  `<ProductSpotSection>` and `<Benefits />` in `glutathione-page.tsx`.
+  New order: Hero → ProductSpotSection → Benefits → Formula → Gift →
+  ... Downloaded and visually inspected both the product-spot card's
+  image and the Formula section's `formulaImage` from their live
+  Firebase Storage URLs to resolve which one the owner meant — turned
+  out the admin currently has the *same* "قوة الجلوتاثيون" graphic set
+  for both fields, so the picture renders twice in a row
+  (ProductSpotSection then Formula); asked the owner to disambiguate,
+  who chose "right after the product card" specifically (Benefits now
+  sits between the two picture appearances, not after both). Not
+  deduplicating that repeated image — out of scope, flagging here in
+  case it's worth a follow-up. Updated the stale section-order comment
+  at the top of `glutathione-page.tsx` (still described the original
+  pre-2026-08-06 mockup order). Verified via `npx tsc --noEmit` / `npm
+  run lint` (both clean) and live DOM inspection in the dev server
+  (section order: glHero, ProductSpotSection, Benefits, glFormula, ...).
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)
