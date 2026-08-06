@@ -61,7 +61,7 @@ export function Glutathione3DPage({
       <Topbar scrolled={topScrolled} />
       <Hero ref={heroRef} onOrder={() => setModalOpen(true)} product={product} gift={GIFT_SOAP} />
       <Benefits />
-      <Formula product={product} />
+      <Formula />
       <Gift gift={GIFT_SOAP} />
       <CareRoutine />
       <ProductSection onOrder={() => setModalOpen(true)} product={product} />

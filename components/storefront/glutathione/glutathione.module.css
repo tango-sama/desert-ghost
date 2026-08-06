@@ -181,11 +181,17 @@
   max-width: 1280px;
   margin: 0 auto;
   display: grid;
-  grid-template-columns: 1.05fr 0.95fr;
-  gap: 3rem;
+  grid-template-columns: 1fr;
   align-items: center;
   position: relative;
   z-index: 2;
+}
+/* Text-only hero since 2026-08-06 (the floating product card moved to
+   its own section — see product-spot-section.tsx) — caps the text block
+   so it doesn't sprawl the full section width now that nothing shares
+   the row with it. */
+.glHeroTextOnly {
+  max-width: 640px;
 }
 .glHeroRay {
   position: absolute;
@@ -371,7 +377,9 @@
   color: var(--gl-gold);
 }
 
-/* ───────── hero product spotlight ───────── */
+/* ───────── product spotlight card — own section after Benefits since
+   2026-08-06 (used to live as the hero's second column; see
+   product-spot-section.tsx) ───────── */
 .glSpot {
   position: relative;
   border-radius: 28px;
@@ -446,6 +454,10 @@
   color: var(--gl-deep);
   border: 1px solid rgba(185, 134, 47, 0.25);
 }
+.glSpotStandalone {
+  max-width: 380px;
+  margin: 0 auto;
+}
 @media (prefers-reduced-motion: reduce) {
   .glEyebrow,
   .glHero h1,
@@ -459,10 +471,6 @@
   .glSpot {
     animation: none;
   }
-}
-@media (max-width: 980px) {
-  .glHeroInner { grid-template-columns: 1fr; }
-  .glSpot { max-width: 380px; margin: 0 auto; }
 }
 @media (max-width: 640px) {
   .glHero { padding: 7.5rem 1.2rem 3rem; }

@@ -7,6 +7,7 @@ import { TikTokLiveButton } from "@/components/storefront/tiktok-live-button";
 import { Topbar } from "./topbar";
 import { Hero } from "./hero";
 import { Benefits } from "./benefits";
+import { ProductSpotSection } from "./product-spot-section";
 import { Formula } from "./formula";
 import { Gift } from "./gift";
 import { CareRoutine } from "./care-routine";
@@ -67,8 +68,9 @@ export function GlutathionePage({
   return (
     <div className={styles.glutathione} dir="rtl">
       <Topbar scrolled={topScrolled} />
-      <Hero ref={heroRef} onOrder={() => setModalOpen(true)} product={product} gift={GIFT_SOAP} content={landing?.hero} />
+      <Hero ref={heroRef} onOrder={() => setModalOpen(true)} gift={GIFT_SOAP} content={landing?.hero} />
       <Benefits />
+      <ProductSpotSection product={product} image={landing?.hero?.image} />
       <Formula image={landing?.formulaImage} />
       <Gift gift={GIFT_SOAP} />
       <CareRoutine />

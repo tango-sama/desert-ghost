@@ -1619,6 +1619,34 @@ not the intended state (see `development-workflow.md`).
   720px mobile override). Admin's `formulaImage` override path
   (full-image render, bypassing the orbit entirely) is untouched.
 
+- Moved `/glutathione` hero's floating product-spotlight card out of the
+  hero into its own standalone section right after Benefits (owner
+  request via annotated screenshot, 2026-08-06). New
+  `product-spot.tsx` (`ProductSpot`, pure presentational — same JSX the
+  card always had) and `product-spot-section.tsx` (`ProductSpotSection`,
+  wraps it in `RevealRoot`/`.glSec`, new `.glSpotStandalone` centers it
+  at 380px). `hero.tsx` is now text-only, single column
+  (`.glHeroInner` collapsed to `grid-template-columns: 1fr`, text capped
+  via new `.glHeroTextOnly { max-width: 640px }`) — dropped its unused
+  `product` prop and the now-redundant 980px media-query override.
+  `glutathione-page.tsx` renders `<ProductSpotSection product={product}
+  image={landing?.hero?.image} />` between `<Benefits />` and
+  `<Formula />`; the admin "صورة الواجهة (Hero)" override still feeds
+  this card's photo, just re-homed from Hero's props to
+  ProductSpotSection's. `glutathione-3d`'s own hero is untouched (it's a
+  separate component, `glutathione-3d/hero.tsx`), and its shared
+  `<Formula />` call — found broken by `tsc` from the *previous* entry's
+  prop removal (still passing the now-nonexistent `product` prop) — was
+  fixed too. Verified via `npx tsc --noEmit` (0 errors project-wide,
+  down from 1) and `npm run lint` (clean of anything in touched files).
+  Screenshot-based visual verification was unreliable this session (the
+  chrome extension's screenshot tool returned stale/ghosted frames after
+  scrolling — a capture-timing issue, not an app bug); confirmed the new
+  layout instead via live DOM inspection (`document.querySelectorAll`)
+  in the running dev server: hero contains no `.glSpot`, and the section
+  immediately after Benefits contains `.glSpotStandalone`, before
+  Formula.
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)

@@ -1,5 +1,5 @@
 import type { LandingHeroContent } from "@/lib/firebase";
-import type { GLUTATHIONE_PRODUCT, GIFT_SOAP } from "./product";
+import type { GIFT_SOAP } from "./product";
 import styles from "./glutathione.module.css";
 
 // Restyled (2026-07-26) to match an owner-provided reference built for
@@ -9,27 +9,28 @@ import styles from "./glutathione.module.css";
 // catalog item, not a fabricated offer). No star-rating graphic or
 // customer-count claim — this store has no real review data to back
 // that up (see progress-tracker.md).
+//
+// Text-only single column since 2026-08-06 (owner request) — the
+// floating product card that used to fill a second column here now has
+// its own section right after Benefits (see product-spot-section.tsx).
 export function Hero({
   onOrder,
   ref,
-  product,
   gift,
   content,
 }: {
   onOrder: () => void;
   ref: React.Ref<HTMLElement>;
-  product: typeof GLUTATHIONE_PRODUCT;
   gift: typeof GIFT_SOAP;
   content?: LandingHeroContent;
 }) {
   const title = content?.title?.trim();
   const lead = content?.lead?.trim();
-  const heroImage = content?.image?.trim() || product.image;
   return (
     <section className={styles.glHero} ref={ref}>
       <div className={styles.glHeroRay} />
       <div className={styles.glHeroInner}>
-        <div>
+        <div className={styles.glHeroTextOnly}>
           <span className={styles.glEyebrow}>✨ تركيبة متقدمة لدعم جمالكِ من الداخل</span>
           {/* admin-edited title loses the two-tone gold split — plain
               white text is a fair trade-off for editability (see
@@ -89,21 +90,6 @@ export function Hero({
               </svg>
               توصيل لكل الولايات
             </span>
-          </div>
-        </div>
-        <div>
-          <div className={styles.glSpot}>
-            <div className={styles.glSpotVisual}>
-              <span className={styles.glSpotCorner}>✨ {product.size}</span>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={heroImage} alt={product.title} />
-            </div>
-            <div className={styles.glSpotBrand}>{product.brand}</div>
-            <div className={styles.glSpotTitle}>{product.title}</div>
-            <div className={styles.glSpotBadges}>
-              <span className={styles.glSpotBadge}>🌿 خالٍ من الجلوتين</span>
-              <span className={styles.glSpotBadge}>✅ NON-GMO</span>
-            </div>
           </div>
         </div>
       </div>
