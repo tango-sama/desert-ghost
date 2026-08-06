@@ -152,6 +152,20 @@
   position: relative;
   z-index: 2;
 }
+/* formulaImage-as-background mode (2026-08-06, owner request — see
+   hero.tsx) — no second column to balance against, so the grid collapses
+   to one, and the text block gets its own cap so it doesn't sprawl the
+   full section width now that nothing else shares the row with it. */
+.glHeroWithBg {
+  background-size: cover;
+  background-position: center;
+}
+.glHeroInnerSingle {
+  grid-template-columns: 1fr;
+}
+.glHeroTextOnly {
+  max-width: 640px;
+}
 .glHeroRay {
   position: absolute;
   top: 0;
@@ -337,24 +351,17 @@
 }
 
 /* hero/formula visual swap (2026-08-06, owner request) — the hero's
-   floating product card and the formula section's diagram/picture now
-   trade places: this fills the hero's visual slot (see formula-visual.tsx
-   / hero.tsx), and .glFormulaSpot (further below) centers the floating
-   card in its new standalone section (see product-spot-section.tsx).
-   Same-day follow-up: owner asked for this to fill its whole slot with
-   no floating-card look and no hero-navy showing around it — stretched
-   to the full row height (.glHeroVisualCol overrides glHeroInner's
-   align-items: center for just this column) and no radius/shadow/anim. */
+   floating product card and the formula section's orbit diagram (the
+   no-formulaImage fallback — see .glHeroWithBg above for the picture
+   case, now a section background instead of living here) trade places:
+   this fills the hero's visual column (see formula-visual.tsx / hero.tsx),
+   and .glFormulaSpot (further below) centers the floating card in its new
+   standalone section (see product-spot-section.tsx). Stretched to the
+   full row height (.glHeroVisualCol overrides glHeroInner's
+   align-items: center for just this column) with no card look. */
 .glHeroVisualCol {
   align-self: stretch;
   display: flex;
-}
-.glHeroBigImage {
-  display: block;
-  width: 100%;
-  height: 100%;
-  min-height: 340px;
-  object-fit: cover;
 }
 .glHeroOrbitCard {
   flex: 1;

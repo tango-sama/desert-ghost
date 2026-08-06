@@ -1,4 +1,5 @@
 import type { LandingHeroContent } from "@/lib/firebase";
+import { cn } from "@/lib/utils";
 import type { GLUTATHIONE_PRODUCT, GIFT_SOAP } from "./product";
 import { FormulaVisual } from "./formula-visual";
 import styles from "./glutathione.module.css";
@@ -29,6 +30,15 @@ import styles from "./glutathione.module.css";
 // stretches that column to the full row height (see glutathione.module.css)
 // so `FormulaVisual`'s image/card can fill it completely instead of
 // sitting inset and center-aligned.
+//
+// 2026-08-06, second follow-up: owner went further — not just filling its
+// own column, but becoming the whole section's background, literally
+// full. When `formulaImage` is set, it's now applied as the section's
+// `background-image` (with a dark overlay for text legibility) and the
+// second grid column disappears entirely — text becomes the only column,
+// full-bleed image behind it. The orbit-diagram fallback (no
+// `formulaImage` set) is unchanged: still its own column via
+// `FormulaVisual`, navy gradient background as before.
 export function Hero({
   onOrder,
   ref,
@@ -46,11 +56,22 @@ export function Hero({
 }) {
   const title = content?.title?.trim();
   const lead = content?.lead?.trim();
+  const bgImage = formulaImage?.trim();
   return (
-    <section className={styles.glHero} ref={ref}>
+    <section
+      className={cn(styles.glHero, bgImage && styles.glHeroWithBg)}
+      style={
+        bgImage
+          ? {
+              backgroundImage: `linear-gradient(to left, rgba(6, 13, 28, 0.93) 0%, rgba(6, 13, 28, 0.8) 45%, rgba(6, 13, 28, 0.55) 100%), url(${bgImage})`,
+            }
+          : undefined
+      }
+      ref={ref}
+    >
       <div className={styles.glHeroRay} />
-      <div className={styles.glHeroInner}>
-        <div>
+      <div className={cn(styles.glHeroInner, bgImage && styles.glHeroInnerSingle)}>
+        <div className={bgImage ? styles.glHeroTextOnly : undefined}>
           <span className={styles.glEyebrow}>✨ تركيبة متقدمة لدعم جمالكِ من الداخل</span>
           {/* admin-edited title loses the two-tone gold split — plain
               white text is a fair trade-off for editability (see
@@ -112,9 +133,11 @@ export function Hero({
             </span>
           </div>
         </div>
-        <div className={styles.glHeroVisualCol}>
-          <FormulaVisual product={product} image={formulaImage} />
-        </div>
+        {!bgImage && (
+          <div className={styles.glHeroVisualCol}>
+            <FormulaVisual product={product} />
+          </div>
+        )}
       </div>
     </section>
   );

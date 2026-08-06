@@ -2066,3 +2066,33 @@ not the intended state (see `development-workflow.md`).
   no transform-creating ancestors) that this is a screenshot-capture
   timing artifact in the browser tool itself, not a real layout bug;
   worth remembering if it recurs so it isn't mistaken for a regression.
+
+- Same day, second follow-up: owner sent the same circled screenshot
+  again and clarified further — not just fill its own column edge-to-
+  edge (previous entry), but become the whole section's *background*,
+  "literally full of the background." Reworked `hero.tsx`: when
+  `formulaImage` is set, it's now applied directly as the `<section>`'s
+  `background-image` (inline style, layered under a directional dark
+  gradient — `linear-gradient(to left, rgba(6,13,28,.93) → .8 → .55)` —
+  for text legibility against a busy product photo) instead of being
+  rendered as a foreground element in a second grid column. The second
+  column is dropped entirely in this case (`{!bgImage && <FormulaVisual
+  .../>}`) — `.glHeroInner` collapses to one column
+  (`.glHeroInnerSingle`) and the text block gets a `.glHeroTextOnly`
+  max-width (640px) so it doesn't sprawl the now-uncontested row width.
+  The no-`formulaImage` orbit-diagram fallback is untouched — still its
+  own column, same as the previous entry.
+  Simplified `formula-visual.tsx` to match: dropped its `image` prop and
+  fullImage branch entirely (dead code now that hero.tsx handles the
+  picture case directly) — it only ever renders the orbit diagram now.
+  Removed the now-fully-dead `.glHeroBigImage` CSS class (was the
+  previous entry's foreground-image treatment).
+  Verified: `npm run lint` / `npm run build` clean. Real `npm run dev` +
+  browser check against the live `formulaImage`: screenshot confirms the
+  photo now spans the entire hero section behind the text, with the
+  right side (where the text sits) darkened for contrast and the left
+  side showing the photo clearly; confirmed `/glutathione-3d` is
+  unaffected (separate `hero.tsx`, still shows its own 3D-viewer hero
+  unchanged). Did not separately re-verify the no-`formulaImage`
+  orbit-diagram fallback path in this pass (unchanged from the prior
+  entry, which did verify it).
