@@ -1803,4 +1803,90 @@ not the intended state (see `development-workflow.md`).
   a right-mouse-button drag directly via `PointerEvent`s (the same input
   path model-viewer's pan gesture listens on) and read `getCameraTarget()`
   / `getCameraOrbit()` before and after — both identical, confirming pan
+  is fully locked.
+
+- Fixed "تفاصيل الشحنة" (shipment details) never showing on ZR Express
+  orders (2026-08-04, owner report: "Shipment information is not
+  showing on ZR orders" — narrowed down through follow-up questions and
+  a screenshot to specifically the shipment-details accordion, not the
+  stepper or the tracking-number line, both of which were already fine).
+  Pure trinkl-side fix, no ghost files touched. `TrackStepper` in
+  ghost's `orders-view.tsx` only renders the accordion when
+  `trackingStatus.events.length > 0` — true for Yalidine and Noest,
+  whose `fetchYalidineStatus`/`fetchNoestStatus` (trinkl
+  `functions/index.js`) pull real carrier activity history, but
+  `fetchZrStatus` hardcoded `events: []` on every call, so ZR orders
+  never had anything to show there regardless of delivery stage.
+  Confirmed via ZR Express's own API docs (docs.zrexpress.app) that
+  `GET /parcels/{id}/state-history` exposes the same kind of
+  state-transition timeline (previousState/newState, modifiedBy,
+  location, comment, situations) the other two carriers already
+  surface. Wired it into `fetchZrStatus`, mapped to the shared
+  `TrackEvent` shape, best-effort (try/catch, same pattern as
+  Yalidine's `/histories` call) so a history-fetch failure can never
+  break the stepper itself, which already has everything it needs from
+  the parcel row.
+  Deployed (direct commit to trinkl's `main`, commit `e2dce88`,
+  approved by the owner before pushing since it triggers a live Cloud
+  Functions deploy; CI run verified via `gh run watch`): `getParcelStatus`.
+  Verified: `node --check` on the changed file, and the event-mapping
+  logic unit-tested in isolation (`node -e`) against a synthetic
+  response matching the documented `state-history` schema — correct
+  field mapping and chronological sort. NOT exercised against a real
+  ZR order's live `state-history` response (no ZR credentials/test
+  parcel available in this session) — owner should press 🔄 on an
+  existing ZR order and confirm "تفاصيل الشحنة" now lists real events.
+
+- Same day, follow-up: owner asked for the ZR event entries to be
+  colour-coded like Yalidine/Noest's already are (the first pass above
+  left every ZR event's `badge` as `null`, so they all rendered in
+  plain/neutral text). `TrackStepper` colours an event via `badgeCls`
+  matching keywords ("success"/"danger"/"warn"/"primary") in
+  `e.badge` — Noest/Yalidine get this straight from the carrier's own
+  API. ZR's state objects do carry a `color` field, but it's a
+  tenant-configurable hex with no guaranteed ok/bad/warn meaning, so
+  instead reused `zrNormalize` (already deployed, already driving the
+  top-level stepper's own colour) against each event's `newState`
+  name: alert states (retour/echec) → `badge-danger`, the terminal
+  delivered/encaissé stage → `badge-success`, anything else
+  recognized → `badge-primary`, unrecognized → `null` (same neutral
+  fallback as an unmatched badge anywhere else). Keeps an event's
+  colour always consistent with what the stepper itself says about
+  that same state name.
+  Deployed (trinkl `main`, commit `3f909c3`, owner approved before
+  push; CI verified via `gh run watch`): `getParcelStatus`.
+  Verified: `node --check`, plus the classification re-tested in
+  isolation (`node -e`) against sample state names spanning every
+  branch (new/in-transit/delivered/encaissé/retour/echec/unrecognized)
+  — each mapped to the intended colour. NOT exercised against real ZR
+  state names/colours in production.
+
+- Swapped the hero floating product card with the formula section's big
+  picture on `/glutathione` (2026-08-06, owner request): before, `hero.tsx`
+  always rendered the floating "spotlight" card (`.glSpot` — bottle photo,
+  brand, title, badges) and, separately, `formula.tsx` rendered
+  `formulaImage` (the admin-set full-bleed marketing graphic, currently
+  live in production per the 2026-07-26 entries above) as its own section
+  after Benefits. Owner asked for those two visuals to trade places.
+  Extracted the floating-card markup out of `hero.tsx` into a new shared
+  `product-spot.tsx` (`ProductSpot`) so both spots render identical badge
+  copy instead of two hand-synced copies. `hero.tsx` now takes a
+  `bigImage` prop (threaded from `landing?.formulaImage` in
+  `glutathione-page.tsx`): when set, the hero's second column renders that
+  image (new `.glHeroBigImage` — rounded, shadowed, inherits the card's
+  reveal/bob animation) instead of `<ProductSpot>`; when unset, it falls
+  back to `<ProductSpot>` as before, so a page with no `formulaImage`
+  configured is unaffected. `formula.tsx`'s `fullImage` branch now renders
+  `<ProductSpot>` (centered via new `.glFormulaSpot`, inside the normal
+  padded `.glSec` shell) instead of the old edge-to-edge image; its
+  no-image branch (the real-markup orbit diagram) is untouched. Removed
+  the now-unused `.glFormulaImageWrap`/`.glFormulaFullImage` CSS rules.
+  Verified: `npm run lint` / `npm run build` clean. Firebase Storage is
+  still unreachable from this sandbox, so verification used a local
+  stand-in image (`/assets/sunguard/product-shot.webp`) temporarily
+  wired into `formulaImage` in `app/glutathione/page.tsx` — screenshotted
+  the hero (big picture in the floating card's old spot) and the
+  post-Benefits section (floating card, badges and all, in the picture's
+  old spot), both correctly positioned and styled. Reverted the temporary
+  code before committing (confirmed via `git diff`).
   is fully inert while the element is otherwise interactive.

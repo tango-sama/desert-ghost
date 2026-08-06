@@ -1,5 +1,6 @@
 import type { LandingHeroContent } from "@/lib/firebase";
 import type { GLUTATHIONE_PRODUCT, GIFT_SOAP } from "./product";
+import { ProductSpot } from "./product-spot";
 import styles from "./glutathione.module.css";
 
 // Restyled (2026-07-26) to match an owner-provided reference built for
@@ -15,16 +16,22 @@ export function Hero({
   product,
   gift,
   content,
+  bigImage,
 }: {
   onOrder: () => void;
   ref: React.Ref<HTMLElement>;
   product: typeof GLUTATHIONE_PRODUCT;
   gift: typeof GIFT_SOAP;
   content?: LandingHeroContent;
+  // Formula-section "big picture" (LandingPageContent.formulaImage),
+  // swapped into the hero's floating-card spot — see formula.tsx, which
+  // swaps the floating card into this image's old spot in exchange.
+  bigImage?: string;
 }) {
   const title = content?.title?.trim();
   const lead = content?.lead?.trim();
   const heroImage = content?.image?.trim() || product.image;
+  const swapImage = bigImage?.trim();
   return (
     <section className={styles.glHero} ref={ref}>
       <div className={styles.glHeroRay} />
@@ -92,19 +99,12 @@ export function Hero({
           </div>
         </div>
         <div>
-          <div className={styles.glSpot}>
-            <div className={styles.glSpotVisual}>
-              <span className={styles.glSpotCorner}>✨ {product.size}</span>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={heroImage} alt={product.title} />
-            </div>
-            <div className={styles.glSpotBrand}>{product.brand}</div>
-            <div className={styles.glSpotTitle}>{product.title}</div>
-            <div className={styles.glSpotBadges}>
-              <span className={styles.glSpotBadge}>🌿 خالٍ من الجلوتين</span>
-              <span className={styles.glSpotBadge}>✅ NON-GMO</span>
-            </div>
-          </div>
+          {swapImage ? (
+            // eslint-disable-next-line @next/next/no-img-element
+            <img src={swapImage} alt="تركيبة ثلاثية الجمال" className={styles.glHeroBigImage} />
+          ) : (
+            <ProductSpot product={product} image={heroImage} />
+          )}
         </div>
       </div>
     </section>

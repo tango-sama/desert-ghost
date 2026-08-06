@@ -446,6 +446,18 @@
   color: var(--gl-deep);
   border: 1px solid rgba(185, 134, 47, 0.25);
 }
+/* hero/formula visual swap (2026-08-06) — when `formulaImage` is set, it
+   fills the hero's floating-card slot and takes over its reveal/bob
+   animation; the floating card moves to the formula section instead (see
+   hero.tsx / formula.tsx and .glFormulaSpot below). */
+.glHeroBigImage {
+  display: block;
+  width: 100%;
+  height: auto;
+  border-radius: 28px;
+  box-shadow: 0 30px 70px rgba(0, 0, 0, 0.4);
+  animation: glSpotReveal 0.95s var(--ease) 0.32s both, glBob 6s ease-in-out 1.3s infinite;
+}
 @media (prefers-reduced-motion: reduce) {
   .glEyebrow,
   .glHero h1,
@@ -456,13 +468,15 @@
   .glGiftBox::before,
   .glHeroCtas,
   .glTrust,
-  .glSpot {
+  .glSpot,
+  .glHeroBigImage {
     animation: none;
   }
 }
 @media (max-width: 980px) {
   .glHeroInner { grid-template-columns: 1fr; }
   .glSpot { max-width: 380px; margin: 0 auto; }
+  .glHeroBigImage { max-width: 460px; margin: 0 auto; }
 }
 @media (max-width: 640px) {
   .glHero { padding: 7.5rem 1.2rem 3rem; }
@@ -568,19 +582,13 @@
   max-width: none;
   background: linear-gradient(180deg, #eef3fb 0%, #fff 100%);
 }
-.glFormulaImageWrap {
-  max-width: none;
-  padding: 0;
-  line-height: 0;
-  background: none;
-}
-.glFormulaFullImage {
-  width: 100%;
-  max-width: none;
-  height: auto;
-  display: block;
-  border-radius: 0;
-  box-shadow: none;
+/* the floating card, swapped in here in place of the old full-bleed
+   `formulaImage` render (now shown in the hero instead — see
+   .glHeroBigImage above and formula.tsx) — .glSpot has no width of its
+   own outside the hero's grid column, so cap and center it here. */
+.glFormulaSpot {
+  max-width: 380px;
+  margin: 0 auto;
 }
 .glFormHead {
   text-align: center;

@@ -1,15 +1,16 @@
 import { RevealRoot } from "@/components/storefront/reveal-root";
 import type { GLUTATHIONE_PRODUCT } from "./product";
+import { ProductSpot } from "./product-spot";
 import styles from "./glutathione.module.css";
 
 // Ingredient-science section — two possible renders:
 // 1. Default (no admin image set): a real-markup "orbit" diagram (crisp,
 //    always-correct text — see progress-tracker.md, 2026-07-26, for why
 //    an earlier AI-generated version of this was replaced).
-// 2. Admin-set `formulaImage`: the image becomes the entire section
-//    (owner's choice, 2026-07-26) — used only when the supplied image is
-//    itself a complete, legible, accurate graphic; loses independent
-//    text-editability for this section in exchange for that visual.
+// 2. Admin-set `formulaImage`: the hero's floating product card is shown
+//    here instead (owner asked, 2026-08-06, for the hero's floating card
+//    and this section's big picture to swap places — see hero.tsx, which
+//    now renders `formulaImage` in the floating card's old spot).
 const TRIO = [
   {
     ic: "🧬",
@@ -60,9 +61,8 @@ export function Formula({
   if (fullImage) {
     return (
       <RevealRoot>
-        <section className={`${styles.glFormula} ${styles.glFormulaImageWrap} reveal`}>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src={fullImage} alt="تركيبة ثلاثية الجمال" className={styles.glFormulaFullImage} />
+        <section className={`${styles.glSec} ${styles.glFormula} reveal`}>
+          <ProductSpot product={product} className={styles.glFormulaSpot} />
         </section>
       </RevealRoot>
     );

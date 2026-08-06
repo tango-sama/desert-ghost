@@ -67,7 +67,14 @@ export function GlutathionePage({
   return (
     <div className={styles.glutathione} dir="rtl">
       <Topbar scrolled={topScrolled} />
-      <Hero ref={heroRef} onOrder={() => setModalOpen(true)} product={product} gift={GIFT_SOAP} content={landing?.hero} />
+      <Hero
+        ref={heroRef}
+        onOrder={() => setModalOpen(true)}
+        product={product}
+        gift={GIFT_SOAP}
+        content={landing?.hero}
+        bigImage={landing?.formulaImage}
+      />
       <Benefits />
       <Formula product={product} image={landing?.formulaImage} />
       <Gift gift={GIFT_SOAP} />
