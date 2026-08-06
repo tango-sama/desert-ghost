@@ -526,6 +526,25 @@
   .glSec { padding: 3.5rem 1.2rem; }
 }
 
+/* ───────── standalone banner picture (2026-08-06, owner request) —
+   picture-only section right before Benefits, full-bleed, no boundaries
+   (no max-width, no padding, no radius, no shadow) — see
+   banner-section.tsx. ───────── */
+.glBanner {
+  max-width: none;
+  padding: 0;
+  line-height: 0;
+  background: none;
+}
+.glBannerImage {
+  width: 100%;
+  max-width: none;
+  height: auto;
+  display: block;
+  border-radius: 0;
+  box-shadow: none;
+}
+
 /* ───────── benefits strip (6 columns) ───────── */
 .glBenefits {
   display: grid;

@@ -105,10 +105,14 @@ export type LandingPageContent = {
   beforeAfter?: LandingBaItem[];
   product?: LandingProductOverride;
   products?: LandingProductOverride[];
-  // Photo for the ingredient/formula split section — currently only read
-  // by /glutathione (see glutathione/formula.tsx). Falls back to the
-  // page's product photo when blank.
+  // Hero section background photo — currently only read by /glutathione
+  // (see glutathione/hero.tsx). When blank, the hero keeps its plain navy
+  // background and shows the built-in ingredient-orbit diagram instead.
   formulaImage?: string;
+  // Standalone full-bleed picture-only section, no fallback design —
+  // renders nothing when blank. Currently only read by /glutathione (see
+  // glutathione/banner-section.tsx), placed right before Benefits.
+  bannerImage?: string;
   // Custom path segment (no slashes/spaces) serving this page's content at
   // /<slug> via app/[slug]/page.tsx, in addition to its built-in route —
   // the built-in route (app/sunguard, app/collagen) redirects to it once

@@ -2096,3 +2096,35 @@ not the intended state (see `development-workflow.md`).
   unchanged). Did not separately re-verify the no-`formulaImage`
   orbit-diagram fallback path in this pass (unchanged from the prior
   entry, which did verify it).
+
+- New standalone banner-picture section on `/glutathione`, right before
+  Benefits (2026-08-06, owner request: "only a picture... full-section,
+  no boundaries"). New optional field `LandingPageContent.bannerImage`
+  (`lib/firebase.ts`) and new component `banner-section.tsx`
+  (`BannerSection`) — renders nothing when unset (no sensible default for
+  a picture-only section), otherwise a full-bleed `<img>` with the same
+  no-max-width/no-padding/no-radius/no-shadow treatment as the hero's own
+  background (reused `.glBanner`/`.glBannerImage`, styled like the old
+  pre-swap `.glFormulaImageWrap`/`.glFormulaFullImage`). Wired into
+  `glutathione-page.tsx` between `Hero` and `Benefits`.
+  Admin panel (`landing-pages-view.tsx`): added a new "🖼️ صورة قسم
+  مستقلة" card (glutathione-only, same upload/thumbnail/URL-field pattern
+  as the existing formula-image card) wired to the new field. Also
+  corrected the adjacent formula-image card's now-stale label/help text
+  while touching this area — it used to describe `formulaImage` as
+  becoming "a complete section on its own" with a warning about baked-in
+  text, which stopped being true days earlier this same session once
+  `formulaImage` became the hero's background image instead; relabeled
+  "🧬 خلفية الواجهة (Hero)" with copy describing the actual current
+  behavior.
+  Verified: `npm run lint` / `npm run build` clean (one self-introduced
+  `react/no-unescaped-entities` pair from literal quote marks in the new
+  admin help text, caught by lint and fixed with `&quot;` before the
+  final pass — nothing shipped broken). Real `npm run dev` + browser
+  check: temporarily wired a local test image into `bannerImage` in
+  `app/glutathione/page.tsx` (Firebase Storage still unreachable from
+  this sandbox), confirmed via `getBoundingClientRect`/`getComputedStyle`
+  on the live element (`x: 0`, full viewport `width`, `border-radius:
+  0px`, `box-shadow: none`, `max-width: none`) and a screenshot that the
+  section renders full-bleed right after the hero, then reverted the
+  temporary code (confirmed via `git diff`).

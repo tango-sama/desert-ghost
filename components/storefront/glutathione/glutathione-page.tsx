@@ -6,6 +6,7 @@ import { useDeliveryData } from "@/hooks/use-delivery-data";
 import { TikTokLiveButton } from "@/components/storefront/tiktok-live-button";
 import { Topbar } from "./topbar";
 import { Hero } from "./hero";
+import { BannerSection } from "./banner-section";
 import { Benefits } from "./benefits";
 import { ProductSpotSection } from "./product-spot-section";
 import { Gift } from "./gift";
@@ -25,6 +26,10 @@ import styles from "./glutathione.module.css";
 // card in its own section (was the formula split before this swap),
 // free-gift detail, before/after + usage, product/order card, trust
 // strip, FAQ, final CTA.
+// 2026-08-06, later same day: added an optional standalone banner
+// picture (BannerSection, admin `bannerImage`) right before Benefits —
+// renders nothing when unset, so it's a no-op until the owner uploads
+// one via /amelhadj.
 export function GlutathionePage({
   settings,
   isTikTokLive,
@@ -76,6 +81,7 @@ export function GlutathionePage({
         content={landing?.hero}
         formulaImage={landing?.formulaImage}
       />
+      <BannerSection image={landing?.bannerImage} />
       <Benefits />
       <ProductSpotSection product={product} />
       <Gift gift={GIFT_SOAP} />

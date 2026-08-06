@@ -158,6 +158,7 @@ function PageEditor({
   const [heroLead, setHeroLead] = useState(saved?.hero?.lead ?? "");
   const [heroImage, setHeroImage] = useState(saved?.hero?.image ?? "");
   const [formulaImage, setFormulaImage] = useState(saved?.formulaImage ?? "");
+  const [bannerImage, setBannerImage] = useState(saved?.bannerImage ?? "");
   const [slots, setSlots] = useState<SlotForm[]>(() => slotsFromSaved(saved, BA_SLOTS[page].length));
   const [slug, setSlug] = useState(saved?.slug ?? "");
   const [products, setProducts] = useState<ProductForm[]>(() => productFormFromSaved(saved, page));
@@ -204,6 +205,7 @@ function PageEditor({
       })),
       ...(SINGLE_PRODUCT_PAGES.includes(page) ? { product: productOverrides[0] } : { products: productOverrides }),
       formulaImage: formulaImage.trim(),
+      bannerImage: bannerImage.trim(),
       slug: s,
     };
     const data: SiteSettings = {
@@ -313,11 +315,10 @@ function PageEditor({
 
       {page === "glutathione" && (
       <div className={cardCls}>
-        <h3 className={cardH3}>🧬 صورة قسم التركيبة</h3>
+        <h3 className={cardH3}>🧬 خلفية الواجهة (Hero)</h3>
         <div className="mb-4 text-[.78rem] text-[var(--ink-3)]">
-          اتركيها فارغة ليظهر التصميم الافتراضي (عناوين ونصوص حقيقية قابلة للقراءة دائماً). إذا رفعتِ صورة هنا، تحل
-          محل التصميم بالكامل وتظهر كقسم كامل بذاتها — تأكدي أن الكتابة داخلها واضحة وصحيحة قبل الرفع، لأن أي خطأ أو
-          تشويش في النص سيظهر كما هو ولا يمكن تعديله لاحقاً إلا برفع صورة جديدة.
+          اتركيها فارغة ليظهر التصميم الافتراضي (خلفية كحلية اللون + رسم توضيحي للمكوّنات). إذا رفعتِ صورة هنا، تصبح
+          خلفية قسم الواجهة بالكامل خلف النص — تأكدي أنها واضحة تحت النص الأبيض قبل الرفع.
         </div>
         <Field label="الصورة">
           <div className="flex items-center gap-3">
@@ -335,6 +336,37 @@ function PageEditor({
               type="button"
               className={uploadLbl}
               onClick={() => pickImage(folder, toast, (url) => setFormulaImage(url))}
+            >
+              ⬆ رفع
+            </button>
+          </div>
+        </Field>
+      </div>
+      )}
+
+      {page === "glutathione" && (
+      <div className={cardCls}>
+        <h3 className={cardH3}>🖼️ صورة قسم مستقلة</h3>
+        <div className="mb-4 text-[.78rem] text-[var(--ink-3)]">
+          قسم جديد يظهر قبل قسم &quot;فوائد المنتج&quot; مباشرة — يحتوي على هذه الصورة فقط، بحجم الصفحة الكامل بدون أي
+          حواف أو تصميم إضافي. اتركيها فارغة لإخفاء هذا القسم بالكامل.
+        </div>
+        <Field label="الصورة">
+          <div className="flex items-center gap-3">
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img className={thumbPrev} src={bannerImage || PRODUCT_DEFAULTS[page][0].image} alt="" />
+            <input
+              className={inp}
+              style={{ flex: 1 }}
+              dir="ltr"
+              value={bannerImage}
+              onChange={(e) => setBannerImage(e.target.value)}
+              placeholder="بدون صورة — القسم مخفي"
+            />
+            <button
+              type="button"
+              className={uploadLbl}
+              onClick={() => pickImage(folder, toast, (url) => setBannerImage(url))}
             >
               ⬆ رفع
             </button>
