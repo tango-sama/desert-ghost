@@ -910,11 +910,26 @@
 
 /* ───────── 3D-model showcase section (2026-08-06, owner request) —
    sits between BeforeAfterSection and UsageSection (see
-   product-3d-section.tsx). Styled to match this page's light background,
-   unlike glutathione-3d.module.css's version of these same rules, which
-   floats the model on that page's navy hero instead. ───────── */
+   product-3d-section.tsx). Blue background (2026-08-06 follow-up, owner
+   request) — same navy gradient as .glHero, full-bleed like .glCare, so
+   it reads as a deliberate banner instead of a boxed card; .glLabel/
+   .glTitle get light-on-navy overrides below since their shared default
+   colors (dark navy text) assume a light section background. The hint
+   chip/fullscreen button switch from navy (now indistinguishable from
+   the section itself) to the near-black chip glutathione-3d.module.css
+   already uses for the same navy-background contrast problem. */
 .gl3dSection {
+  max-width: none;
   text-align: center;
+  background: radial-gradient(ellipse 100% 80% at 30% -10%, var(--gl-navy2) 0%, var(--gl-deep) 60%, #060d1c 100%);
+}
+.gl3dSection .glLabel {
+  color: var(--gl-gold);
+  background: rgba(240, 196, 104, 0.12);
+  border-color: rgba(240, 196, 104, 0.35);
+}
+.gl3dSection .glTitle {
+  color: #fff;
 }
 .gl3dStage {
   position: relative;
@@ -926,6 +941,7 @@
   width: 100%;
   height: 100%;
   object-fit: contain;
+  --poster-color: transparent;
   /* Belt-and-suspenders alongside the wheel-preventDefault in
      product-3d-viewer.tsx: stops the browser's native touch-pan/pinch
      gesture from taking over on mobile, and the scroll-chaining past
@@ -935,7 +951,7 @@
 }
 .gl3dModel:fullscreen,
 .gl3dModel:-webkit-full-screen {
-  background: var(--gl-cream);
+  background: radial-gradient(ellipse 100% 80% at 30% -10%, var(--gl-navy2) 0%, var(--gl-deep) 60%, #060d1c 100%);
 }
 .gl3dHint {
   position: absolute;
@@ -947,7 +963,7 @@
   gap: 0.35rem;
   padding: 0.4rem 0.85rem;
   border-radius: 100px;
-  background: var(--gl-deep);
+  background: #1a1108;
   color: #fff9ee;
   font-size: 0.68rem;
   font-weight: 800;
@@ -965,7 +981,7 @@
   height: 2.5rem;
   border: none;
   border-radius: 50%;
-  background: var(--gl-deep);
+  background: #1a1108;
   color: #fff9ee;
   cursor: pointer;
   box-shadow: 0 10px 20px rgba(0, 0, 0, 0.2);

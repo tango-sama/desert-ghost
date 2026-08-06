@@ -1736,6 +1736,31 @@ not the intended state (see `development-workflow.md`).
   here — 25MB is a real jump from the previous two models on this page
   (6.4MB, 8.1MB) and worth knowing about if load time ever comes up.
 
+- A follow-up re-upload attempt (`5.glb`) was also byte-identical to
+  the already-committed model (same SHA-256 as `aaa.glb` above, same
+  size/timestamp too) — flagged it again rather than no-op committing;
+  no code change made for that one.
+
+- Gave `/glutathione`'s 3D-model section (`.gl3dSection` in
+  glutathione.module.css) a blue background (owner request, 2026-08-06)
+  — reused the exact navy radial gradient `.glHero` already uses
+  (`--gl-navy2`/`--gl-deep`), full-bleed (`max-width: none`) like
+  `.glCare`, so it reads as a deliberate banner rather than a boxed
+  card. That flipped the section from light to dark, so also fixed
+  contrast on everything that assumed a light background: `.glTitle`/
+  `.glLabel` get scoped `.gl3dSection` overrides (white / gold, same
+  treatment `.glHero`'s own heading uses), and `.gl3dHint`/`.gl3dFsBtn`
+  switch from navy (now indistinguishable from the section itself) to
+  the near-black chip `glutathione-3d.module.css` already uses for this
+  exact contrast problem. Also matched `.gl3dModel:fullscreen`'s
+  background to the same navy gradient (was cream) for consistency.
+  Verified via computed styles in the dev server (not screenshots — the
+  chrome extension's screenshot tool is unreliable again after
+  scrolling, same reveal-on-scroll timing issue noted earlier this
+  session): section background-image resolves to the navy gradient,
+  `.glTitle` color is white, `.glLabel` is gold, hint chip is
+  near-black-on-cream.
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)
