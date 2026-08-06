@@ -69,7 +69,7 @@ export function GlutathionePage({
       <Topbar scrolled={topScrolled} />
       <Hero ref={heroRef} onOrder={() => setModalOpen(true)} product={product} gift={GIFT_SOAP} content={landing?.hero} />
       <Benefits />
-      <Formula product={product} image={landing?.formulaImage} />
+      <Formula image={landing?.formulaImage} />
       <Gift gift={GIFT_SOAP} />
       <CareRoutine />
       <ProductSection onOrder={() => setModalOpen(true)} product={product} />

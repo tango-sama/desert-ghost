@@ -1,5 +1,4 @@
 import { RevealRoot } from "@/components/storefront/reveal-root";
-import type { GLUTATHIONE_PRODUCT } from "./product";
 import styles from "./glutathione.module.css";
 
 // Ingredient-science section — two possible renders:
@@ -48,13 +47,7 @@ function OrbitRing() {
   );
 }
 
-export function Formula({
-  product,
-  image,
-}: {
-  product: typeof GLUTATHIONE_PRODUCT;
-  image?: string;
-}) {
+export function Formula({ image }: { image?: string }) {
   const fullImage = image?.trim();
 
   if (fullImage) {
@@ -78,10 +71,6 @@ export function Formula({
         </div>
         <div className={styles.glOrbit}>
           <OrbitRing />
-          <div className={styles.glOrbitBottle}>
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={product.image} alt={product.title} />
-          </div>
           {TRIO.map((t) => (
             <div className={`${styles.glOrbitNode} ${t.pos}`} key={t.h}>
               <div className={styles.glOrbitIcon}>{t.ic}</div>

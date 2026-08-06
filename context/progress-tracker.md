@@ -1608,6 +1608,17 @@ not the intended state (see `development-workflow.md`).
   touched files (the two errors present are pre-existing, in
   `cart-drawer.tsx` and a vendored `runninghub-mcp/.venv` file).
 
+- Removed the bottle-photo image from the center of `/glutathione`
+  Formula section's ingredient-orbit diagram (owner request via
+  annotated screenshot, 2026-08-06) — the ring, heading, and the three
+  ingredient callouts (جلوتاثيون / سيستئين / فيتامين C) stay, only the
+  `.glOrbitBottle` product-photo overlay is gone. `Formula` no longer
+  takes a `product` prop (it was only used for that photo); updated the
+  call site in `glutathione-page.tsx` and dropped the now-dead
+  `.glOrbitBottle` / `.glOrbitBottle img` CSS rules (desktop + the
+  720px mobile override). Admin's `formulaImage` override path
+  (full-image render, bypassing the orbit entirely) is untouched.
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)
