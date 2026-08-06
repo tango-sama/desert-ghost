@@ -152,20 +152,6 @@
   position: relative;
   z-index: 2;
 }
-/* formulaImage-as-background mode (2026-08-06, owner request — see
-   hero.tsx) — no second column to balance against, so the grid collapses
-   to one, and the text block gets its own cap so it doesn't sprawl the
-   full section width now that nothing else shares the row with it. */
-.glHeroWithBg {
-  background-size: cover;
-  background-position: center;
-}
-.glHeroInnerSingle {
-  grid-template-columns: 1fr;
-}
-.glHeroTextOnly {
-  max-width: 640px;
-}
 .glHeroRay {
   position: absolute;
   top: 0;
@@ -351,14 +337,16 @@
 }
 
 /* hero/formula visual swap (2026-08-06, owner request) — the hero's
-   floating product card and the formula section's orbit diagram (the
-   no-formulaImage fallback — see .glHeroWithBg above for the picture
-   case, now a section background instead of living here) trade places:
-   this fills the hero's visual column (see formula-visual.tsx / hero.tsx),
-   and .glFormulaSpot (further below) centers the floating card in its new
-   standalone section (see product-spot-section.tsx). Stretched to the
-   full row height (.glHeroVisualCol overrides glHeroInner's
-   align-items: center for just this column) with no card look. */
+   floating product card and the formula section's orbit diagram trade
+   places: this fills the hero's visual column (see formula-visual.tsx /
+   hero.tsx), and .glFormulaSpot (further below) centers the floating
+   card in its new standalone section (see product-spot-section.tsx).
+   Stretched to the full row height (.glHeroVisualCol overrides
+   glHeroInner's align-items: center for just this column) with no card
+   look. (The formulaImage picture itself no longer appears in the hero
+   at all, foreground or background — it moved through a few iterations
+   same day before landing in its own dedicated section right after the
+   hero; see formula-background-section.tsx and progress-tracker.md.) */
 .glHeroVisualCol {
   align-self: stretch;
   display: flex;
@@ -543,6 +531,25 @@
   display: block;
   border-radius: 0;
   box-shadow: none;
+}
+
+/* ───────── formulaImage picture-break, right after the hero
+   (2026-08-06, owner request) — an otherwise-empty section with the
+   picture as its own CSS background: no text, no buttons, no overlay,
+   just the picture. Unlike .glBanner (a foreground <img>, height set by
+   its own aspect ratio), an empty section has no content to derive
+   height from, so this needs an explicit height instead — viewport-
+   relative so it stays a substantial, clearly-visible break on any
+   screen size. See formula-background-section.tsx. ───────── */
+.glPictureBreak {
+  max-width: none;
+  height: 60vh;
+  min-height: 380px;
+  background-size: cover;
+  background-position: center;
+}
+@media (max-width: 640px) {
+  .glPictureBreak { height: 45vh; min-height: 300px; }
 }
 
 /* ───────── benefits strip (6 columns) ───────── */

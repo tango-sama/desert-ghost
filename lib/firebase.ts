@@ -105,13 +105,17 @@ export type LandingPageContent = {
   beforeAfter?: LandingBaItem[];
   product?: LandingProductOverride;
   products?: LandingProductOverride[];
-  // Hero section background photo — currently only read by /glutathione
-  // (see glutathione/hero.tsx). When blank, the hero keeps its plain navy
-  // background and shows the built-in ingredient-orbit diagram instead.
+  // Picture-break section right after the hero: an otherwise-empty
+  // section with this photo as its own CSS background (no text/overlay).
+  // Currently only read by /glutathione (see
+  // glutathione/formula-background-section.tsx). Renders nothing when
+  // blank.
   formulaImage?: string;
   // Standalone full-bleed picture-only section, no fallback design —
   // renders nothing when blank. Currently only read by /glutathione (see
-  // glutathione/banner-section.tsx), placed right before Benefits.
+  // glutathione/banner-section.tsx), placed right after the formulaImage
+  // section (both no-ops until set, so effectively right before
+  // Benefits by default).
   bannerImage?: string;
   // Custom path segment (no slashes/spaces) serving this page's content at
   // /<slug> via app/[slug]/page.tsx, in addition to its built-in route —

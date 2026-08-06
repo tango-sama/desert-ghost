@@ -2128,3 +2128,49 @@ not the intended state (see `development-workflow.md`).
   0px`, `box-shadow: none`, `max-width: none`) and a screenshot that the
   section renders full-bleed right after the hero, then reverted the
   temporary code (confirmed via `git diff`).
+
+- Backed the `formulaImage` picture back out of the hero entirely,
+  same day — owner: "don't make it a background for the first section
+  [hero]... make an empty section after the hero and make the picture
+  the background of it. The user sees only the picture, not overlaid by
+  text and buttons." This is the fourth same-day placement for this one
+  picture (floating card → fills its own hero column → hero's own
+  background-with-text-overlay → now this) — full history in the
+  entries above.
+  `hero.tsx` reverted to a plain, unconditional two-column hero (text +
+  `<FormulaVisual product={product} />`, the ingredient-orbit diagram,
+  always) — no `formulaImage` prop, no background-image branch, no
+  conditional classNames; removed the now-dead `.glHeroWithBg` /
+  `.glHeroInnerSingle` / `.glHeroTextOnly` CSS from the previous entry.
+  New component `formula-background-section.tsx`
+  (`FormulaBackgroundSection`) renders an *empty* `<section>` — zero
+  children, no text — with `formulaImage` as its own CSS
+  `background-image`, no gradient/overlay of any kind; renders nothing
+  when unset (same no-default-for-a-picture-only-section reasoning as
+  `BannerSection`). Unlike `BannerSection` (a foreground `<img>`, height
+  from its own aspect ratio), an empty section has no content to derive
+  height from, so new class `.glPictureBreak` gives it an explicit
+  viewport-relative height (`60vh`, `min-height: 380px`; `45vh`/`300px`
+  on mobile) with `background-size: cover`/`background-position: center`.
+  Wired into `glutathione-page.tsx` right after `Hero`, before the
+  existing `BannerSection` (both are independent no-ops until their
+  respective admin fields are set).
+  Updated the `formulaImage` type comment (`lib/firebase.ts`) and its
+  admin-panel card (`landing-pages-view.tsx`, now "🧬 قسم الصورة بعد
+  الواجهة") again to match — this field's admin-facing description has
+  now changed three times in one session as its actual behavior kept
+  moving; if it moves again, check `formula-background-section.tsx` and
+  `hero.tsx` are both updated together, not just one.
+  Verified: `npm run lint` / `npm run build` clean. Real `npm run dev` +
+  browser check: confirmed the hero renders with no background-image and
+  the plain orbit diagram (visually identical to the hero's original,
+  pre-`formulaImage` state); confirmed via `getBoundingClientRect` /
+  `getComputedStyle` on the live `.glPictureBreak` element that it has
+  `children.length === 0` and empty `textContent` (genuinely no
+  text/buttons), correct `background-image`/`background-size: cover`/
+  `background-position: 50% 50%`, and sits immediately after the hero at
+  full viewport width; confirmed `/glutathione-3d` is unaffected (its own
+  separate `hero.tsx`, doesn't import `FormulaVisual` or the new
+  component). Reverted the temporary test-image code in
+  `app/glutathione/page.tsx` before committing (confirmed via `git
+  diff`).

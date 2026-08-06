@@ -6,6 +6,7 @@ import { useDeliveryData } from "@/hooks/use-delivery-data";
 import { TikTokLiveButton } from "@/components/storefront/tiktok-live-button";
 import { Topbar } from "./topbar";
 import { Hero } from "./hero";
+import { FormulaBackgroundSection } from "./formula-background-section";
 import { BannerSection } from "./banner-section";
 import { Benefits } from "./benefits";
 import { ProductSpotSection } from "./product-spot-section";
@@ -21,15 +22,15 @@ import { OrderModal } from "./order-modal";
 import { GLUTATHIONE_PRODUCT, GIFT_SOAP } from "./product";
 import styles from "./glutathione.module.css";
 
-// Section order (2026-08-06 update): hero (now showing the ingredient-
-// formula visual — see hero.tsx), benefits strip, the floating product
-// card in its own section (was the formula split before this swap),
-// free-gift detail, before/after + usage, product/order card, trust
-// strip, FAQ, final CTA.
-// 2026-08-06, later same day: added an optional standalone banner
-// picture (BannerSection, admin `bannerImage`) right before Benefits —
-// renders nothing when unset, so it's a no-op until the owner uploads
-// one via /amelhadj.
+// Section order (2026-08-06 update): hero (showing the ingredient-formula
+// diagram — see hero.tsx), an optional formulaImage picture-break section
+// right after it (FormulaBackgroundSection — empty, picture as its own
+// background, no overlay; renders nothing when `formulaImage` is unset),
+// an optional standalone banner picture (BannerSection, admin
+// `bannerImage`, also a no-op when unset), benefits strip, the floating
+// product card in its own section (was the formula split before the
+// swap), free-gift detail, before/after + usage, product/order card,
+// trust strip, FAQ, final CTA.
 export function GlutathionePage({
   settings,
   isTikTokLive,
@@ -60,9 +61,7 @@ export function GlutathionePage({
   // section, product card, order modal) so an admin-edited name/price can
   // never disagree between what's displayed and what's charged at
   // checkout — same fix applied to sunguard/collagen (see
-  // progress-tracker.md). `formulaImage` is threaded straight to `Hero`
-  // now (it decides the hero's visual, not a separate section's) — see
-  // hero.tsx's 2026-08-06 comment.
+  // progress-tracker.md).
   const product = {
     ...GLUTATHIONE_PRODUCT,
     title: override?.title?.trim() || GLUTATHIONE_PRODUCT.title,
@@ -79,8 +78,8 @@ export function GlutathionePage({
         product={product}
         gift={GIFT_SOAP}
         content={landing?.hero}
-        formulaImage={landing?.formulaImage}
       />
+      <FormulaBackgroundSection image={landing?.formulaImage} />
       <BannerSection image={landing?.bannerImage} />
       <Benefits />
       <ProductSpotSection product={product} />
