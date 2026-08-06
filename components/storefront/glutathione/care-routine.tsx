@@ -13,7 +13,14 @@ import styles from "./glutathione.module.css";
 // (pigmentation/skin-tone evenness) is the same one that asset already
 // illustrates honestly, with the same disclaimer. Drag mechanic ported
 // verbatim from sunguard/before-after.tsx.
-function BeforeAfterCard() {
+//
+// BeforeAfterCard and USAGE_STEPS are exported (2026-08-06) so
+// before-after-section.tsx and usage-section.tsx can each render one half
+// of this as its own standalone section on /glutathione, with a new 3D
+// model section sandwiched between them (see product-3d-section.tsx and
+// glutathione-page.tsx) — /glutathione-3d still uses the combined
+// two-column CareRoutine below unchanged.
+export function BeforeAfterCard() {
   const frameRef = useRef<HTMLDivElement>(null);
   const draggingRef = useRef(false);
 
@@ -90,7 +97,7 @@ function BeforeAfterCard() {
   );
 }
 
-const USAGE_STEPS = [
+export const USAGE_STEPS = [
   { ic: "💊", p: "تناولي كبسولة إلى كبسولتين يومياً على معدة فارغة مع كوب من فيتامين C." },
   { ic: "🧼", p: "استخدمي صابون Nawarna (هديتكِ المجانية) ضمن روتين العناية اليومي." },
   { ic: "💧", p: "اشربي كمية كافية من الماء على مدار اليوم لدعم فعالية التركيبة." },

@@ -10,7 +10,9 @@ import { Benefits } from "./benefits";
 import { ProductSpotSection } from "./product-spot-section";
 import { Formula } from "./formula";
 import { Gift } from "./gift";
-import { CareRoutine } from "./care-routine";
+import { BeforeAfterSection } from "./before-after-section";
+import { Product3DSection } from "./product-3d-section";
+import { UsageSection } from "./usage-section";
 import { ProductSection } from "./product-section";
 import { TrustStrip } from "./trust-strip";
 import { Faq } from "./faq";
@@ -24,12 +26,17 @@ import styles from "./glutathione.module.css";
 // Section order (last touched 2026-08-06, owner request): hero,
 // ingredient-formula split (the full-bleed formulaImage picture, when
 // set), benefits strip, product spotlight card, free-gift detail,
-// before/after + usage, product/order card, trust strip, FAQ, final CTA.
-// Diverged from the original reference mockup's hero→benefits ordering
-// once the spotlight card moved out of the hero (see
-// product-spot-section.tsx) — went through a few placements before
-// landing here (Formula right after hero, spotlight card right before
-// Gift, Benefits between the two).
+// before/after slider, 3D model showcase, usage steps, product/order
+// card, trust strip, FAQ, final CTA. Diverged from the original
+// reference mockup's hero→benefits ordering once the spotlight card
+// moved out of the hero (see product-spot-section.tsx) — went through a
+// few placements before landing here (Formula right after hero,
+// spotlight card right before Gift, Benefits between the two). The
+// before/after + usage pair used to be one two-column CareRoutine
+// section; split into BeforeAfterSection/UsageSection so the new 3D
+// model section could sit between them (see care-routine.tsx,
+// product-3d-section.tsx) — /glutathione-3d still uses the original
+// combined CareRoutine unchanged.
 export function GlutathionePage({
   settings,
   isTikTokLive,
@@ -79,7 +86,9 @@ export function GlutathionePage({
       <Benefits />
       <ProductSpotSection product={product} image={landing?.hero?.image} />
       <Gift gift={GIFT_SOAP} />
-      <CareRoutine />
+      <BeforeAfterSection />
+      <Product3DSection product={product} />
+      <UsageSection />
       <ProductSection onOrder={() => setModalOpen(true)} product={product} />
       <TrustStrip />
       <Faq />

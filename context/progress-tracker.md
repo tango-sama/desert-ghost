@@ -1689,6 +1689,40 @@ not the intended state (see `development-workflow.md`).
   `npx tsc --noEmit` / `npm run lint` (clean) and live DOM inspection in
   the dev server.
 
+- Added a new 3D-model showcase section to `/glutathione` (owner
+  request, 2026-08-06), between the before/after slider and the usage
+  steps. Owner supplied the model as a local file
+  (`C:\Users\Tango\Desktop\gluta\qqq.glb`, ~8.1MB); copied into
+  `public/assets/glutathione/product-3d.glb`. Reused
+  `glutathione-3d/product-3d-viewer.tsx`'s `<model-viewer>` wrapper
+  as-is (it was already presentational/generic — src, poster, alt,
+  className props only, nothing specific to that page) instead of
+  duplicating it; new `product-3d-section.tsx` wraps it with its own
+  light-background styling (`.gl3dSection`/`.gl3dStage`/`.gl3dModel`/
+  `.gl3dHint`/`.gl3dFsBtn` in glutathione.module.css — the glutathione-3d
+  module's equivalent rules float the model on that page's navy hero,
+  wrong look for this page's cream background).
+  Before/after and usage steps used to be two columns of one section
+  (`CareRoutine`, still used unchanged by `/glutathione-3d`) — asked the
+  owner to confirm since inserting a section between them meant
+  splitting that into two stacked full-width sections; owner confirmed.
+  Split into `before-after-section.tsx` (`BeforeAfterSection`) and
+  `usage-section.tsx` (`UsageSection`), each importing the now-exported
+  `BeforeAfterCard` / `USAGE_STEPS` from `care-routine.tsx` rather than
+  duplicating them. New `.glCareSolo` CSS class centers each at 560px
+  (same width the two columns already had inside the old 1200px/2-col
+  `.glCareInner`, so nothing changed size, just stacked) — mirrors the
+  centering `.glCareCol` already got under 900px, just applied
+  unconditionally.
+  New order: Hero → Formula → Benefits → ProductSpotSection → Gift →
+  BeforeAfterSection → Product3DSection → UsageSection → ProductSection
+  → TrustStrip → Faq → CtaBanner → Footer.
+  Verified: `npx tsc --noEmit` / `npm run lint` clean; live in the dev
+  server — section order correct via DOM inspection, and confirmed the
+  `<model-viewer>` actually finished loading the new glb
+  (`mv.loaded === true`, `mv.src` resolves to `product-3d.glb`) with no
+  console errors.
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)
