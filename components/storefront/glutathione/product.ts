@@ -17,15 +17,18 @@ export const GLUTATHIONE_PRODUCT = {
   image: "/assets/glutathione/product-shot.webp",
 };
 
-// Real catalog product (Firestore `products/1768441716115`, 1,700 د.ج) —
+// Real catalog product (Firestore `products/1780279395143`, 2,900 د.ج) —
 // bundled as a free gift with every /glutathione order per the owner's
-// real promotion (2026-07-26). Added to every order as a zero-price line
+// real promotion. Swapped 2026-08-06 from the earlier rice-milk-soap gift
+// (owner request) to this astaxanthin mask soap; title/price/image pulled
+// live from the real Firestore doc via a direct REST read, same convention
+// as GLUTATHIONE_PRODUCT above. Added to every order as a zero-price line
 // item (see order-modal.tsx) so fulfillment staff see it and actually
 // pack it — the marketing promise and the real order must match.
 export const GIFT_SOAP = {
-  id: "gl-gift-jam-rice-soap",
-  title: "صابون حليب الأرز (Jam Rice Milk Soap)",
-  normalPrice: 1700,
+  id: "gl-gift-astaxanthin-soap",
+  title: "صابون Nawarna Dose Astaxanthin Mask",
+  normalPrice: 2900,
   image: "/assets/glutathione/gift-soap.webp",
 };
 

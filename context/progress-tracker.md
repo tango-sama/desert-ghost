@@ -1561,6 +1561,36 @@ not the intended state (see `development-workflow.md`).
   what made this fixable without guessing; worth a quick real-device
   check next time this scenario comes up.
 
+- `/glutathione` free gift swapped from rice-milk soap to a different real
+  catalog product (2026-08-06, owner request via product URL
+  `desertshop.fit/product/1780279395143`): `GIFT_SOAP` in
+  `components/storefront/glutathione/product.ts` now points at Firestore
+  `products/1780279395143` ("صابون Nawarna Dose Astaxanthin Mask", 2,900
+  د.ج, id `gl-gift-astaxanthin-soap`) instead of the earlier
+  `products/1768441716115` rice-milk soap — title/price/description pulled
+  live via a direct Firestore REST read, same convention as
+  `GLUTATHIONE_PRODUCT`. Real product photo downloaded from the live
+  Firestore Storage URL and saved over `public/assets/glutathione/
+  gift-soap.webp` (same filename, so every component importing that path
+  picked up the new image with no further changes). Since every gift-
+  related surface reads `GIFT_SOAP`/its `gift` prop rather than
+  reimplementing the name, most call sites (hero gift badge, gift section
+  heading, order-modal line item + totals) updated automatically; four
+  places had the old product's name or ingredients hardcoded in copy and
+  needed manual edits: `gift.tsx`'s bullet list (rewrote the rice-extract/
+  collagen claims to the real ingredients — astaxanthin, niacinamide,
+  coconut oil — from the new product's Firestore description),
+  `faq.tsx`'s "is the gift real" question, `care-routine.tsx`'s usage-step
+  copy, and `order-modal.tsx`'s success-message sentence (also switched
+  that one from a hardcoded string to `gift.title` so it can never drift
+  from `product.ts` again). `glutathione-3d` (the sibling funnel reusing
+  the same `GIFT_SOAP` import) needed no changes — verified it had no
+  hardcoded gift copy of its own.
+  Verified: `npm run lint` / `npm run build` clean (pre-existing warnings
+  in unrelated files only). Headless Chromium screenshots of both the hero
+  gift badge and the gift detail section confirm the new product name and
+  the new product photo (red Nawarna soap box) render correctly.
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)

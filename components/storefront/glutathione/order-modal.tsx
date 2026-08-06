@@ -167,7 +167,7 @@ export function OrderModal({
               <h4>شكراً لثقتكِ، {success.firstName}!</h4>
               <p>
                 استلمنا طلبكِ لـ {success.qty} {success.qty > 1 ? "علب من جلوتاثيون Life Extension" : "علبة من جلوتاثيون Life Extension"}
-                {" "}+ هدية صابون حليب الأرز مجاناً. سنتصل بكِ قريباً على {success.phone} لتأكيد الطلب وترتيب التوصيل.
+                {" "}+ هدية {gift.title} مجاناً. سنتصل بكِ قريباً على {success.phone} لتأكيد الطلب وترتيب التوصيل.
               </p>
               <button type="button" className={styles.glSubmit} onClick={resetAndClose}>
                 تم

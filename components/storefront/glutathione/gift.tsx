@@ -3,7 +3,7 @@ import type { GIFT_SOAP } from "./product";
 import styles from "./glutathione.module.css";
 
 // Free-gift detail section — GIFT_SOAP is a real catalog product
-// (Firestore products/1768441716115) the owner is genuinely bundling
+// (Firestore products/1780279395143) the owner is genuinely bundling
 // with every /glutathione order (see product.ts). Bullet copy summarizes
 // that product's real Firestore description, not invented claims.
 export function Gift({ gift }: { gift: typeof GIFT_SOAP }) {
@@ -17,15 +17,15 @@ export function Gift({ gift }: { gift: typeof GIFT_SOAP }) {
             <ul className={styles.glCheckList}>
               <li>
                 <b>✓</b>
-                يفتّح ويوحّد لون البشرة بفضل الجلوتاثيون ومستخلصات الأرز
+                يحتوي على الأستازانتين المضاد للأكسدة والنياسيناميد لتفتيح البشرة وتوحيد لونها
               </li>
               <li>
                 <b>✓</b>
-                ينظف المسام بعمق ويساعد في تقليل حب الشباب وآثاره
+                ينظف المسام بعمق ويساعد في تقليل التصبغات والبقع الداكنة
               </li>
               <li>
                 <b>✓</b>
-                يرطّب ويغذّي البشرة بالكولاجين وزيت جوز الهند
+                يرطّب البشرة بزيت جوز الهند
               </li>
               <li>
                 <b>✓</b>
