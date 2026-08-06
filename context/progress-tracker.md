@@ -1978,3 +1978,53 @@ not the intended state (see `development-workflow.md`).
   icon renders in the nav (`aria-label="بحث"`) and that
   `/products?q=عطر` server-renders the search input pre-filled with
   `value="عطر"`.
+
+- `/glutathione`: removed the promo strip, and structurally swapped the
+  hero's floating product card with the formula section's visual
+  (2026-08-06, owner request, in a separate session from the same-day
+  hero/formula *image* swap above — see that entry's note on the two
+  being different, reconciled asks). Two changes:
+  1. `topbar.tsx`: dropped the `.glPromo` strip (🚚/💳/✅ claims) that sat
+     above the brand nav — owner asked to remove it outright, not just
+     restyle it. Those same claims still show as hero trust icons, so
+     nothing factual was lost. `Topbar` is shared with `/glutathione-3d`
+     (imports the same component), so that page loses the strip too;
+     left as-is rather than forking the component for one page.
+  2. The formula section (diagram-or-`formulaImage`) and the hero's
+     floating card now trade places: the diagram/picture renders inside
+     the hero (new second-column content), and the floating card gets
+     its own section where the formula section used to sit — right after
+     Benefits, before the free-gift section. New files: `product-spot.tsx`
+     (`ProductSpot`, the floating-card markup, extracted so it renders
+     identically in both its old and new context), `formula-visual.tsx`
+     (`FormulaVisual` — the diagram-or-picture visual only, no section
+     wrapper, reusing `formula.tsx`'s `TRIO`/`OrbitRing` which are now
+     exported for this), `product-spot-section.tsx` (wraps `ProductSpot`
+     in a normal `.glSec` section for its new standalone spot).
+     `formula.tsx` itself is untouched behaviorally (only gained two
+     `export` keywords) — it's still the full section-with-heading
+     component and still powers `/glutathione-3d`'s own separate Formula
+     section unchanged; `/glutathione-3d` also has its own independent
+     `hero.tsx` (3D viewer), so none of the hero-side changes reach it.
+     This also retires the hero's old photo-override behavior
+     (`content.image` no longer has anywhere to render since the hero
+     has no direct photo slot anymore) — the admin field itself wasn't
+     touched (shared `LandingHeroContent` type with sunguard/collagen),
+     it's just inert on this page now.
+     New CSS: `.glHeroBigImage` (picture case — rounded, shadowed, same
+     reveal/bob animation the floating card used to have) and
+     `.glHeroOrbitCard` (diagram case — wraps the orbit diagram in the
+     same light gradient card the standalone formula section used to be,
+     since the diagram's dark text needs a light backdrop, not the
+     hero's dark navy one) for the hero's new visual; `.glFormulaSpot`
+     (max-width 380px, centered) for the floating card's new standalone
+     section. Removed the now-fully-dead `.glPromo` rules (base + the
+     640px-override that referenced it).
+  Verified: `npm run lint` / `npm run build` clean (same pre-existing,
+  unrelated findings as prior entries — nothing new from these files).
+  Real `npm run dev` + browser check: confirmed the promo strip is gone
+  site-wide (no matching text anywhere in the rendered page), and via
+  `get_page_text` confirmed the exact new section order on `/glutathione`
+  (hero → benefits → floating card → gift → …) and that `/glutathione-3d`
+  is unaffected except for the shared header (still has its own hero, its
+  own full Formula section with heading, in the original order).

@@ -4,17 +4,14 @@ import Link from "next/link";
 import { cn } from "@/lib/utils";
 import styles from "./glutathione.module.css";
 
-// Stacked fixed header: a promo/trust strip above the brand nav, styled
-// after the owner's ad-style reference — but only real, verified claims
-// (no fabricated customer counts; see product.ts / progress-tracker.md).
+// Fixed header brand nav (2026-08-06: dropped the promo/trust strip that
+// used to sit above it — owner asked to remove it; those same claims
+// still appear as trust icons in the hero, so nothing real was lost).
+// Shared with /glutathione-3d (imports this same component), so the
+// removal applies there too.
 export function Topbar({ scrolled }: { scrolled: boolean }) {
   return (
     <div className={cn(styles.glHeader, scrolled && styles.scrolled)}>
-      <div className={styles.glPromo}>
-        <span>🚚 توصيل مجاني لكل الولايات</span>
-        <span>💳 الدفع عند الاستلام</span>
-        <span>✅ منتج أصلي 100%</span>
-      </div>
       <div className={styles.glTop}>
         <Link className={styles.brand} href="/">
           {/* eslint-disable-next-line @next/next/no-img-element */}

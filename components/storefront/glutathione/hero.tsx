@@ -1,5 +1,6 @@
 import type { LandingHeroContent } from "@/lib/firebase";
 import type { GLUTATHIONE_PRODUCT, GIFT_SOAP } from "./product";
+import { FormulaVisual } from "./formula-visual";
 import styles from "./glutathione.module.css";
 
 // Restyled (2026-07-26) to match an owner-provided reference built for
@@ -9,33 +10,34 @@ import styles from "./glutathione.module.css";
 // catalog item, not a fabricated offer). No star-rating graphic or
 // customer-count claim — this store has no real review data to back
 // that up (see progress-tracker.md).
-
-// Hero spotlight default photo (2026-08-06, owner request): the
-// "قوة الجلوتاثيون" ingredient/molecule infographic — the same asset
-// already used as the admin-set `formulaImage` override before this
-// change, downloaded from its live Firebase Storage URL so the code
-// default and the admin's own upload stay byte-identical. The owner asked
-// for this to swap places with the bottle+soap combo photo (see
-// formula.tsx's comment) — that combo photo is NOT this component's
-// default anymore.
-const HERO_IMAGE = "/assets/glutathione/formula-infographic.webp";
-
+//
+// 2026-08-06, structural swap (owner request): the hero's second column
+// no longer shows the floating product card — it now shows the formula
+// section's visual (ingredient orbit diagram, or the admin's
+// `formulaImage` picture) via <FormulaVisual>, passed down as
+// `formulaImage`. The floating card itself moved to its own section
+// (product-spot-section.tsx), right after Benefits. This also retires
+// the hero's own photo override (`content.image`, formerly this
+// component's default photo) — there's no photo slot left in the hero to
+// override; the admin field itself is untouched (shared type with
+// sunguard/collagen) but has no visible effect here anymore.
 export function Hero({
   onOrder,
   ref,
   product,
   gift,
   content,
+  formulaImage,
 }: {
   onOrder: () => void;
   ref: React.Ref<HTMLElement>;
   product: typeof GLUTATHIONE_PRODUCT;
   gift: typeof GIFT_SOAP;
   content?: LandingHeroContent;
+  formulaImage?: string;
 }) {
   const title = content?.title?.trim();
   const lead = content?.lead?.trim();
-  const heroImage = content?.image?.trim() || HERO_IMAGE;
   return (
     <section className={styles.glHero} ref={ref}>
       <div className={styles.glHeroRay} />
@@ -103,19 +105,7 @@ export function Hero({
           </div>
         </div>
         <div>
-          <div className={styles.glSpot}>
-            <div className={styles.glSpotVisual}>
-              <span className={styles.glSpotCorner}>✨ {product.size}</span>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={heroImage} alt={product.title} />
-            </div>
-            <div className={styles.glSpotBrand}>{product.brand}</div>
-            <div className={styles.glSpotTitle}>{product.title}</div>
-            <div className={styles.glSpotBadges}>
-              <span className={styles.glSpotBadge}>🌿 خالٍ من الجلوتين</span>
-              <span className={styles.glSpotBadge}>✅ NON-GMO</span>
-            </div>
-          </div>
+          <FormulaVisual product={product} image={formulaImage} />
         </div>
       </div>
     </section>
