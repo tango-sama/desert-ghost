@@ -39,7 +39,27 @@ export function Hero({
   return (
     <section className={styles.glHero} ref={ref}>
       <div className={styles.glHeroRay} />
+      {/* 2026-08-06 (owner request): the two Hero panels swapped places —
+          the picture/product-spotlight card now comes first (top on
+          mobile), the headline/CTA copy second. Grid column widths swapped
+          alongside (see .glHeroInner in glutathione.module.css) so the
+          panel that's first in the markup keeps the wider column. */}
       <div className={styles.glHeroInner}>
+        <div>
+          <div className={styles.glSpot}>
+            <div className={styles.glSpotVisual}>
+              <span className={styles.glSpotCorner}>✨ {product.size}</span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img src={heroImage} alt={product.title} />
+            </div>
+            <div className={styles.glSpotBrand}>{product.brand}</div>
+            <div className={styles.glSpotTitle}>{product.title}</div>
+            <div className={styles.glSpotBadges}>
+              <span className={styles.glSpotBadge}>🌿 خالٍ من الجلوتين</span>
+              <span className={styles.glSpotBadge}>✅ NON-GMO</span>
+            </div>
+          </div>
+        </div>
         <div>
           <span className={styles.glEyebrow}>✨ تركيبة متقدمة لدعم جمالكِ من الداخل</span>
           {/* admin-edited title loses the two-tone gold split — plain
@@ -100,21 +120,6 @@ export function Hero({
               </svg>
               توصيل لكل الولايات
             </span>
-          </div>
-        </div>
-        <div>
-          <div className={styles.glSpot}>
-            <div className={styles.glSpotVisual}>
-              <span className={styles.glSpotCorner}>✨ {product.size}</span>
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img src={heroImage} alt={product.title} />
-            </div>
-            <div className={styles.glSpotBrand}>{product.brand}</div>
-            <div className={styles.glSpotTitle}>{product.title}</div>
-            <div className={styles.glSpotBadges}>
-              <span className={styles.glSpotBadge}>🌿 خالٍ من الجلوتين</span>
-              <span className={styles.glSpotBadge}>✅ NON-GMO</span>
-            </div>
           </div>
         </div>
       </div>
