@@ -1648,27 +1648,6 @@ not the intended state (see `development-workflow.md`).
   swap.
   Verified: `npm run lint` / `npm run build` clean.
 
-- `/glutathione` Hero panel order flipped (2026-08-06, same day,
-  clarification of the entry above): owner clarified "swap the sections"
-  meant the Hero component's own two panels, not the hero/formula image
-  swap — confirmed via `AskUserQuestion`: "first section is a picture,
-  second is a product card". `hero.tsx`'s `glHeroInner` grid now renders
-  the `glSpot` picture/spotlight card (photo + brand + title + badges)
-  first in the markup and the headline/lead/gift-box/CTA copy second —
-  previously the reverse. `glHeroInner`'s `grid-template-columns` in
-  `glutathione.module.css` swapped from `1.05fr 0.95fr` to `0.95fr 1.05fr`
-  alongside, so the copy panel keeps the slightly wider share it had
-  before (design intent unchanged, just which panel it's assigned to).
-  Net visible effect: on the RTL desktop layout the card now reads first
-  (right side); on the single-column mobile layout the card/picture now
-  stacks above the headline instead of below it. The image-default swap
-  from the entry above (Hero → infographic, Formula → combo photo) is
-  unaffected — this only reordered the two existing panels, no image
-  paths changed.
-  Verified: `npm run lint` / `npm run build` clean. Headless Chromium
-  screenshots at both a 1280px desktop and a 420px mobile viewport confirm
-  the new order in both layouts.
-
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)

@@ -181,10 +181,7 @@
   max-width: 1280px;
   margin: 0 auto;
   display: grid;
-  /* 2026-08-06: panels swapped in the markup (picture card first, copy
-     second) — column widths swapped to match, so the copy column keeps
-     the slightly wider share it had before. */
-  grid-template-columns: 0.95fr 1.05fr;
+  grid-template-columns: 1.05fr 0.95fr;
   gap: 3rem;
   align-items: center;
   position: relative;
