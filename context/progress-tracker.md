@@ -1723,6 +1723,19 @@ not the intended state (see `development-workflow.md`).
   (`mv.loaded === true`, `mv.src` resolves to `product-3d.glb`) with no
   console errors.
 
+- Replaced `/glutathione`'s 3D model with a fixed version (owner,
+  2026-08-06). First attempt at a re-upload (`qqq.glb` again) turned out
+  byte-identical to what was already committed (same SHA-256) — flagged
+  it instead of silently no-op'ing, owner re-exported and sent
+  `aaa.glb` instead (confirmed genuinely different via SHA-256 this
+  time, and notably bigger: 25.1MB vs the previous 8.1MB). Copied over
+  `public/assets/glutathione/product-3d.glb` (same filename/path, so
+  product-3d-section.tsx needed no changes). Verified in the dev server:
+  `<model-viewer>` loads it with no console errors (`mv.loaded ===
+  true`). Not flagging the size on my own initiative beyond noting it
+  here — 25MB is a real jump from the previous two models on this page
+  (6.4MB, 8.1MB) and worth knowing about if load time ever comes up.
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)
