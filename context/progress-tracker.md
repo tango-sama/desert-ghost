@@ -1667,6 +1667,17 @@ not the intended state (see `development-workflow.md`).
   run lint` (both clean) and live DOM inspection in the dev server
   (section order: glHero, ProductSpotSection, Benefits, glFormula, ...).
 
+- Follow-up re-order on `/glutathione` (owner, same day): "move the
+  product card down further, just before the benefit section... after
+  the big picture" — moved `<Formula>` (the full-bleed "big" picture)
+  up to right after `<Hero>`, ahead of `<ProductSpotSection>` (the
+  smaller card picture), which now sits directly before `<Benefits>`.
+  New order: Hero → Formula (big picture) → ProductSpotSection (card) →
+  Benefits → Gift → ... This is the third ordering iteration on these
+  same three sections today; see the two entries above for the prior
+  states. Verified via `npx tsc --noEmit` / `npm run lint` (clean) and
+  live DOM inspection in the dev server.
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)
