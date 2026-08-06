@@ -1591,6 +1591,23 @@ not the intended state (see `development-workflow.md`).
   gift badge and the gift detail section confirm the new product name and
   the new product photo (red Nawarna soap box) render correctly.
 
+- Reverted the whole `/glutathione` hero/formula picture-swap saga from
+  earlier tonight (2026-08-06, owner request — "remove the last changes
+  on the swapping pictures"): six commits undone (`9bdd192`, `6abdae4`,
+  `eb322c6`, `b025970`, `101459e`, `c3686d1`; the intermediate flip/revert
+  pair `3b5aa0e`/`c6b3199` had already cancelled itself out). `hero.tsx`,
+  `formula.tsx`, `glutathione-page.tsx`, `topbar.tsx`,
+  `landing-pages-view.tsx`, `lib/firebase.ts`, and
+  `glutathione.module.css` are back to their pre-saga state (commit
+  `13b1668`); the promo strip is back in the topbar; `banner-section.tsx`,
+  `formula-background-section.tsx`, `formula-visual.tsx`,
+  `product-spot.tsx`, `product-spot-section.tsx`, and the
+  `formula-infographic.webp`/`hero-shot.webp` assets introduced along the
+  way are deleted. The unrelated free-gift product swap above (`43121e2`)
+  was left untouched. Verified: `npm run lint` clean of anything in the
+  touched files (the two errors present are pre-existing, in
+  `cart-drawer.tsx` and a vendored `runninghub-mcp/.venv` file).
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)
