@@ -1678,6 +1678,17 @@ not the intended state (see `development-workflow.md`).
   states. Verified via `npx tsc --noEmit` / `npm run lint` (clean) and
   live DOM inspection in the dev server.
 
+- Fourth ordering iteration, same day: "the floating product picture...
+  just before the gift section... the big picture... just after the
+  hero section." The big-picture requirement was already satisfied
+  (Formula was already right after Hero from the previous entry) — only
+  moved `<ProductSpotSection>` down past `<Benefits>`, to sit directly
+  before `<Gift>`. New (current) order: Hero → Formula (big picture) →
+  Benefits → ProductSpotSection (card) → Gift → CareRoutine →
+  ProductSection → TrustStrip → Faq → CtaBanner → Footer. Verified via
+  `npx tsc --noEmit` / `npm run lint` (clean) and live DOM inspection in
+  the dev server.
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)
