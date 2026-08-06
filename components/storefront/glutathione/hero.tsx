@@ -21,6 +21,14 @@ import styles from "./glutathione.module.css";
 // component's default photo) — there's no photo slot left in the hero to
 // override; the admin field itself is untouched (shared type with
 // sunguard/collagen) but has no visible effect here anymore.
+//
+// 2026-08-06, same-day follow-up: owner circled a screenshot of that
+// visual sitting as a rounded, shadowed "card" with hero-navy showing
+// around it and asked for it to fill its whole slot instead — no visible
+// background, no floating-card look, edge-to-edge. `glHeroVisualCol`
+// stretches that column to the full row height (see glutathione.module.css)
+// so `FormulaVisual`'s image/card can fill it completely instead of
+// sitting inset and center-aligned.
 export function Hero({
   onOrder,
   ref,
@@ -104,7 +112,7 @@ export function Hero({
             </span>
           </div>
         </div>
-        <div>
+        <div className={styles.glHeroVisualCol}>
           <FormulaVisual product={product} image={formulaImage} />
         </div>
       </div>

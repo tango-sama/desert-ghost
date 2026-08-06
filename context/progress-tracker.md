@@ -2028,3 +2028,41 @@ not the intended state (see `development-workflow.md`).
   (hero → benefits → floating card → gift → …) and that `/glutathione-3d`
   is unaffected except for the shared header (still has its own hero, its
   own full Formula section with heading, in the original order).
+
+- Same day, follow-up: owner circled a screenshot of the hero's new
+  visual (the picture case specifically) sitting as a rounded, shadowed
+  "card" with hero-navy visible around it on all sides, and asked for it
+  to fill its whole slot instead — no visible background, no
+  floating-card look, just the image. Root cause: `.glHeroBigImage` had
+  `height: auto` inside a grid row centered via `.glHeroInner`'s
+  `align-items: center`, so the image only took its own intrinsic
+  height, leaving navy gaps above/below (and its rounded corners +
+  shadow read as an inset card rather than a fill). Added
+  `.glHeroVisualCol` (new wrapper class on `hero.tsx`'s second grid
+  column) with `align-self: stretch` so just that column — not the text
+  column, which still wants center alignment — stretches to the full row
+  height; `.glHeroBigImage` now uses `height: 100%; object-fit: cover`
+  (plus a `min-height: 340px` floor) to actually fill that stretched
+  space, with `border-radius`/`box-shadow`/the reveal-bob animation all
+  removed. Applied the same radius/shadow/animation removal to
+  `.glHeroOrbitCard` (the no-`formulaImage` diagram case) for
+  consistency, keeping its light gradient background since that one's
+  structurally required for the diagram's dark text to stay legible —
+  not decorative "card" styling the owner was objecting to. Removed the
+  now-dead mobile `max-width: 460px` cap on `.glHeroBigImage` and the
+  now-animation-free classes from the reduced-motion query.
+  Verified: `npm run lint` / `npm run build` clean. Real `npm run dev` +
+  browser check against the live `formulaImage` already set in
+  production settings — screenshot at the top of `/glutathione` confirms
+  the image now starts flush with the hero's own padding edge (no extra
+  navy border) and has no rounded corners/shadow; a `getComputedStyle`
+  check on the live element confirmed `border-radius: 0px`,
+  `box-shadow: none`, `object-fit: cover`, and that it starts exactly at
+  x = 48px = the hero's 3rem left padding (not inset further). Note:
+  screenshots taken immediately after a fast programmatic scroll
+  intermittently mis-rendered the fixed header partway down the page
+  with blank space above it — confirmed via `getBoundingClientRect`/
+  `getComputedStyle` on the live element (`top: 0`, `position: fixed`,
+  no transform-creating ancestors) that this is a screenshot-capture
+  timing artifact in the browser tool itself, not a real layout bug;
+  worth remembering if it recurs so it isn't mistaken for a regression.
