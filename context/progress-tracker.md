@@ -43,6 +43,35 @@ not the intended state (see `development-workflow.md`).
   NOT done: no production cutover. The live `desert-shop-24af9.web.app`
   (old static `trinkl` site) is untouched and still what customers see.
 
+- **Update (2026-08-07) — a real Vercel production deployment exists and
+  appears to already be live**, discovered incidentally while wiring up
+  `FIREBASE_SERVICE_ACCOUNT_KEY` (see Completed below): Vercel project
+  `desert-ghost` (team `tango0es-3396s-projects`, not the same as the
+  `trinkl` project below) is Git-connected to
+  `github.com/tango-sama/desert-ghost` `main` and serves the custom domain
+  **`desertshop.fit`** — confirmed serving this actual Next.js app (not the
+  old static site): `https://www.desertshop.fit/` returns 200 and
+  `/api/storage-closet` (this app's own route) responds correctly. This
+  contradicts the "NOT done: no production cutover" line directly above,
+  which was accurate as of 2026-07-21 but is now stale — **the owner should
+  confirm whether `desertshop.fit` going live was an intentional cutover**
+  (this session has no record of who set it up or when — the domain was
+  registered 195 days ago, long before ghost existed, so it may have been
+  repurposed from something else) before this file's "no cutover yet"
+  framing is trusted anywhere else.
+  **Trap for next time**: this Vercel team also has a project literally
+  named `trinkl` that is ALSO Git-connected to the same
+  `tango-sama/desert-ghost` repo/branch, but has no domain assigned and
+  sits behind Vercel's own SSO "Vercel Authentication" deployment
+  protection (`vercel inspect`/`curl` both 401/302 on it). Its
+  `.vercel/project.json` used to be what this repo linked to (leftover
+  from early setup, probably before the `desert-ghost` project existed)
+  — every `vercel env`/`vercel deploy` command run from this repo was
+  silently hitting the WRONG, unused project until this session
+  re-linked it (`vercel link --project desert-ghost`). Always run
+  `cat .vercel/project.json` and confirm `projectName: "desert-ghost"`
+  before trusting any `vercel` CLI output against this repo.
+
 ## Completed
 
 - Yalidine fee correction override (2026-07-22): the synced Yalidine grid
@@ -1892,15 +1921,17 @@ not the intended state (see `development-workflow.md`).
   to read `CarrierData.centers`, but that field is only populated once
   `syncCarriers` is extended (see Next Up). Until then Stop Desk mode is
   correctly empty rather than wrong.
-- Two live features now depend on `getAdminDb()`/`getOrderStats()`
-  (`lib/firebase-admin.ts`) having real credentials — checkout's storage
-  counter badge (`app/api/storage-closet`) and the home page's "أبرز
-  المنتجات" sort order (`product-grid.tsx`) — see "Completed" above for
-  both. Neither will do anything until `FIREBASE_SERVICE_ACCOUNT_KEY` is
-  set in whatever platform serves production (Vercel and/or Firebase App
-  Hosting); no Google credentials exist anywhere in this repo/deployment
-  today. Until the owner sets it, both fail safe (no badges, original
-  recency sort) rather than showing wrong data.
+- ~~Two live features now depend on `getAdminDb()`/`getOrderStats()`...~~
+  **RESOLVED (2026-08-07)**: `FIREBASE_SERVICE_ACCOUNT_KEY` is now set on
+  the real `desert-ghost` Vercel project (Production + Preview) — see the
+  Deployment section's 2026-08-07 update above for the project-mixup story.
+  Confirmed live against `https://www.desertshop.fit/api/storage-closet`:
+  returns real per-product numbers (e.g. `{"1780283875728":31}`), not an
+  empty result. Both the checkout badge and the home page sort should now
+  be showing real data on the live site — owner should do one real visual
+  check (open `/checkout` in seller mode, and compare the home page's
+  featured order against `/amelhadj`'s Storage Counter "في المحل" column)
+  since this session only verified the API layer, not a rendered page.
 
 ## Architecture Decisions
 
