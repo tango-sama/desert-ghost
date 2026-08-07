@@ -58,31 +58,44 @@
   shared by the admin view and `app/api/storage-closet` below so both can
   never drift apart.
 
-## Storefront-safe stock endpoint (`app/api/storage-closet`)
+## Storefront-safe closet-stock access (`lib/firebase-admin.ts`)
 
 - The storefront's "seller mode" (`ds_staff` localStorage flag) is cosmetic
   UI only, not real Firebase Auth — it cannot read `orders` (admin-only per
   `firestore.rules`), so it cannot compute the live "in closet" number the
-  same way the admin panel does. `app/api/storage-closet` (this repo's only
-  API route) bridges that gap: a Next.js Route Handler that reads `orders`
-  server-side with the Firebase **Admin SDK** (`lib/firebase-admin.ts`,
-  bypasses `firestore.rules` entirely — server-only, never imported by any
-  "use client" file) and returns only the derived per-product integer.
-- **Invariant: this endpoint must never return order fields** (customer
-  name/phone/address, carrier data, etc.) — only `{ closet: Record<productId,
-  number> }`. Any future change to this route must preserve that; it is the
-  one place in the codebase where privileged Firestore access is exposed to
-  the public internet, so the response shape is the entire security
-  boundary.
+  same way the admin panel does. `lib/firebase-admin.ts` bridges that gap:
+  server-only Firebase **Admin SDK** access (bypasses `firestore.rules`
+  entirely — NEVER imported by any "use client" file) exposing
+  `getOrderStats()`, which reads `orders` and returns the same per-product
+  sending/delivered/returned shape `lib/storage-counter.ts`'s
+  `statsByProduct` already produces for the admin panel. Two call sites:
+  - `app/api/storage-closet` (this repo's only API route) — `POST { ids }`
+    → `{ closet: Record<productId, number> }`, fetched client-side by
+    `hooks/use-storage-closet.ts`, only in seller mode
+    (`checkout-form.tsx`, `seller-order-modal.tsx`). Regular customers
+    never trigger this request.
+  - `components/storefront/product-grid.tsx` (the home page's "أبرز
+    المنتجات" section) — a Server Component, so it calls `getOrderStats()`
+    directly at render time (no network hop) to sort all products by
+    closet count before picking the top 8. This one runs for every visitor,
+    not just seller mode, since it only affects display order, not any
+    data exposed to the page.
+- **Invariant: nothing downstream of `getOrderStats()` may expose order
+  fields** (customer name/phone/address, carrier data, etc.) to the
+  browser — only derived integers. Any future change to either call site
+  above must preserve that; this is the one place in the codebase where
+  privileged Firestore access feeds into what the public internet gets
+  served, so the response/render shape at each call site is the entire
+  security boundary.
 - Credentials: `FIREBASE_SERVICE_ACCOUNT_KEY` env var (service-account JSON
   string) — required, since production traffic is served from Vercel (no
   ambient Google credentials). Falls back to `applicationDefault()` for
   environments that provide it natively. Missing/invalid credentials or any
-  Firestore error degrade to an empty result, never a 500 — consistent with
-  invariant 2 below.
-- Consumed by `hooks/use-storage-closet.ts`, only fetched in seller mode
-  (`checkout-form.tsx`, `seller-order-modal.tsx`) — regular customers never
-  trigger this request.
+  Firestore error make `getOrderStats()` return `null` — callers must treat
+  that as "couldn't check" (fail to the pre-existing behavior: no badge,
+  original recency sort), never as "zero orders" — conflating the two would
+  make every product's full un-decremented `stock` look like its live
+  closet count. Consistent with invariant 2 below.
 
 ## Auth Model
 

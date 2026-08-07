@@ -1830,6 +1830,40 @@ not the intended state (see `development-workflow.md`).
   product page in seller mode with items whose `stock` is set and confirm
   the badge shows the same number as `/amelhadj`'s Storage Counter tab.
 
+- Home page "أبرز المنتجات" (الأكثر طلباً) section sorted by live in-closet
+  stock (2026-08-07, same feature family): owner asked for the featured
+  product grid on `/` to show the product with the most stock left first,
+  instead of the previous newest-first (`lastModified`) order.
+  `product-grid.tsx` is a Server Component (no `"use client"`), so this
+  reuses the closet math directly server-side instead of going through the
+  client-facing `/api/storage-closet` route — no extra network hop, and it
+  keeps the privileged Admin SDK orders read entirely server-side. Added
+  `getOrderStats()` to `lib/firebase-admin.ts` (reads `orders`, returns the
+  same per-product sending/delivered/returned shape `statsByProduct`
+  already produces — refactored `/api/storage-closet` to call this too
+  instead of duplicating the read) and made `ProductGrid` an `async`
+  function that awaits it, then sorts all products by
+  `closetFor(stock, stats[id])` descending before slicing the top 8.
+  Sort tie-breaks, since the owner didn't specify: products with no
+  admin-entered `stock` (never tracked) always sort after every tracked
+  product — an unknown quantity can't outrank a known one — but keep the
+  original recency order among themselves; equal closet counts also
+  tie-break by recency. If `getOrderStats()` returns null (orders read
+  failed, e.g. `FIREBASE_SERVICE_ACCOUNT_KEY` not set yet), this is treated
+  as "couldn't check" and the whole grid falls back to the original
+  recency-only sort — explicitly NOT treated as "zero orders", which would
+  have wrongly shown every product's full un-decremented stock as its
+  closet count. Same missing-credentials caveat as the checkout badge
+  above: shows the old sort order until the owner sets the env var, never
+  wrong numbers.
+  Verified: `npx tsc --noEmit`, `npm run lint`, `npm run build` clean; dev
+  server confirmed `/` still renders 200 and the section's Arabic heading
+  is present with no credentials configured (graceful fallback path).
+  NOT exercised: the actual reordering against real stock/order data (same
+  standing sandbox constraint) — once the env var is set, confirm the
+  featured section's order matches `/amelhadj`'s Storage Counter "في
+  المحل" column, highest first.
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)
@@ -1858,13 +1892,15 @@ not the intended state (see `development-workflow.md`).
   to read `CarrierData.centers`, but that field is only populated once
   `syncCarriers` is extended (see Next Up). Until then Stop Desk mode is
   correctly empty rather than wrong.
-- Checkout's new live storage counter (`app/api/storage-closet`, see
-  "Completed" above) needs a `FIREBASE_SERVICE_ACCOUNT_KEY` env var set in
-  whatever platform serves production (Vercel and/or Firebase App Hosting)
-  before it will ever return real numbers — no Google credentials exist
-  anywhere in this repo/deployment today. Until the owner sets it, the
-  endpoint fails safe (empty result, no badges shown, no crash) rather than
-  showing wrong data.
+- Two live features now depend on `getAdminDb()`/`getOrderStats()`
+  (`lib/firebase-admin.ts`) having real credentials — checkout's storage
+  counter badge (`app/api/storage-closet`) and the home page's "أبرز
+  المنتجات" sort order (`product-grid.tsx`) — see "Completed" above for
+  both. Neither will do anything until `FIREBASE_SERVICE_ACCOUNT_KEY` is
+  set in whatever platform serves production (Vercel and/or Firebase App
+  Hosting); no Google credentials exist anywhere in this repo/deployment
+  today. Until the owner sets it, both fail safe (no badges, original
+  recency sort) rather than showing wrong data.
 
 ## Architecture Decisions
 

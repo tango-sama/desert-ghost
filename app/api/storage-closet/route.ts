@@ -13,8 +13,8 @@
 // "out of stock", it's just never been counted, and showing 0 would read
 // as a false out-of-stock signal to a seller mid-checkout.
 import { NextRequest, NextResponse } from "next/server";
-import { getAdminDb } from "@/lib/firebase-admin";
-import { closetFor, statsByProduct, EMPTY_STATS, type OrderLike } from "@/lib/storage-counter";
+import { getAdminDb, getOrderStats } from "@/lib/firebase-admin";
+import { closetFor, EMPTY_STATS } from "@/lib/storage-counter";
 
 export const dynamic = "force-dynamic";
 
@@ -40,11 +40,14 @@ export async function POST(req: NextRequest) {
   if (!adb) return NextResponse.json({ closet: {} });
 
   try {
-    const [productSnaps, ordersSnap] = await Promise.all([
+    const [productSnaps, stats] = await Promise.all([
       Promise.all(ids.map((id) => adb.collection("products").doc(id).get())),
-      adb.collection("orders").get(),
+      getOrderStats(),
     ]);
-    const stats = statsByProduct(ordersSnap.docs.map((d) => d.data() as OrderLike));
+    // stats === null means the orders read itself failed — NOT "no orders
+    // exist". Treating that as EMPTY_STATS would report full, un-decremented
+    // stock as if nothing had ever sold. Fail to an empty result instead.
+    if (!stats) return NextResponse.json({ closet: {} });
 
     const closet: Record<string, number> = {};
     for (const snap of productSnaps) {

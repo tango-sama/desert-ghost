@@ -18,6 +18,7 @@
 // even when Firestore is unreachable" invariant.
 import { getApps, initializeApp, cert, applicationDefault, type App } from "firebase-admin/app";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
+import { statsByProduct, type OrderLike, type Stats } from "@/lib/storage-counter";
 
 const PROJECT_ID = "desert-shop-24af9";
 
@@ -44,4 +45,25 @@ export function getAdminDb(): Firestore | null {
     cached = null;
   }
   return cached;
+}
+
+// Reads `orders` server-side (Admin SDK, bypasses firestore.rules) and
+// returns the per-product sending/delivered/returned aggregation — the
+// same shape `statsByProduct` (lib/storage-counter.ts) already produces
+// from the admin panel's live `orders` store slice. Callers combine this
+// with each product's own public `stock` field via `closetFor()` — never
+// return this raw `orders` data itself to the browser, only the derived
+// closet numbers. Returns null (not an empty object) when credentials
+// aren't configured or the read fails, so callers can tell "no orders"
+// apart from "couldn't check" and fall back accordingly.
+export async function getOrderStats(): Promise<Record<string, Stats> | null> {
+  const adb = getAdminDb();
+  if (!adb) return null;
+  try {
+    const snap = await adb.collection("orders").get();
+    return statsByProduct(snap.docs.map((d) => d.data() as OrderLike));
+  } catch (e) {
+    console.error("[DS] getOrderStats", e);
+    return null;
+  }
 }
