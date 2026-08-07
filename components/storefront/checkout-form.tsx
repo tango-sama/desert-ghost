@@ -8,6 +8,7 @@ import { waLink } from "@/lib/whatsapp";
 import { useCartStore, cartTotal } from "@/stores/cart-store";
 import { useDeliveryData } from "@/hooks/use-delivery-data";
 import { useIsStaff, setStaffFlag } from "@/hooks/use-staff";
+import { useStorageCloset } from "@/hooks/use-storage-closet";
 import { generateOrderNumber } from "@/lib/order";
 import {
   CARRIER_ORDER,
@@ -45,6 +46,8 @@ export function CheckoutForm({ settings }: { settings: SiteSettings }) {
   const cache = useDeliveryData();
 
   const staff = useIsStaff();
+  const itemIds = useMemo(() => items.map((i) => i.id), [items]);
+  const closet = useStorageCloset(itemIds, staff);
 
   const enabled = useMemo(() => carrierEnabled(settings, staff), [settings, staff]);
   const customerEnabled = useMemo(() => carrierEnabled(settings, false), [settings]);
@@ -494,7 +497,14 @@ export function CheckoutForm({ settings }: { settings: SiteSettings }) {
                 </div>
                 <div className="min-w-0 flex-1">
                   <div className="line-clamp-2 text-[0.84rem] font-bold">{item.title}</div>
-                  <div className="mt-0.5 text-[0.82rem] font-extrabold text-[var(--rose-deep)]">{priceFmt(item.price)}</div>
+                  <div className="mt-0.5 flex items-center gap-2 text-[0.82rem] font-extrabold text-[var(--rose-deep)]">
+                    {priceFmt(item.price)}
+                    {staff && closet[item.id] !== undefined && (
+                      <span className="inline-flex items-center gap-1 rounded-full bg-[var(--gold-soft)] px-2 py-0.5 text-[0.68rem] font-extrabold text-[#5A3F2A]">
+                        📦 في المحل: {closet[item.id]}
+                      </span>
+                    )}
+                  </div>
                   <div className="mt-1.5 flex items-center gap-2">
                     <button type="button" onClick={() => setQty(item.id, item.qty - 1)} className="flex size-6.5 items-center justify-center rounded-md border border-border bg-muted">
                       <Minus className="size-3" />

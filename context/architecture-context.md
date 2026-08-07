@@ -54,6 +54,35 @@
   `trackingStatus` (same derivation the orders-tracking stepper already
   uses). "Returned" is a placeholder (always 0) until order cards gain a
   manual failed-delivery/return flag — a planned follow-up, not yet built.
+  This math lives in `lib/storage-counter.ts` (pure, no Firebase imports),
+  shared by the admin view and `app/api/storage-closet` below so both can
+  never drift apart.
+
+## Storefront-safe stock endpoint (`app/api/storage-closet`)
+
+- The storefront's "seller mode" (`ds_staff` localStorage flag) is cosmetic
+  UI only, not real Firebase Auth — it cannot read `orders` (admin-only per
+  `firestore.rules`), so it cannot compute the live "in closet" number the
+  same way the admin panel does. `app/api/storage-closet` (this repo's only
+  API route) bridges that gap: a Next.js Route Handler that reads `orders`
+  server-side with the Firebase **Admin SDK** (`lib/firebase-admin.ts`,
+  bypasses `firestore.rules` entirely — server-only, never imported by any
+  "use client" file) and returns only the derived per-product integer.
+- **Invariant: this endpoint must never return order fields** (customer
+  name/phone/address, carrier data, etc.) — only `{ closet: Record<productId,
+  number> }`. Any future change to this route must preserve that; it is the
+  one place in the codebase where privileged Firestore access is exposed to
+  the public internet, so the response shape is the entire security
+  boundary.
+- Credentials: `FIREBASE_SERVICE_ACCOUNT_KEY` env var (service-account JSON
+  string) — required, since production traffic is served from Vercel (no
+  ambient Google credentials). Falls back to `applicationDefault()` for
+  environments that provide it natively. Missing/invalid credentials or any
+  Firestore error degrade to an empty result, never a 500 — consistent with
+  invariant 2 below.
+- Consumed by `hooks/use-storage-closet.ts`, only fetched in seller mode
+  (`checkout-form.tsx`, `seller-order-modal.tsx`) — regular customers never
+  trigger this request.
 
 ## Auth Model
 

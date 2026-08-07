@@ -1761,6 +1761,75 @@ not the intended state (see `development-workflow.md`).
   `.glTitle` color is white, `.glLabel` is gold, hint chip is
   near-black-on-cream.
 
+- Live "في المحل" (in-closet) storage counter added to checkout, seller mode
+  only (2026-08-07): owner asked for the same live stock number the admin
+  Storage Counter tab shows (`stock - sending - delivered - returned`) to
+  appear on both cart checkout and the single-product seller quick-order
+  modal, next to each item, so a seller taking a phone order can see what's
+  actually left. Confirmed with the owner via AskUserQuestion — they wanted
+  the accurate live number (not just the raw `products.stock` total-ever-
+  stocked field), and per-item placement in the order summary.
+  This crossed a real boundary: `firestore.rules` keeps `orders` admin-only
+  readable (an explicit invariant — see architecture-context.md), and the
+  storefront's "seller mode" is only a client-side `ds_staff` flag, not real
+  Firebase Auth, so it can never read `orders` directly. Rather than widen
+  that boundary, added a small server-side aggregation layer that computes
+  the same derivation with the Admin SDK (bypasses rules server-side only)
+  and returns nothing but the derived integer per product — no order
+  documents (customer name/phone/address) ever reach the browser:
+  - `lib/storage-counter.ts` (new): the pure `stock - sending - delivered -
+    returned` math, extracted out of `storage-counter-view.tsx` so the admin
+    tab and this new endpoint compute from the exact same function and can't
+    drift apart. `storage-counter-view.tsx` refactored to import it instead
+    of keeping its own copy (no behavior change there — verified via a
+    diff-only re-read).
+  - `lib/firebase-admin.ts` (new): server-only Admin SDK singleton, prefers
+    `FIREBASE_SERVICE_ACCOUNT_KEY` (service-account JSON string), falls back
+    to `applicationDefault()`, returns `null` on any init failure instead of
+    throwing.
+  - `app/api/storage-closet/route.ts` (new, this repo's first API route):
+    `POST { ids: string[] }` → `{ closet: Record<id, number> }`. Skips ids
+    whose product doc has no admin-entered `stock` at all (omitted, not
+    shown as 0 — an untracked product isn't "out of stock", it just hasn't
+    been counted yet, and 0 would read as a false signal to a seller
+    mid-checkout). Any failure (missing/invalid credentials, Firestore
+    error) is caught and degrades to `{ closet: {} }` rather than a 500 —
+    matches the "storefront must render even when Firestore is unreachable"
+    invariant; verified locally (no admin credentials configured in this
+    sandbox either) that the endpoint returns `{closet:{}}` and `/checkout`
+    still renders 200 across repeated calls, no crash.
+  - `hooks/use-storage-closet.ts` (new): client hook, only fetches when
+    `enabled` (staff mode) and there are ids; the "disabled/no ids" case is
+    handled by the hook's own return expression rather than a synchronous
+    `setState` in the effect body, to satisfy `react-hooks/set-state-in-effect`
+    (same class of fix this file has needed elsewhere — see
+    `hooks/use-staff.ts`'s entry above).
+  - Wired into `checkout-form.tsx` (per-cart-item, gold badge "📦 في المحل: N"
+    next to the price) and `seller-order-modal.tsx` (same badge next to the
+    single product line in the order-summary box) — both gated on
+    `useIsStaff()`, so regular customers never trigger the fetch or see the
+    badge.
+  Added `firebase-admin` to `package.json`/`package-lock.json`.
+  NOT done / owner action required: this repo has no Google credentials
+  configured anywhere (confirmed — no `apphosting.yaml`, no
+  `firebase-admin` usage before this, `.env.local` only has Vercel/
+  RunningHub keys), and the project is linked to Vercel
+  (`.vercel/project.json` → project `trinkl`), which has no ambient Google
+  credentials the way Firebase App Hosting/Cloud Run would. **The owner
+  must generate a service-account key for `desert-shop-24af9`** (Firebase
+  Console → Project Settings → Service Accounts → Generate new private
+  key) and set its JSON as the `FIREBASE_SERVICE_ACCOUNT_KEY` env var in
+  whichever platform actually serves production traffic (Vercel project
+  settings, and/or Firebase App Hosting secrets if that backend is used
+  instead) — until then this feature silently shows no badges at all
+  (verified fail-safe, not a crash) rather than wrong numbers.
+  Verified: `npx tsc --noEmit`, `npm run lint`, `npm run build` all clean.
+  NOT exercised: real data through this endpoint (no credentials in this
+  sandbox, same standing constraint as every Firestore-touching entry in
+  this file) — once the owner sets the env var, open `/checkout` or a
+  product page in seller mode with items whose `stock` is set and confirm
+  the badge shows the same number as `/amelhadj`'s Storage Counter tab.
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)
@@ -1789,6 +1858,13 @@ not the intended state (see `development-workflow.md`).
   to read `CarrierData.centers`, but that field is only populated once
   `syncCarriers` is extended (see Next Up). Until then Stop Desk mode is
   correctly empty rather than wrong.
+- Checkout's new live storage counter (`app/api/storage-closet`, see
+  "Completed" above) needs a `FIREBASE_SERVICE_ACCOUNT_KEY` env var set in
+  whatever platform serves production (Vercel and/or Firebase App Hosting)
+  before it will ever return real numbers — no Google credentials exist
+  anywhere in this repo/deployment today. Until the owner sets it, the
+  endpoint fails safe (empty result, no badges shown, no crash) rather than
+  showing wrong data.
 
 ## Architecture Decisions
 

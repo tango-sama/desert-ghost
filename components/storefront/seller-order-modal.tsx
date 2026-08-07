@@ -6,6 +6,7 @@ import type { Product, SiteSettings } from "@/lib/firebase";
 import { priceFmt, priceNum, productImages, saveOrder } from "@/lib/firebase";
 import { useIsStaff } from "@/hooks/use-staff";
 import { useDeliveryData } from "@/hooks/use-delivery-data";
+import { useStorageCloset } from "@/hooks/use-storage-closet";
 import { generateOrderNumber } from "@/lib/order";
 import {
   CARRIER_ORDER,
@@ -124,6 +125,7 @@ export function SellerOrderModal({
   const title = product.title || product.name || "";
   const subtotal = priceNum(product.price) * qty;
   const total = subtotal + deliveryFee;
+  const closet = useStorageCloset(staff ? [product.id] : [], staff);
 
   if (!open) return null;
 
@@ -274,8 +276,15 @@ export function SellerOrderModal({
           )}
 
           <div className="my-4 rounded-xl bg-muted p-4 text-sm">
-            <div className="mb-1.5 flex justify-between text-[var(--ink-2)]">
-              <span>{title} × {qty}</span>
+            <div className="mb-1.5 flex items-center justify-between gap-2 text-[var(--ink-2)]">
+              <span className="flex items-center gap-2">
+                {title} × {qty}
+                {staff && closet[product.id] !== undefined && (
+                  <span className="inline-flex items-center gap-1 rounded-full bg-[var(--gold-soft)] px-2 py-0.5 text-[0.68rem] font-extrabold text-[#5A3F2A]">
+                    📦 في المحل: {closet[product.id]}
+                  </span>
+                )}
+              </span>
               <span className="num">{priceFmt(subtotal)}</span>
             </div>
             <div className="mb-1.5 flex justify-between text-[var(--ink-2)]">
