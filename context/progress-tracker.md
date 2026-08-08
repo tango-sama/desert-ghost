@@ -74,6 +74,66 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- Admin panel "existing client" autocomplete + manual order creation
+  (2026-08-08): ports the Noest/ZR Express feature the owner asked for —
+  typing a returning customer's name while starting a new order suggests
+  them in a dropdown, and picking one autofills phone/wilaya/commune/
+  address. There was no manual "create order" screen anywhere in this app
+  before this (admin only ever viewed orders that arrived via checkout/
+  seller-modal/landing pages) and no separate `clients` collection — this
+  had to be built from scratch, and where to put it was a real security
+  decision, not just a UI one: the storefront's "seller mode" (product-page
+  quick-order modal) is gated only by a password literally shipped in the
+  page's JS (`tango88`, `checkout-form.tsx`), not real Firebase Auth, and a
+  prior session explicitly decided customer PII (name/phone/address) must
+  never be exposed through that gate — only derived integers (see the
+  "in-closet" stock counter entry below). Confirmed with the owner via
+  AskUserQuestion: build this **admin-panel-only** (`/amelhadj`, real
+  Firebase Auth already required there); the storefront seller quick-order
+  modal is untouched and still has no client lookup.
+  New `lib/clients.ts` (admin-only — never import outside `/amelhadj`):
+  `deriveExistingClients(orders)` groups the admin store's already-loaded
+  `orders` by normalized phone (no extra Firestore reads — `orders` is
+  admin-only-readable and the panel already holds them all via
+  `watchOrders`), keeping each phone's MOST RECENT order as the client
+  snapshot plus a running order count; `searchClients(clients, query)`
+  matches typed text against name (ranked: starts-with → word-starts-with →
+  contains) or phone digits (3+ digits typed), Noest/ZR search both too.
+  New `components/admin/views/new-order-modal.tsx`: full manual order form
+  (name with the live suggestion dropdown, phone, carrier picker, wilaya/
+  commune or Stop Desk select, home/office toggle + fee preview, Yalidine
+  insurance, a product search-to-add picker since admin has no single-
+  product context like the storefront flows, qty +/-, running total) —
+  reuses `lib/delivery.ts`'s carrier/fee helpers and `saveOrder` from
+  `lib/firebase.ts` exactly like every other order-creation surface, with
+  `source: "admin_phone"` — the SAME tag `checkout-form.tsx`'s staff mode
+  already used, so `orders-view.tsx`'s existing "📞 أدخلتيه بنفسك" badge and
+  neon-halo exclusion needed no changes. Wired a "➕ إضافة طلب" trigger into
+  `OrdersView`'s toolbar (kept visible even when the order list is empty,
+  unlike the search-driven empty state).
+  Verified against the REAL production Firestore (`npm run dev`, signed-in
+  admin session already active in the browser profile): searched a real
+  customer ("نسرين"), confirmed the suggestion showed her phone/wilaya/order
+  count, selected it, and confirmed phone + wilaya autofilled correctly.
+  Caught and fixed a real bug this way (would have shipped broken without
+  live data): Stop-Desk clients' `baladiya` stores the desk's display NAME
+  (e.g. "مكتب المنيعة"), but the commune `<select>` is keyed by the desk's
+  id — `selectClient` was setting the select's value to the name, so it
+  silently failed to preselect. Fixed by resolving the id from the name
+  against that carrier's live desk list (`centersForCarrier`) inside
+  `selectClient` itself, reading the `cache` prop directly rather than
+  component state that isn't committed yet at that point in the function.
+  Re-verified after the fix: desk correctly preselected. Also verified the
+  product search/add/qty/totals math live (real catalog data). Did NOT
+  click the actual submit button — no test order written to production.
+  Note for whoever reads this next: while this verification was running, a
+  genuine unrelated order (`DS-9601`, customer "زهير كتفي") arrived live in
+  the panel via the existing real-time `onSnapshot` — confirmed by its data
+  matching nothing typed during this session (different customer/carrier/
+  wilaya/products). Left untouched; recorded here only so it isn't mistaken
+  for test data if it's ever traced back to this session.
+  `npx tsc --noEmit`, `npx eslint`, and `npm run build` all clean.
+
 - Yalidine fee correction override (2026-07-22): the synced Yalidine grid
   (`delivery_data/yalidine.fees`) is wrong — `site_settings.originWilaya` is
   correctly "Touggourt", but the server-side `syncCarriers` sync stored a

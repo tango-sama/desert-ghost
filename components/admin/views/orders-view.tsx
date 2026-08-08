@@ -37,6 +37,7 @@ import {
 } from "@/components/admin/carriers";
 import { nowMs } from "@/lib/time";
 import { useDeliveryData } from "@/hooks/use-delivery-data";
+import { NewOrderModal } from "@/components/admin/views/new-order-modal";
 import {
   centersForCarrier,
   communesForCarrier,
@@ -461,6 +462,7 @@ export function OrdersView() {
   // user fold/unfold overrides; without one, a card starts folded when the
   // order is old news (placed over 7 days ago or already delivered)
   const [folds, setFolds] = useState<Record<string, boolean>>({});
+  const [newOrderOpen, setNewOrderOpen] = useState(false);
 
   const cache = useDeliveryData();
   // When a Stop Desk order's delivery company is switched to one other than
@@ -953,16 +955,12 @@ export function OrdersView() {
     }
   }
 
-  if (!list.length)
-    return q ? (
-      <EmptyState icon="🔍" text="لا توجد طلبات مطابقة للبحث" />
-    ) : (
-      <EmptyState icon="📦" text="لا توجد طلبات بعد" />
-    );
-
   return (
     <div>
       <div className="mb-4 flex flex-wrap items-center gap-2">
+        <button type="button" className={btn("rose", true)} onClick={() => setNewOrderOpen(true)}>
+          ➕ إضافة طلب
+        </button>
         {anyTracked && (
           <button
             type="button"
@@ -974,10 +972,20 @@ export function OrdersView() {
               `🔄 تحديث حالة الطرود المفتوحة (${openTracked.length})`}
           </button>
         )}
-        <button type="button" className={btn("gray", true)} onClick={toggleSelectAll}>
-          {allSelected ? "✕ إلغاء تحديد الكل" : `☑️ تحديد الكل (${list.length})`}
-        </button>
+        {list.length > 0 && (
+          <button type="button" className={btn("gray", true)} onClick={toggleSelectAll}>
+            {allSelected ? "✕ إلغاء تحديد الكل" : `☑️ تحديد الكل (${list.length})`}
+          </button>
+        )}
       </div>
+
+      {!list.length && (
+        q ? (
+          <EmptyState icon="🔍" text="لا توجد طلبات مطابقة للبحث" />
+        ) : (
+          <EmptyState icon="📦" text="لا توجد طلبات بعد" />
+        )
+      )}
 
       {selectedIds.length > 0 && (
         <div className="fixed bottom-5 right-5 z-[300] rounded-full bg-destructive px-2 py-1.5 shadow-[0_10px_30px_rgba(0,0,0,.35)]">
@@ -1681,6 +1689,15 @@ export function OrdersView() {
           </div>
         );
       })}
+
+      <NewOrderModal
+        open={newOrderOpen}
+        onClose={() => setNewOrderOpen(false)}
+        orders={orders}
+        products={products}
+        cache={cache}
+        toast={toast}
+      />
     </div>
   );
 }
