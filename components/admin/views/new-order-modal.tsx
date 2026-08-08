@@ -1,12 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import { priceFmt, priceNum, productImages, saveOrder, type Product } from "@/lib/firebase";
+import { priceFmt, saveOrder, type Product } from "@/lib/firebase";
 import type { Order } from "@/lib/admin";
 import { generateOrderNumber } from "@/lib/order";
 import { deriveExistingClients, searchClients, type ExistingClient } from "@/lib/clients";
 import { cn } from "@/lib/utils";
 import { CO } from "@/components/admin/carriers";
+import { ProductPicker, type CartItem } from "@/components/admin/product-picker";
 import {
   CARRIER_ORDER,
   carrierDataReady,
@@ -20,9 +21,7 @@ import {
   type CarrierCache,
   type DeliveryType,
 } from "@/lib/delivery";
-import { inp, sel, btn, Field, rowActions, transparent } from "@/components/admin/ui";
-
-type CartItem = { id: string | number; title: string; price: number; qty: number; image: string };
+import { inp, sel, btn, Field, rowActions } from "@/components/admin/ui";
 
 const EMPTY: {
   name: string;
@@ -72,25 +71,12 @@ export function NewOrderModal({
   const [submitting, setSubmitting] = useState(false);
 
   const [showClientSuggestions, setShowClientSuggestions] = useState(false);
-  const [productQuery, setProductQuery] = useState("");
-  const [showProductSuggestions, setShowProductSuggestions] = useState(false);
 
   // Derived only from orders already loaded in the admin store — no extra
   // Firestore reads. See lib/clients.ts for why this stays admin-only.
   const clients = useMemo(() => deriveExistingClients(orders), [orders]);
   const clientSuggestions =
     showClientSuggestions && name.trim().length >= 2 ? searchClients(clients, name) : [];
-
-  const productMatches =
-    showProductSuggestions && productQuery.trim().length >= 1
-      ? products
-          .filter((p) =>
-            (p.title || p.name || "")
-              .toLowerCase()
-              .includes(productQuery.trim().toLowerCase())
-          )
-          .slice(0, 8)
-      : [];
 
   function resetAndClose() {
     setSelectedCompany(null);
@@ -103,7 +89,6 @@ export function NewOrderModal({
     setInsurance(EMPTY.insurance);
     setItems([]);
     setErrors({});
-    setProductQuery("");
     onClose();
   }
 
@@ -154,32 +139,6 @@ export function NewOrderModal({
   function selectDeliveryType(type: DeliveryType) {
     setDeliveryType(type);
     setCommune("");
-  }
-
-  function addProduct(p: Product) {
-    const title = p.title || p.name || "";
-    setItems((cur) => {
-      const idx = cur.findIndex((it) => String(it.id) === String(p.id));
-      if (idx >= 0) {
-        const next = [...cur];
-        next[idx] = { ...next[idx], qty: next[idx].qty + 1 };
-        return next;
-      }
-      return [
-        ...cur,
-        { id: p.id, title, price: priceNum(p.price), qty: 1, image: productImages(p)[0] || "" },
-      ];
-    });
-    setProductQuery("");
-    setShowProductSuggestions(false);
-  }
-
-  function setQty(id: string | number, qty: number) {
-    setItems((cur) => cur.map((it) => (String(it.id) === String(id) ? { ...it, qty } : it)));
-  }
-
-  function removeItem(id: string | number) {
-    setItems((cur) => cur.filter((it) => String(it.id) !== String(id)));
   }
 
   const carrierReady = carrierDataReady(company, cache);
@@ -431,75 +390,8 @@ export function NewOrderModal({
           )}
 
           <Field label="المنتجات *">
-            <div className="relative">
-              <input
-                value={productQuery}
-                onChange={(e) => {
-                  setProductQuery(e.target.value);
-                  setShowProductSuggestions(true);
-                }}
-                onFocus={() => setShowProductSuggestions(true)}
-                onBlur={() => setTimeout(() => setShowProductSuggestions(false), 120)}
-                placeholder="اكتبي اسم المنتج لإضافته..."
-                autoComplete="off"
-                className={errCls(errors.items && items.length === 0)}
-              />
-              {productMatches.length > 0 && (
-                <div className="absolute z-10 mt-1 w-full overflow-hidden rounded-[11px] border border-border bg-card shadow-[var(--shadow-lg)]">
-                  {productMatches.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => addProduct(p)}
-                      className="flex w-full items-center gap-2 border-b border-border px-3 py-2 text-right text-[.82rem] last:border-0 hover:bg-[var(--card-2)]"
-                    >
-                      {/* eslint-disable-next-line @next/next/no-img-element */}
-                      <img src={productImages(p)[0] || transparent()} alt="" className="size-8 rounded-md object-cover" />
-                      <span className="flex-1 font-bold">{p.title || p.name}</span>
-                      <span className="text-[var(--ink-3)]">{priceFmt(p.price)}</span>
-                    </button>
-                  ))}
-                </div>
-              )}
-            </div>
+            <ProductPicker products={products} items={items} setItems={setItems} hasError={errors.items} />
           </Field>
-
-          {items.length > 0 && (
-            <div className="mb-4 -mt-2 rounded-[11px] bg-[var(--card-2)] p-3">
-              {items.map((it) => (
-                <div key={String(it.id)} className="mb-2 flex items-center gap-2 text-[.84rem] last:mb-0">
-                  {/* eslint-disable-next-line @next/next/no-img-element */}
-                  <img src={it.image || transparent()} alt="" className="size-8 rounded-md object-cover" />
-                  <span className="flex-1 truncate font-bold">{it.title}</span>
-                  <button
-                    type="button"
-                    onClick={() => setQty(it.id, Math.max(1, it.qty - 1))}
-                    className="size-6 cursor-pointer rounded-md border border-border text-[.8rem]"
-                  >
-                    −
-                  </button>
-                  <span className="w-5 text-center num">{it.qty}</span>
-                  <button
-                    type="button"
-                    onClick={() => setQty(it.id, it.qty + 1)}
-                    className="size-6 cursor-pointer rounded-md border border-border text-[.8rem]"
-                  >
-                    +
-                  </button>
-                  <span className="w-16 text-left num">{priceFmt(it.price * it.qty)}</span>
-                  <button
-                    type="button"
-                    onClick={() => removeItem(it.id)}
-                    className="text-[var(--ink-3)] hover:text-destructive"
-                    aria-label="حذف"
-                  >
-                    ✕
-                  </button>
-                </div>
-              ))}
-            </div>
-          )}
 
           <div className="mb-4 rounded-[11px] bg-[var(--card-2)] p-4 text-[.9rem]">
             <div className="mb-1.5 flex justify-between text-[var(--ink-2)]">

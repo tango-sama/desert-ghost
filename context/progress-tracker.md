@@ -74,6 +74,51 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- Edit an existing order's products (2026-08-08, same admin-panel work as
+  the entry directly below): a "✏️ تعديل المنتجات" button on each order card
+  in `orders-view.tsx` lets staff add/remove products or change quantities
+  on an order that's ALREADY been placed — not just at creation time. Only
+  shown while the order has no carrier tracking yet (`!carrier`, the same
+  gate the existing pre-shipping "delivery label"/"parcel price override"
+  fields on this card already use) — once a real parcel exists, its
+  manifest was already built from the original items, so this repo doesn't
+  try to silently keep a carrier's label in sync with a later edit.
+  Extracted the product-search-and-cart widget out of `new-order-modal.tsx`
+  (built for the entry below) into a shared
+  `components/admin/product-picker.tsx` (`ProductPicker` component +
+  `CartItem` type + `addToCart`/`cartFromOrderItems` helpers) so the two
+  modals can't drift — `new-order-modal.tsx` was refactored to use it too,
+  net negative diff. `cartFromOrderItems` normalizes an order's stored
+  `items[]` (old docs may carry `quantity` instead of `qty`, a string
+  price, or no `image`) the same way `orders-view.tsx`'s own `picList`
+  already tolerates, backfilling a missing image from the live catalog by
+  id. New `components/admin/views/edit-items-modal.tsx`: opens with that
+  order's current items pre-loaded (a lazy `useState` initializer, not an
+  effect — the modal remounts via `key={editItemsOrderId}` when a different
+  order is opened, same "state-syncing effect → key remount" pattern
+  already used by the landing-pages admin tab), lets staff edit freely, and
+  on save writes `{ items, subtotal, total }` via `updateDocIn` — delivery
+  fee is intentionally left untouched (this app's fee model is per-wilaya,
+  not per-order-weight, so a product change never changes what shipping
+  costs). `patchOrder` (already local to `orders-view.tsx`) applies the
+  same patch to the in-memory store immediately, matching every other
+  optimistic-update in this file.
+  Verified against real production Firestore (same already-authenticated
+  admin session as the entry below): opened the modal on a real order
+  (`DS-2060`, 2 items, 11,550 د.ج), confirmed the cart pre-filled exactly
+  matching the order's real items, removed one item, bumped quantity
+  (3→4, confirmed the double-click-with-no-render-yield result was a test-
+  script artifact, not an app bug, by re-testing with a proper wait between
+  clicks), searched and added a different real catalog product, confirmed
+  the running total recalculated correctly (22,200 + 1,450 = 23,650), then
+  hit Cancel and confirmed the real order was completely unchanged
+  afterward (still its original 2 items and 11,550 total) — deliberately
+  never clicked Save against this real order, to avoid mutating production
+  order data without the owner's explicit go-ahead. Also confirmed the
+  `!carrier` gate itself live: of 6 real orders on the page, exactly the 2
+  that already had carrier tracking correctly had NO edit button.
+  `npx tsc --noEmit`, `npx eslint`, and `npm run build` all clean.
+
 - Admin panel "existing client" autocomplete + manual order creation
   (2026-08-08): ports the Noest/ZR Express feature the owner asked for —
   typing a returning customer's name while starting a new order suggests

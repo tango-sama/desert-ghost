@@ -38,6 +38,7 @@ import {
 import { nowMs } from "@/lib/time";
 import { useDeliveryData } from "@/hooks/use-delivery-data";
 import { NewOrderModal } from "@/components/admin/views/new-order-modal";
+import { EditItemsModal } from "@/components/admin/views/edit-items-modal";
 import {
   centersForCarrier,
   communesForCarrier,
@@ -463,6 +464,7 @@ export function OrdersView() {
   // order is old news (placed over 7 days ago or already delivered)
   const [folds, setFolds] = useState<Record<string, boolean>>({});
   const [newOrderOpen, setNewOrderOpen] = useState(false);
+  const [editItemsOrderId, setEditItemsOrderId] = useState<string | null>(null);
 
   const cache = useDeliveryData();
   // When a Stop Desk order's delivery company is switched to one other than
@@ -1622,6 +1624,15 @@ export function OrdersView() {
                     >
                       💬 واتساب
                     </a>
+                    {!carrier && (
+                      <button
+                        type="button"
+                        className={btn("gray", true)}
+                        onClick={() => setEditItemsOrderId(oid)}
+                      >
+                        ✏️ تعديل المنتجات
+                      </button>
+                    )}
                     {!carrier &&
                       (Object.keys(CO) as CarrierKey[]).map((co) => {
                         const bright = !o.deliveryCompany || o.deliveryCompany === co;
@@ -1698,6 +1709,26 @@ export function OrdersView() {
         cache={cache}
         toast={toast}
       />
+
+      {editItemsOrderId &&
+        (() => {
+          const o = orders.find((x) => String(x.id) === editItemsOrderId);
+          if (!o) return null;
+          return (
+            <EditItemsModal
+              // Remount when a different order is opened so the picker's
+              // initial cart snapshot (a lazy useState initializer, not an
+              // effect) is recomputed from THAT order's items instead of
+              // carrying over the previous one's local edits.
+              key={editItemsOrderId}
+              order={o}
+              products={products}
+              onClose={() => setEditItemsOrderId(null)}
+              onSaved={(id, patch) => patchOrder(id, patch)}
+              toast={toast}
+            />
+          );
+        })()}
     </div>
   );
 }
