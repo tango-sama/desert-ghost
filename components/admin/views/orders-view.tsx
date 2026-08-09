@@ -38,6 +38,7 @@ import {
 import { nowMs } from "@/lib/time";
 import { useDeliveryData } from "@/hooks/use-delivery-data";
 import { NewOrderModal } from "@/components/admin/views/new-order-modal";
+import { LinkOrderModal } from "@/components/admin/views/link-order-modal";
 import { EditItemsModal } from "@/components/admin/views/edit-items-modal";
 import {
   centersForCarrier,
@@ -464,6 +465,7 @@ export function OrdersView() {
   // order is old news (placed over 7 days ago or already delivered)
   const [folds, setFolds] = useState<Record<string, boolean>>({});
   const [newOrderOpen, setNewOrderOpen] = useState(false);
+  const [linkOrderOpen, setLinkOrderOpen] = useState(false);
   const [editItemsOrderId, setEditItemsOrderId] = useState<string | null>(null);
 
   const cache = useDeliveryData();
@@ -963,6 +965,9 @@ export function OrdersView() {
         <button type="button" className={btn("rose", true)} onClick={() => setNewOrderOpen(true)}>
           ➕ إضافة طلب
         </button>
+        <button type="button" className={btn("blue", true)} onClick={() => setLinkOrderOpen(true)}>
+          🔗 ربط طلب
+        </button>
         {anyTracked && (
           <button
             type="button"
@@ -1352,6 +1357,11 @@ export function OrdersView() {
                       📞 أدخلتيه بنفسك
                     </span>
                   )}
+                  {o.source === "admin_linked" && (
+                    <span className="mr-1 inline-block rounded-full bg-[var(--pink-bg)] px-[9px] py-[2px] text-[.72rem] font-extrabold text-[var(--pink-ink)]">
+                      🔗 طرد مربوط
+                    </span>
+                  )}
                   {o.source === "seller_direct" && (
                     <span className="mr-1 inline-block rounded-full bg-[rgba(217,168,108,.18)] px-[9px] py-[2px] text-[.72rem] text-[var(--gold)]">
                       🧾 بائع مباشر
@@ -1539,6 +1549,20 @@ export function OrdersView() {
                       <span className="text-[.78rem]">الوصل يُطبع من لوحة ZR</span>
                     </div>
                   )}
+                  {o.linkedParcel?.package && (
+                    <div className="mt-2.5 rounded-[11px] bg-[var(--card-2)] px-4 py-3 text-[.8rem] text-[var(--ink-2)]">
+                      🔗 بيانات الطرد المربوط
+                      {o.linkedParcel.package.productLabel && (
+                        <> · 📦 {o.linkedParcel.package.productLabel}</>
+                      )}
+                      {o.linkedParcel.package.price != null && (
+                        <> · 💰 COD {priceFmt(o.linkedParcel.package.price)}</>
+                      )}
+                      {o.linkedParcel.package.createdAt && (
+                        <> · 🗓️ {fmtDate(o.linkedParcel.package.createdAt)}</>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 <TrackStepper
@@ -1705,6 +1729,14 @@ export function OrdersView() {
         open={newOrderOpen}
         onClose={() => setNewOrderOpen(false)}
         orders={orders}
+        products={products}
+        cache={cache}
+        toast={toast}
+      />
+
+      <LinkOrderModal
+        open={linkOrderOpen}
+        onClose={() => setLinkOrderOpen(false)}
         products={products}
         cache={cache}
         toast={toast}

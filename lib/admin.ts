@@ -90,6 +90,31 @@ export type TrackingStatus = {
   zrHasPendingSwap?: boolean;
 };
 
+// A parcel fetched by the admin "ربط طلب" (link order) flow — returned by the
+// admin-gated lookupParcel callable. The parcel already exists at the carrier
+// (created OUTSIDE this app), so the modal only reads these details to prefill
+// a new order — no create*Parcel call ever runs for it.
+export type ParcelPackageInfo = {
+  customer?: string;
+  phone?: string;
+  wilaya?: string;
+  wilayaFr?: string;
+  commune?: string;
+  address?: string;
+  productLabel?: string;
+  price?: number | null;
+  createdAt?: string | null;
+  deliveryType?: "home" | "office";
+  raw?: Record<string, unknown>;
+};
+
+export type ParcelLookupResult = {
+  carrier: CarrierKey;
+  tracking: string;
+  status: TrackingStatus | null;
+  package: ParcelPackageInfo | null;
+};
+
 export type OrderItem = {
   id?: string | number;
   title?: string;
@@ -126,6 +151,15 @@ export type Order = {
   trackingStatus?: TrackingStatus | null;
   deliveryLabel?: string | null;
   parcelPrice?: number | null;
+  // Snapshot of the externally-created parcel an order was linked to via the
+  // admin "ربط طلب" flow (lookupParcel) — set at creation, never updated by
+  // the tracker (live status lives in `trackingStatus`).
+  linkedParcel?: {
+    carrier?: CarrierKey;
+    tracking?: string;
+    linkedAt?: number;
+    package?: ParcelPackageInfo;
+  } | null;
   [key: string]: unknown;
 };
 
@@ -298,4 +332,15 @@ export async function callFn<R = Record<string, unknown>>(
   const fns = getFunctions(app, "us-central1");
   const res = await httpsCallable(fns, name)(data ?? {});
   return res.data as R;
+}
+
+// Admin-gated lookup of a parcel that already exists at the carrier (see the
+// lookupParcel callable in the trinkl functions). Returns recipient/COD info
+// plus the normalized TrackingStatus so the modal can confirm the parcel and
+// prefill the order. Errors surface as HttpsError-ish messages from callFn.
+export function lookupParcel(
+  carrier: CarrierKey,
+  tracking: string
+): Promise<ParcelLookupResult> {
+  return callFn<ParcelLookupResult>("lookupParcel", { carrier, tracking });
 }

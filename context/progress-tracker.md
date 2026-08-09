@@ -74,6 +74,51 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- Admin "ربط طلب" (link order) flow (2026-08-09) — for parcels that already
+  exist at a carrier (created directly in the Yalidine/Noest/ZR dashboard,
+  outside this app): a "🔗 ربط طلب" toolbar button in `orders-view.tsx` opens
+  `components/admin/views/link-order-modal.tsx`, where the admin picks the
+  carrier, types the tracking number, and a new admin-gated `lookupParcel`
+  callable fetches that parcel's live info from the carrier WITHOUT creating
+  anything: a normalized `TrackingStatus` (reuses the exact `fetch*Status`
+  functions the tracker already uses) plus a `package` snapshot (receiver
+  name/phone, wilaya/commune, address, product label, COD amount, delivery
+  type, createdAt, raw carrier object). The callable is `requireAdmin`-gated
+  (mirrors firestore.rules isAdmin() emails, like the register*Webhook
+  callables) because the response carries customer PII — unlike the older
+  open callables. Function committed on trinkl branch `claude/lookup-parcel`,
+  built from `origin/main` in worktree `.claude/worktrees/lookup-parcel` (the
+  local main is diverged) — MERGE `claude/lookup-parcel` INTO MAIN when
+  convenient so deployed == main again. The modal confirms the parcel (shows
+  the summary + current status), prefills the customer/address fields
+  (wilaya/commune matched by NAME against that carrier's own live lists, same
+  lookups as new-order-modal), and on submit writes a normal order via
+  `saveOrder` that references the tracking directly — `[carrier]: { tracking,
+  createdAt }`, `trackingStatus`, a `linkedParcel` snapshot, `source:
+  "admin_linked"`, `fulfilled: true`, `status: "Confirmed"`, plus
+  `parcelPrice` (the parcel's OWN COD amount — what the courier collects; the
+  modal's computed total is only the store's internal record) and
+  `deliveryLabel` (the parcel's product label). NO create*Parcel call ever
+  runs — the parcel is already live at the carrier and this flow must not
+  double-ship. Because the order ends up with real carrier tracking, the
+  existing stepper/refresh/cancel machinery works as-is and the card's
+  create-parcel buttons correctly hide (the `!carrier` gate). Orders-view
+  shows a pink "🔗 طرد مربوط" badge (same convention as the other source
+  tags) and a "بيانات الطرد المربوط" strip (product label, COD, created
+  date) from the `linkedParcel` snapshot. New types
+  `ParcelPackageInfo`/`ParcelLookupResult` and a `lookupParcel()` client
+  helper in `lib/admin.ts`; `linkedParcel` added to the `Order` type.
+  Deployed `functions:lookupParcel` to desert-shop-24af9 (live) and pushed
+  `claude/lookup-parcel` to origin. Verified: `node --check` on the function,
+  `npx tsc --noEmit` + `npx eslint` clean. NOT exercised live: a real lookup
+  against the carriers' production APIs (package field names are read
+  generously across the shapes the create/webhook code already uses, but the
+  exact receiver-name/COD fields for parcels created OUTSIDE this app are
+  unconfirmed) and a real submit — the admin should try one real tracking
+  number per carrier and confirm the prefilled name/phone/COD match before
+  trusting the extraction; mismatches degrade to editable fields, never a
+  crash.
+
 - Edit an existing order's products (2026-08-08, same admin-panel work as
   the entry directly below): a "✏️ تعديل المنتجات" button on each order card
   in `orders-view.tsx` lets staff add/remove products or change quantities

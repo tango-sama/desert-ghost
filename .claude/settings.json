@@ -1,0 +1,29 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e ' *)",
+      "Bash(curl -s http://localhost:8000/amelhadj.html)",
+      "Bash(curl -sL http://localhost:8000/amelhadj.html)",
+      "Bash(curl -sL https://desert-shop-24af9.web.app/amelhadj)",
+      "Bash(npx firebase-tools *)",
+      "Bash(curl -s -o /dev/null -w '%{http_code}\\\\n' 'https://firestore.googleapis.com/v1/projects/desert-shop-24af9/databases/\\(default\\)/documents/products')",
+      "Bash(curl -s -o /dev/null -w '%{http_code}\\\\n' 'https://firestore.googleapis.com/v1/projects/desert-shop-24af9/databases/\\(default\\)/documents/orders')",
+      "Bash(curl -s -o /dev/null -w '%{http_code}\\\\n' -X POST 'https://firestore.googleapis.com/v1/projects/desert-shop-24af9/databases/\\(default\\)/documents/orders' -H 'Content-Type: application/json' -d '{\"fields\":{\"note\":{\"stringValue\":\"RULES VERIFICATION TEST - delete me\"}}}')",
+      "Bash(curl -s -o /dev/null -w '%{http_code}\\\\n' 'https://firestore.googleapis.com/v1/projects/desert-shop-24af9/databases/\\(default\\)/documents/private/yalidine')",
+      "Bash(curl -s -o /dev/null -w '%{http_code}\\\\n' -X PATCH 'https://firestore.googleapis.com/v1/projects/desert-shop-24af9/databases/\\(default\\)/documents/private/__rules_test__?updateMask.fieldPaths=note' -H 'Content-Type: application/json' -d '{\"fields\":{\"note\":{\"stringValue\":\"rules test\"}}}')",
+      "Bash(curl -s -w '\\\\nHTTP:%{http_code}\\\\n' 'https://firestore.googleapis.com/v1/projects/desert-shop-24af9/databases/\\(default\\)/documents/private/yalidine')",
+      "Bash(curl -s -w '\\\\nHTTP:%{http_code}\\\\n' -X PATCH 'https://firestore.googleapis.com/v1/projects/desert-shop-24af9/databases/\\(default\\)/documents/private/__rules_test__' -H 'Content-Type: application/json' -d '{\"fields\":{\"note\":{\"stringValue\":\"rules test\"}}}')",
+      "Bash(curl -s -w '\\\\nHTTP:%{http_code}\\\\n' -X PATCH 'https://firestore.googleapis.com/v1/projects/desert-shop-24af9/databases/\\(default\\)/documents/private/rules_check_delete_me' -H 'Content-Type: application/json' -d '{\"fields\":{\"note\":{\"stringValue\":\"rules test\"}}}')",
+      "Bash(curl -s -o /dev/null -w \"%{http_code}\\\\n\" \"https://firebasestorage.googleapis.com/v0/b/desert-shop-24af9.firebasestorage.app/o/uploads%2Ftest.txt?alt=media\")",
+      "Bash(curl -s -w \"\\\\nHTTP:%{http_code}\\\\n\" -X POST \"https://firebasestorage.googleapis.com/v0/b/desert-shop-24af9.firebasestorage.app/o?name=rules_check_delete_me.txt\" -H \"Content-Type: text/plain\" -d \"rules test\")",
+      "Bash(npm run *)",
+      "Bash(npm ls *)",
+      "Bash(npm audit *)",
+      "Bash(npx shadcn@latest add sheet --yes)",
+      "Bash(mkdir -p \"c:\\\\Users\\\\Tango\\\\Desktop\\\\Engine\\\\ghost\\\\public\\\\assets\" && cp \"C:\\\\Users\\\\Tango\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Tango-Desktop-Engine-ghost\\\\852fbb01-8842-4663-9203-d31b157c6fee\\\\scratchpad\\\\trinkl\\\\assets\\\\logo.webp\" \"C:\\\\Users\\\\Tango\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Tango-Desktop-Engine-ghost\\\\852fbb01-8842-4663-9203-d31b157c6fee\\\\scratchpad\\\\trinkl\\\\assets\\\\facebook.png\" \"C:\\\\Users\\\\Tango\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Tango-Desktop-Engine-ghost\\\\852fbb01-8842-4663-9203-d31b157c6fee\\\\scratchpad\\\\trinkl\\\\assets\\\\instagram.png\" \"C:\\\\Users\\\\Tango\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Tango-Desktop-Engine-ghost\\\\852fbb01-8842-4663-9203-d31b157c6fee\\\\scratchpad\\\\trinkl\\\\assets\\\\tiktok.png\" \"C:\\\\Users\\\\Tango\\\\AppData\\\\Local\\\\Temp\\\\claude\\\\c--Users-Tango-Desktop-Engine-ghost\\\\852fbb01-8842-4663-9203-d31b157c6fee\\\\scratchpad\\\\trinkl\\\\assets\\\\whatsapp.png\" \"c:\\\\Users\\\\Tango\\\\Desktop\\\\Engine\\\\ghost\\\\public\\\\assets\\\\\" && ls \"c:\\\\Users\\\\Tango\\\\Desktop\\\\Engine\\\\ghost\\\\public\\\\assets\")"
+    ],
+    "additionalDirectories": [
+      "c:\\Users\\Tango\\Desktop\\Engine\\ghost\\public"
+    ]
+  }
+}
