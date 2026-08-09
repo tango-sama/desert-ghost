@@ -172,6 +172,29 @@ not the intended state (see `development-workflow.md`).
   field shapes are still unconfirmed against real production parcels — the
   admin should test one real tracking per carrier.
 
+- ZR + Yalidine «ربط طلب» lookup verified/fixed against real parcels
+  (2026-08-09, DEPLOYED). (1) ZR `58-8AQZ1Q3IB2-ZR` (pickup-point, wilaya 58
+  El Meniaa, COD 15070): extraction mostly worked but the territory display
+  name ("El Menia") does NOT match the synced app name ("El Meniaa"), and for
+  a Stop Desk parcel the desk couldn't be selected. Fixed `lookupZr` to use
+  `deliveryAddress.cityTerritoryCode` (numeric, like Noest's wilaya_id) as
+  the wilaya, and for pickup-point parcels to put `deliveryAddress.hubName`
+  (the exact synced center name, e.g. "Hub Menea 58 مكتب المنيعة") in
+  `commune` so the modal selects the desk directly. (2) Yalidine
+  `yal-UU40XP` (home, wilaya 55 Touggourt, COD 15200): field names already
+  matched (firstname/familyname/contact_phone/to_wilaya_name/...
+  — Yalidine masks PII in the public API: "ا*ة", "0********6"), but
+  `deliveryType` read the nonexistent `is_stopdesk` — Stop Desk parcels are
+  flagged by `stopdesk_id`/`stopdesk_name` (null = home). Fixed the check and
+  also sent `to_wilaya_id` (numeric) as the primary wilaya. Modal
+  (`link-order-modal.tsx`): wilaya matching now tries BOTH `pkg.wilaya` and
+  `pkg.wilayaFr`, id-first then name (so any carrier's numeric code or name
+  matches), and the office desk-name match collapses whitespace (ZR hub names
+  have double spaces). All three carriers now verified against live parcels;
+  extracted for ZR: نسرين / +213669658943 / wilaya 58 / "Hub Menea 58
+  مكتب المنيعة" / 15070 DZD. Functions pushed on `claude/noest-link-fields`
+  (1499ace), ghost `main` (same push as the entry below's modal work).
+
 - Edit an existing order's products (2026-08-08, same admin-panel work as
   the entry directly below): a "✏️ تعديل المنتجات" button on each order card
   in `orders-view.tsx` lets staff add/remove products or change quantities

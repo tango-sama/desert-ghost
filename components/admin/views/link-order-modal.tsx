@@ -135,27 +135,35 @@ export function LinkOrderModal({
     const dt: DeliveryType = pkg.deliveryType === "office" ? "office" : "home";
     setDeliveryType(dt);
 
-    const wilayaName = (pkg.wilayaFr || pkg.wilaya || "").trim();
+    const wl = wilayasFor(res.carrier, cache);
     let wid = "";
-    if (wilayaName) {
-      const wl = wilayasFor(res.carrier, cache);
-      // Noest's lookupParcel returns the numeric wilaya code (its OrderInfo
-      // only carries wilaya_id), so match by id first, then by name for the
-      // carriers that return names (Yalidine/ZR).
-      const byId = wl.find((w) => String(w.id) === wilayaName);
+    for (const cand of [pkg.wilaya, pkg.wilayaFr]) {
+      if (!cand) continue;
+      const c = String(cand).trim();
+      if (!c) continue;
+      // Some carriers send the numeric wilaya code rather than a name
+      // (Noest's wilaya_id, ZR's cityTerritoryCode) — match by id first,
+      // then by name for the carriers that send names (Yalidine).
+      const byId = wl.find((w) => String(w.id) === c);
       const match =
         byId ??
-        wl.find((w) => w.fr.toLowerCase() === wilayaName.toLowerCase()) ??
-        wl.find((w) => w.ar.toLowerCase() === wilayaName.toLowerCase());
-      if (match) wid = String(match.id);
+        wl.find((w) => w.fr.toLowerCase() === c.toLowerCase()) ??
+        wl.find((w) => w.ar.toLowerCase() === c.toLowerCase());
+      if (match) {
+        wid = String(match.id);
+        break;
+      }
     }
     setWilayaId(wid);
 
     const communeName = (pkg.commune || "").trim();
     if (wid && communeName) {
       if (dt === "office") {
+        // Desk names can carry irregular whitespace (e.g. ZR hub names like
+        // "Hub Menea 58  مكتب المنيعة") — compare with collapsed spaces.
+        const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
         const desk = centersForCarrier(res.carrier, wid, cache).find(
-          (d) => d.name.toLowerCase() === communeName.toLowerCase()
+          (d) => norm(String(d.name)) === norm(communeName)
         );
         setCommune(desk ? String(desk.id) : "");
       } else {
