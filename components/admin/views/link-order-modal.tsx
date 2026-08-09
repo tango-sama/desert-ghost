@@ -7,6 +7,9 @@
 // the admin can confirm it's the right parcel, then a new order is written that
 // references that tracking number directly. NO create*Parcel call ever runs —
 // the parcel is already live at the carrier, and this flow must not double-ship.
+// All customer/address fields are READ-ONLY and come from the parcel — the
+// admin's only input is the product list (plus the tracking + carrier used for
+// the lookup). Missing/unmatched parcel data blocks saving.
 
 import { useState } from "react";
 import { priceFmt, saveOrder, type Product } from "@/lib/firebase";
@@ -27,8 +30,39 @@ import {
   type CarrierCache,
   type DeliveryType,
 } from "@/lib/delivery";
-import { inp, sel, btn, Field, rowActions, fmtDate } from "@/components/admin/ui";
+import { inp, btn, Field, rowActions, fmtDate } from "@/components/admin/ui";
 import { nowMs } from "@/lib/time";
+
+// Read-only field for a linked order — every customer/address value must come
+// from the carrier's parcel, never typed by the admin. An unmatched/missing
+// value is shown as-is and blocks saving.
+function ReadOnlyField({
+  label,
+  value,
+  error,
+  errorMsg,
+}: {
+  label: string;
+  value: React.ReactNode;
+  error?: boolean;
+  errorMsg?: string | null;
+}) {
+  return (
+    <Field label={label}>
+      <div
+        className={cn(
+          "flex min-h-[42px] items-center rounded-[11px] border border-dashed bg-[var(--card-2)] px-3 text-[.85rem]",
+          error ? "border-destructive text-[var(--alert-ink)]" : "border-border text-[var(--ink-2)]"
+        )}
+      >
+        {value}
+      </div>
+      {error && errorMsg && (
+        <p className="mt-1 text-[.72rem] font-bold leading-snug text-[var(--alert-ink)]">⚠️ {errorMsg}</p>
+      )}
+    </Field>
+  );
+}
 
 export function LinkOrderModal({
   open,
@@ -60,7 +94,6 @@ export function LinkOrderModal({
   const [submitting, setSubmitting] = useState(false);
 
   const carrierReady = !!cache[carrier];
-  const wilayaList = carrierReady ? wilayasFor(carrier, cache) : [];
   const selectedWilaya = carrierReady && wilayaId ? wilayaForCarrier(carrier, wilayaId, cache) : null;
   const communeOptions = selectedWilaya ? communesForCarrier(carrier, selectedWilaya.id, cache) : [];
   const deskOptions = selectedWilaya ? centersForCarrier(carrier, selectedWilaya.id, cache) : [];
@@ -157,16 +190,6 @@ export function LinkOrderModal({
     setCarrier(c);
     setResult(null);
     setLookupError(null);
-  }
-
-  function selectWilaya(id: string) {
-    setWilayaId(id);
-    setCommune("");
-  }
-
-  function selectDeliveryType(type: DeliveryType) {
-    setDeliveryType(type);
-    setCommune("");
   }
 
   if (!open) return null;
@@ -338,77 +361,48 @@ export function LinkOrderModal({
         {result && (
           <form onSubmit={handleSubmit}>
             <>
+              <div className="mb-4 rounded-[11px] bg-[var(--card-2)] px-4 py-3 text-[.78rem] leading-relaxed text-[var(--ink-3)]">
+                معلومات الزبون والعنوان ونوع التوصيل مأخوذة من الطرد لدى شركة التوصيل (قراءة فقط) — اختاري المنتجات فقط. إن وُجدت قيمة ناقصة أو غير مطابقة، يُمنع الحفظ حتى تعديلها لدى شركة التوصيل.
+              </div>
               <div className="grid grid-cols-2 gap-3 max-[500px]:grid-cols-1">
-                <Field label="اسم الزبون *">
-                  <input value={name} onChange={(e) => setName(e.target.value)} placeholder="من الطرد — قابل للتعديل" className={errCls(errors.name)} />
-                </Field>
-                <Field label="رقم الهاتف *">
-                  <input value={phone} onChange={(e) => setPhone(e.target.value)} type="tel" dir="ltr" placeholder="0X XX XX XX XX" className={cn(errCls(errors.phone), "text-right")} />
-                </Field>
+                <ReadOnlyField label="اسم الزبون *" value={name || "—"} error={errors.name} errorMsg="اسم الزبون غير موجود في الطرد — عدّليه لدى شركة التوصيل وأعيدي البحث" />
+                <ReadOnlyField label="رقم الهاتف *" value={phone || "—"} error={errors.phone} errorMsg="رقم الهاتف غير موجود أو غير صالح في الطرد — عدّليه لدى شركة التوصيل وأعيدي البحث" />
               </div>
 
               <div className="grid grid-cols-2 gap-3 max-[500px]:grid-cols-1">
-                <Field label="الولاية *">
-                  <select value={wilayaId} onChange={(e) => selectWilaya(e.target.value)} disabled={!carrierReady} className={cn(sel, errors.wilaya && "border-destructive")}>
-                    <option value="">{carrierReady ? "اختاري" : "⏳ جاري التحميل..."}</option>
-                    {wilayaList.map((w) => (
-                      <option key={w.id} value={w.id}>
-                        {w.id} - {w.ar}
-                      </option>
-                    ))}
-                  </select>
-                </Field>
-                <Field label={isOffice ? "المكتب (Stop Desk) *" : "البلدية *"}>
-                  <select value={communeValue} onChange={(e) => setCommune(e.target.value)} disabled={!selectedWilaya} className={cn(sel, errors.commune && "border-destructive")}>
-                    <option value="">
-                      {!selectedWilaya
-                        ? "اختاري الولاية أولاً"
-                        : isOffice
-                          ? deskOptions.length
-                            ? "اختاري المكتب"
-                            : "لا توجد مكاتب متاحة"
-                          : "اختاري البلدية"}
-                    </option>
-                    {isOffice
-                      ? deskOptions.map((d) => (
-                          <option key={d.id} value={String(d.id)}>
-                            {d.address ? `${d.name} — ${d.address}` : d.name}
-                          </option>
-                        ))
-                      : communeOptions.map((n) => (
-                          <option key={n} value={n}>
-                            {n}
-                          </option>
-                        ))}
-                  </select>
-                </Field>
+                <ReadOnlyField
+                  label="الولاية *"
+                  value={wilayaId && selectedWilaya ? `${selectedWilaya.id} - ${selectedWilaya.ar}` : pkg?.wilaya || pkg?.wilayaFr || "—"}
+                  error={errors.wilaya}
+                  errorMsg="ولاية الطرد غير مطابقة لقائمة الولايات المحلية — عدّليها لدى شركة التوصيل وأعيدي البحث"
+                />
+                <ReadOnlyField
+                  label={isOffice ? "المكتب (Stop Desk) *" : "البلدية *"}
+                  value={communeLabel || pkg?.commune || "—"}
+                  error={errors.commune}
+                  errorMsg={isOffice ? "مكتب الطرد غير مطابق — عدّليه لدى شركة التوصيل وأعيدي البحث" : "بلدية الطرد غير مطابقة — عدّليها لدى شركة التوصيل وأعيدي البحث"}
+                />
               </div>
 
               <Field label="نوع التوصيل">
                 <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    onClick={() => selectDeliveryType("home")}
+                  <div
                     style={deliveryType === "home" ? { borderColor: "var(--rose)", background: "var(--rose-tint)" } : undefined}
                     className="rounded-[11px] border-[1.5px] border-border p-2 text-center text-[.8rem] font-extrabold"
                   >
                     🏠 للمنزل
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => selectDeliveryType("office")}
+                  </div>
+                  <div
                     style={deliveryType === "office" ? { borderColor: "var(--rose)", background: "var(--rose-tint)" } : undefined}
                     className="rounded-[11px] border-[1.5px] border-border p-2 text-center text-[.8rem] font-extrabold"
                   >
                     🏢 المكتب (Stop Desk)
-                  </button>
+                  </div>
                 </div>
               </Field>
 
               {deliveryType === "home" && (
-                <Field label="عنوان المنزل *">
-                  <input value={address} onChange={(e) => setAddress(e.target.value)} placeholder="من الطرد — قابل للتعديل" className={errCls(errors.address)} />
-                </Field>
+                <ReadOnlyField label="عنوان المنزل *" value={address || "—"} error={errors.address} errorMsg="عنوان المنزل غير موجود في الطرد — عدّليه لدى شركة التوصيل وأعيدي البحث" />
               )}
 
               <Field label="المنتجات *">
