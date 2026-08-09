@@ -119,6 +119,59 @@ not the intended state (see `development-workflow.md`).
   trusting the extraction; mismatches degrade to editable fields, never a
   crash.
 
+- Admin "ربط طلب" flow — client info is now READ-ONLY from the carrier, plus a
+  Noest tracker false-"delivered" fix (2026-08-09, both DEPLOYED):
+  (1) `link-order-modal.tsx` no longer lets the admin type
+  name/phone/wilaya/commune/delivery-type/address when linking an existing
+  parcel — they all come READ-ONLY from `lookupParcel`'s `package` (name/phone
+  from the parcel; wilaya/commune matched by NAME against that carrier's live
+  list, raw parcel value shown when unmatched; delivery type from
+  `pkg.deliveryType`; address only for home delivery). The admin's only input
+  is the product list (`ProductPicker`). Missing or locally-unmatched parcel
+  values render as-is in red and BLOCK saving with a message to fix the data at
+  the carrier and re-search. Added a local `ReadOnlyField`; removed the editable
+  inputs/selects and the now-dead `selectWilaya`/`selectDeliveryType`/
+  `wilayaList`/`sel`. Verified `tsc --noEmit` + `eslint` clean; pushed to ghost
+  `main` (`5faeb2b`), Vercel auto-deploys.
+  (2) Noest tracker bug in trinkl `functions/index.js`: an out-for-delivery
+  parcel (e.g. `4JH-55A-19304135`) showed "تم الاستلام" while Noest's own log
+  showed "En livraison". Root cause: the "Enlevé par le livreur" courier-pickup
+  event mapped to stage 4 via BOTH `NOEST_STAGE.livre = 4` and the `/livr[ée]/`
+  label rule matching "livre" inside "livreur", and `fetchNoestStatus` takes
+  the max over ALL history so it stuck. Fix: `NOEST_STAGE.livre` → 3 (only
+  `livred` = 4); `noestNormalize` catches "enlevé/remis/affecté par le livreur"
+  as out-for-delivery and excludes "livreur" from the delivered rule;
+  `fetchNoestStatus` now only trusts "delivered" when the CURRENT (latest)
+  event confirms it (a history-pinned stage 4 downgrades to the current step,
+  max 3, with a `console.log`). Unit-tested against the real event log
+  (→ stage 3 "خرج للتوصيل", no alert), genuine delivered (→ 4), and
+  delivered→redelivered (→ 3). Deployed all 21 functions to desert-shop-24af9
+  and fast-forwarded trinkl `main` to `85b12e8` — this also resolves the
+  "MERGE claude/lookup-parcel INTO MAIN" note in the entry below (deployed ==
+  main again). NOTE: trinkl's local `main` working tree still carries its own
+  uncommitted `functions/index.js` + untracked files — leave it alone.
+
+- Noest «ربط طلب» lookup returned EMPTY client info — fixed by reading the
+  real response shape (2026-08-09, DEPLOYED). Live test with tracking
+  `4JH-55A-19304135`: the lookup succeeded (parcel box appeared) but
+  name/phone/wilaya/commune/address were blank because `lookupNoest` read
+  `entry.receiver_name`, `entry.parcel_price`, `entry.wilaya_name`, etc. —
+  the real Noest `/get/trackings/info` response nests everything under
+  `entry.OrderInfo` (`client`, `phone`, `adresse`, `wilaya_id` (NUMERIC
+  code, not a name), `commune`, `montant`, `produit`, `created_at`,
+  `stop_desk`) plus a top-level `recipientName`. Fixed the extraction in
+  `lookupNoest` to read from `OrderInfo` (with `recipientName` fallback for
+  the name, `montant` → `price` COD), and since Noest's `wilaya_id` is the
+  numeric code, the modal now matches the wilaya by id first then by name
+  (Yalidine/ZR still match by name). Verified the extraction against the
+  live API → Zidi / 0781466055 / wilaya 6 (بجاية) / Akfadou / 11900 DZD.
+  Deployed all functions from branch `claude/noest-link-fields` (7fe4f32,
+  based on origin/main 85b12e8) and pushed it; ghost `main` updated in the
+  same push as the read-only flow entry above (`link-order-modal.tsx`
+  prefill). Remaining risk (tracker's earlier note): Yalidine/ZR `lookup*`
+  field shapes are still unconfirmed against real production parcels — the
+  admin should test one real tracking per carrier.
+
 - Edit an existing order's products (2026-08-08, same admin-panel work as
   the entry directly below): a "✏️ تعديل المنتجات" button on each order card
   in `orders-view.tsx` lets staff add/remove products or change quantities

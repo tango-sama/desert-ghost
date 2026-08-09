@@ -139,7 +139,12 @@ export function LinkOrderModal({
     let wid = "";
     if (wilayaName) {
       const wl = wilayasFor(res.carrier, cache);
+      // Noest's lookupParcel returns the numeric wilaya code (its OrderInfo
+      // only carries wilaya_id), so match by id first, then by name for the
+      // carriers that return names (Yalidine/ZR).
+      const byId = wl.find((w) => String(w.id) === wilayaName);
       const match =
+        byId ??
         wl.find((w) => w.fr.toLowerCase() === wilayaName.toLowerCase()) ??
         wl.find((w) => w.ar.toLowerCase() === wilayaName.toLowerCase());
       if (match) wid = String(match.id);
