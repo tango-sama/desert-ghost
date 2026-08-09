@@ -9,7 +9,9 @@
 // the parcel is already live at the carrier, and this flow must not double-ship.
 // All customer/address fields are READ-ONLY and come from the parcel — the
 // admin's only input is the product list (plus the tracking + carrier used for
-// the lookup). Missing/unmatched parcel data blocks saving.
+// the lookup). Missing/unmatched parcel data never blocks the save: the order
+// is written with the best available values (flagged as warnings) since the
+// admin can't edit carrier-side data.
 
 import { useState } from "react";
 import { priceFmt, saveOrder, type Product } from "@/lib/firebase";
@@ -23,7 +25,6 @@ import {
   centersForCarrier,
   communesForCarrier,
   feeForCarrier,
-  isValidPhone,
   wilayaForCarrier,
   wilayasFor,
   type Carrier,
@@ -33,32 +34,51 @@ import {
 import { inp, btn, Field, rowActions, fmtDate } from "@/components/admin/ui";
 import { nowMs } from "@/lib/time";
 
-// Read-only field for a linked order — every customer/address value must come
-// from the carrier's parcel, never typed by the admin. An unmatched/missing
-// value is shown as-is and blocks saving.
+// Phone formats the carrier APIs actually return: local 0[567]XXXXXXXX
+// (Noest), international +213XXXXXXXXX (ZR Express), or Yalidine's masked
+// 0*****XXXX (their public API redacts PII — see lookupParcel). Accept all
+// of them: the value is read-only, so format-strict validation would just
+// dead-end the save on data the admin can't change.
+function carrierPhoneOk(phone: string): boolean {
+  const v = phone.replace(/\s+/g, "");
+  if (/^\+213\d{9}$/.test(v)) return true;
+  if (/^0[\d*]{8,9}$/.test(v)) return true;
+  return false;
+}
+
+// ZR returns +213XXXXXXXXX; the rest of the store stores local 0XXXXXXXXX.
+function normalizeCarrierPhone(phone: string): string {
+  const v = phone.trim().replace(/\s+/g, "");
+  return /^\+213\d{9}$/.test(v) ? "0" + v.slice(4) : v;
+}
+
+// Read-only field for a linked order — every customer/address value comes
+// from the carrier's parcel, never typed by the admin. A missing/unmatched
+// value never blocks the save (the admin can't fix it); it's flagged as a
+// non-blocking warning so she knows the order was saved without it.
 function ReadOnlyField({
   label,
   value,
-  error,
-  errorMsg,
+  warn,
+  warnMsg,
 }: {
   label: string;
   value: React.ReactNode;
-  error?: boolean;
-  errorMsg?: string | null;
+  warn?: boolean;
+  warnMsg?: string | null;
 }) {
   return (
     <Field label={label}>
       <div
         className={cn(
           "flex min-h-[42px] items-center rounded-[11px] border border-dashed bg-[var(--card-2)] px-3 text-[.85rem]",
-          error ? "border-destructive text-[var(--alert-ink)]" : "border-border text-[var(--ink-2)]"
+          warn ? "border-[var(--warn-ink)] text-[var(--warn-ink)]" : "border-border text-[var(--ink-2)]"
         )}
       >
         {value}
       </div>
-      {error && errorMsg && (
-        <p className="mt-1 text-[.72rem] font-bold leading-snug text-[var(--alert-ink)]">⚠️ {errorMsg}</p>
+      {warn && warnMsg && (
+        <p className="mt-1 text-[.72rem] font-bold leading-snug text-[var(--warn-ink)]">⚠️ {warnMsg}</p>
       )}
     </Field>
   );
@@ -91,16 +111,27 @@ export function LinkOrderModal({
   const [deliveryType, setDeliveryType] = useState<DeliveryType>("home");
   const [items, setItems] = useState<CartItem[]>([]);
   const [errors, setErrors] = useState<Record<string, boolean>>({});
+  const [warns, setWarns] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
 
   const carrierReady = !!cache[carrier];
+  const pkg = result?.package ?? null;
   const selectedWilaya = carrierReady && wilayaId ? wilayaForCarrier(carrier, wilayaId, cache) : null;
   const communeOptions = selectedWilaya ? communesForCarrier(carrier, selectedWilaya.id, cache) : [];
   const deskOptions = selectedWilaya ? centersForCarrier(carrier, selectedWilaya.id, cache) : [];
   const isOffice = deliveryType === "office";
   const selectedDesk = isOffice ? deskOptions.find((d) => String(d.id) === commune) ?? null : null;
-  const communeValue = isOffice ? (selectedDesk ? commune : "") : communeOptions.includes(commune) ? commune : "";
-  const communeLabel = isOffice ? selectedDesk?.name ?? "" : communeValue;
+  // Read-only parcel values are never a hard block: when the desk name isn't
+  // in this carrier's synced list (or the commune isn't an exact match), keep
+  // the parcel's own value so the order still records it.
+  const communeValue = isOffice
+    ? selectedDesk
+      ? commune
+      : pkg?.commune || ""
+    : communeOptions.includes(commune)
+      ? commune
+      : pkg?.commune || "";
+  const communeLabel = isOffice ? selectedDesk?.name ?? pkg?.commune ?? "" : communeValue;
   const deliveryFee = selectedWilaya ? feeForCarrier(carrier, selectedWilaya.id, deliveryType, cache) : 0;
 
   const subtotal = items.reduce((n, it) => n + it.price * it.qty, 0);
@@ -120,6 +151,7 @@ export function LinkOrderModal({
     setDeliveryType("home");
     setItems([]);
     setErrors({});
+    setWarns({});
     onClose();
   }
 
@@ -160,11 +192,19 @@ export function LinkOrderModal({
     if (wid && communeName) {
       if (dt === "office") {
         // Desk names can carry irregular whitespace (e.g. ZR hub names like
-        // "Hub Menea 58  مكتب المنيعة") — compare with collapsed spaces.
+        // "Hub Menea 58  مكتب المنيعة") and slight wording differences from
+        // the synced list — compare with collapsed spaces, exact first then
+        // partial. If nothing matches the parcel's own desk name is kept as-is
+        // (non-blocking, see communeValue/communeLabel).
         const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
-        const desk = centersForCarrier(res.carrier, wid, cache).find(
-          (d) => norm(String(d.name)) === norm(communeName)
-        );
+        const centers = centersForCarrier(res.carrier, wid, cache);
+        const desk =
+          centers.find((d) => norm(String(d.name)) === norm(communeName)) ??
+          centers.find((d) => {
+            const a = norm(String(d.name));
+            const b = norm(communeName);
+            return b && (a.includes(b) || b.includes(a));
+          });
         setCommune(desk ? String(desk.id) : "");
       } else {
         const cs = communesForCarrier(res.carrier, wid, cache);
@@ -214,16 +254,19 @@ export function LinkOrderModal({
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!result) return;
-    const bad: Record<string, boolean> = {
+    // Missing/unmatched read-only parcel values never block the save — the
+    // admin can't edit them — but they surface as warnings so she knows what
+    // got saved empty or as-is. The only hard requirement is the product list.
+    setWarns({
       name: !name.trim(),
-      phone: !phone.trim() || !isValidPhone(phone),
+      phone: !carrierPhoneOk(phone),
       wilaya: !wilayaId,
       commune: !communeValue,
       address: deliveryType === "home" && !address.trim(),
-      items: items.length === 0,
-    };
+    });
+    const bad: Record<string, boolean> = { items: items.length === 0 };
     setErrors(bad);
-    if (Object.values(bad).some(Boolean)) return;
+    if (bad.items) return;
 
     setSubmitting(true);
     const num = generateOrderNumber();
@@ -233,7 +276,7 @@ export function LinkOrderModal({
     const order = {
       num,
       customer: name.trim(),
-      phone: phone.trim(),
+      phone: normalizeCarrierPhone(phone.trim()),
       wilaya: selectedWilaya?.ar || pkg?.wilaya || "",
       wilayaId: selectedWilaya?.id ?? null,
       wilayaFr: selectedWilaya?.fr || pkg?.wilayaFr || "",
@@ -267,8 +310,6 @@ export function LinkOrderModal({
     }
     setSubmitting(false);
   }
-
-  const pkg = result?.package ?? null;
 
   return (
     <div
@@ -375,25 +416,25 @@ export function LinkOrderModal({
           <form onSubmit={handleSubmit}>
             <>
               <div className="mb-4 rounded-[11px] bg-[var(--card-2)] px-4 py-3 text-[.78rem] leading-relaxed text-[var(--ink-3)]">
-                معلومات الزبون والعنوان ونوع التوصيل مأخوذة من الطرد لدى شركة التوصيل (قراءة فقط) — اختاري المنتجات فقط. إن وُجدت قيمة ناقصة أو غير مطابقة، يُمنع الحفظ حتى تعديلها لدى شركة التوصيل.
+                معلومات الزبون والعنوان ونوع التوصيل مأخوذة من الطرد لدى شركة التوصيل (قراءة فقط) — اختاري المنتجات فقط. إن نقصت قيمة من الطرد أو لم تتطابق مع قوائم شركة التوصيل، ستُحفظ الطلبية بالقيمة المتوفرة وتظهر تنبيهات صفراء.
               </div>
               <div className="grid grid-cols-2 gap-3 max-[500px]:grid-cols-1">
-                <ReadOnlyField label="اسم الزبون *" value={name || "—"} error={errors.name} errorMsg="اسم الزبون غير موجود في الطرد — عدّليه لدى شركة التوصيل وأعيدي البحث" />
-                <ReadOnlyField label="رقم الهاتف *" value={phone || "—"} error={errors.phone} errorMsg="رقم الهاتف غير موجود أو غير صالح في الطرد — عدّليه لدى شركة التوصيل وأعيدي البحث" />
+                <ReadOnlyField label="اسم الزبون *" value={name || "—"} warn={warns.name} warnMsg="اسم الزبون غير موجود في الطرد — ستُحفظ الطلبية بدونه" />
+                <ReadOnlyField label="رقم الهاتف *" value={phone || "—"} warn={warns.phone} warnMsg="رقم الهاتف غير موجود في الطرد — ستُحفظ الطلبية بدونه" />
               </div>
 
               <div className="grid grid-cols-2 gap-3 max-[500px]:grid-cols-1">
                 <ReadOnlyField
                   label="الولاية *"
                   value={wilayaId && selectedWilaya ? `${selectedWilaya.id} - ${selectedWilaya.ar}` : pkg?.wilaya || pkg?.wilayaFr || "—"}
-                  error={errors.wilaya}
-                  errorMsg="ولاية الطرد غير مطابقة لقائمة الولايات المحلية — عدّليها لدى شركة التوصيل وأعيدي البحث"
+                  warn={warns.wilaya}
+                  warnMsg="ولاية الطرد غير مطابقة لقائمة الولايات — ستُحفظ الطلبية دون تطابق الولاية"
                 />
                 <ReadOnlyField
                   label={isOffice ? "المكتب (Stop Desk) *" : "البلدية *"}
                   value={communeLabel || pkg?.commune || "—"}
-                  error={errors.commune}
-                  errorMsg={isOffice ? "مكتب الطرد غير مطابق — عدّليه لدى شركة التوصيل وأعيدي البحث" : "بلدية الطرد غير مطابقة — عدّليها لدى شركة التوصيل وأعيدي البحث"}
+                  warn={warns.commune}
+                  warnMsg={isOffice ? "مكتب الطرد غير مطابق — ستُحفظ باسم المكتب كما ورد من شركة التوصيل" : "بلدية الطرد غير مطابقة — ستُحفظ باسمها كما ورد من شركة التوصيل"}
                 />
               </div>
 
@@ -415,7 +456,7 @@ export function LinkOrderModal({
               </Field>
 
               {deliveryType === "home" && (
-                <ReadOnlyField label="عنوان المنزل *" value={address || "—"} error={errors.address} errorMsg="عنوان المنزل غير موجود في الطرد — عدّليه لدى شركة التوصيل وأعيدي البحث" />
+                <ReadOnlyField label="عنوان المنزل *" value={address || "—"} warn={warns.address} warnMsg="عنوان المنزل غير موجود في الطرد — ستُحفظ الطلبية بدونه" />
               )}
 
               <Field label="المنتجات *">

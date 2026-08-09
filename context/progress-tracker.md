@@ -74,6 +74,40 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- «ربط طلب» no longer blocks on read-only parcel data; phone/desk fixes for
+  Yalidine + ZR (2026-08-10, ghost-only, `main` → Vercel). Live testing of the
+  modal against real parcels exposed that the strict read-only validation
+  dead-ends the save on data the admin CAN'T edit: ZR returns the phone as
+  `+213669658943` and Yalidine returns MASKED PII (`0********6`,
+  name/address redacted to `ا*ة` / `ح* ا*******`) because Yalidine's public
+  API redacts recipient info by design (verified: the list endpoint — by
+  tracking AND by order_id — returns masked values; Noest and ZR return full
+  data; there is NO Yalidine endpoint this app can call that returns the
+  unmasked values, so a linked Yalidine order carries the masked name/phone
+  and the admin sees the real data on Yalidine's dashboard). Both failed
+  `isValidPhone` (`/^0[567][0-9]{8}$/`), so every ZR/Yalidine link attempt
+  was blocked by "رقم الهاتف غير موجود أو غير صالح في الطرد". A ZR office
+  parcel also blocked with "مكتب الطرد غير مطابق" when the desk name didn't
+  exactly match a synced center. Fix in `link-order-modal.tsx`:
+  (1) read-only customer/address fields NEVER block the save anymore — the
+  only hard requirement is the product list; missing/unmatched values save as
+  the best available parcel data and surface as non-blocking yellow warnings
+  (`ReadOnlyField` `warn`/`warnMsg`, `--warn-ink` border, `warns` state)
+  instead of red errors that instructed fixing data at the carrier.
+  (2) Phone: new `carrierPhoneOk` accepts `0[567]XXXXXXXX`, `+213XXXXXXXXX`,
+  and Yalidine's masked `0*****XXXX`; `normalizeCarrierPhone` converts the
+  stored `+213XXXXXXXXX` → local `0XXXXXXXXX` (the rest of the store uses
+  local format). (3) Desk/commune: `communeValue`/`communeLabel` fall back to
+  the parcel's OWN value (`pkg.commune`) when the desk/commune doesn't match
+  the carrier's synced list, so the order records the parcel's real desk name
+  and the fee still comes from the matched wilaya; office desk matching in
+  `prefillFromPackage` is now exact-then-partial (contains) with collapsed
+  whitespace. Note: the earlier ZR hub-name desk match WAS verified correct
+  against the live API (hub.name === deliveryAddress.hubName for wilaya 58),
+  so the remaining mismatch case was the user's specific parcel — now saved
+  as-is rather than blocked. Verified: `npx tsc --noEmit` + `npx eslint`
+  clean. NOT yet committed — pending owner review.
+
 - Admin "ربط طلب" (link order) flow (2026-08-09) — for parcels that already
   exist at a carrier (created directly in the Yalidine/Noest/ZR dashboard,
   outside this app): a "🔗 ربط طلب" toolbar button in `orders-view.tsx` opens
