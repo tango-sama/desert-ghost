@@ -74,6 +74,29 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- ZR tracker: `vers_wilaya` (and other snake_case French) states showed the
+  parcel as «تم التأكيد والشحن» instead of «في مركز الفرز» (2026-08-10,
+  trinkl DEPLOYED). ZR's real state names are snake_case French
+  (`commande_recue`, `pret_a_expedier`, `confirme_au_bureau`,
+  `vers_wilaya`) but `zrNormalize` was written for English/camelCase
+  keywords, so `vers_wilaya` fell through every rule → stage -1 → `getParcelStatus`
+  kept the parcel's PREVIOUS stage (confirme_au_bureau = 1), misreporting an
+  in-transit parcel as shipped. Confirmed against the live API:
+  `state-history` of `58-8AQZ1Q3IB2-ZR` returned exactly those 4 states.
+  Fix (`zrNormalize` in trinkl `functions/index.js`): normalize the raw name
+  by splitting camelCase boundaries, lowercasing, stripping accents (NFD),
+  and collapsing `_`/`-`/whitespace to spaces, so snake_case French names,
+  their accented descriptions ("Prêt à expédier", "Commande reçue"), and the
+  older camelCase English names all hit one keyword set — `vers wilaya` /
+  `vers centre` / `vers bureau` now map to stage 2 (في مركز الفرز). Kept the
+  safe `-1` fallback (unknown states keep their known stage); deliberately did
+  NOT add a generic "arrive" match (an "arrivée chez client" would be
+  delivered, not sorting). Verified 23/23 mapping cases incl. every real state
+  name + description; `node --check` clean. Deployed all 19 functions
+  (firebase deploy, retried after transient 409s on 2 functions), branch
+  `claude/noest-link-fields` (c02e679) pushed and `origin/main` fast-forwarded
+  so deployed == main again (local `main` working tree untouched).
+
 - «ربط طلب» no longer blocks on read-only parcel data; phone/desk fixes for
   Yalidine + ZR (2026-08-10, ghost-only, `main` → Vercel). Live testing of the
   modal against real parcels exposed that the strict read-only validation
