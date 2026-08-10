@@ -326,6 +326,22 @@ function TrackStepper({
             </span>
           )}
         </div>
+        {/* The livreur carrying the parcel (Noest reports driver_name/phone) —
+            the single most useful piece of info while out for delivery. */}
+        {!isReturn && ts.livreur?.name && (
+          <div className="flex flex-wrap items-center gap-2 rounded-lg bg-[var(--teal-bg)] px-2.5 py-1.5">
+            <span className="font-extrabold text-[var(--teal-ink)]">🚚 مع المندوب:</span>
+            <b className="font-extrabold text-foreground">{ts.livreur.name}</b>
+            {ts.livreur.phone && (
+              <a
+                href={`tel:${ts.livreur.phone}`}
+                className="rounded-md bg-card px-2 py-0.5 font-bold text-[var(--teal-ink)] no-underline hover:underline"
+              >
+                📞 {ts.livreur.phone}
+              </a>
+            )}
+          </div>
+        )}
         <div className="text-[.7rem] text-[var(--ink-3)]">
           {lastDate ? `🕒 آخر حدث: ${lastDate}` : ""}
           {ts.lastLocation ? `${lastDate ? " · " : ""}📍 ${ts.lastLocation}` : ""}
@@ -357,7 +373,8 @@ function TrackStepper({
                 const cls = badgeCls(e.badge);
                 const d = e.date ? fmtDate(e.date) : "";
                 const bits: React.ReactNode[] = [];
-                if (e.by) bits.push(`🚚 ${e.by}`);
+                if (e.driver) bits.push(`🚚 المندوب: ${e.driver}`);
+                if (e.by) bits.push(e.driver ? `🏢 ${e.by}` : `🚚 ${e.by}`);
                 if (e.center) bits.push(`🏢 ${e.center}`);
                 if (e.location)
                   bits.push(

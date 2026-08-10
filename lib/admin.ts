@@ -56,6 +56,9 @@ export type TrackEvent = {
   date?: string | number | null;
   location?: string | null;
   by?: string | null;
+  // The livreur the parcel is handed to for delivery (Noest only) — distinct
+  // from `by`, which is who performed the action (often a hub employee).
+  driver?: string | null;
   center?: string | null;
   content?: string | null;
   causer?: string | null;
@@ -73,6 +76,10 @@ export type TrackingStatus = {
   lastLocation?: string;
   updatedAt?: number;
   noestValidated?: boolean;
+  // The livreur currently holding the parcel, as reported by Noest
+  // (OrderInfo.driver_name / driver_phone) — shown prominently while the
+  // parcel is out for delivery.
+  livreur?: { name?: string | null; phone?: string | null } | null;
   // The carrier no longer has this parcel at all (deleted directly from
   // their own dashboard, outside this app) — set only once it's been
   // missing long enough that "just created, not indexed yet" is ruled
