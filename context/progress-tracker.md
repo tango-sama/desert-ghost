@@ -74,6 +74,22 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- Noest tracker now shows the livreur holding the parcel (2026-08-10,
+  trinkl DEPLOYED). Noest reports the assigned driver top-level
+  (`OrderInfo.driver_name` / `driver_phone`) and per-event `driver`, but the
+  code ignored both — the tracker only showed the hub staff who scanned
+  (`by`), so "with Livreur CHIKH MOHAMMED SEIF EDDINE · 0559379413" was
+  invisible even though "En livraison" was correct. Fix (trinkl
+  `functions/index.js`): split `driver` out of the event map (`by` = who
+  performed the action, `driver` = the livreur) and added `livreur
+  {name, phone}` to the status, falling back to the most recent event naming
+  a driver when the top-level fields are empty. UI (`orders-view.tsx`):
+  prominent `🚚 مع المندوب:` chip (with a `tel:` link) under the status when
+  a livreur is reported, plus the livreur per activity event (hub scanner
+  stays as 🏢). Verified against the live Noest API for `4JH-55A-19304060`
+  (livreur = CHIKH MOHAMMED SEIF EDDINE, phone = 0559379413); types extended
+  in `lib/admin.ts`; tsc + eslint clean; deployed all functions.
+
 - ZR tracker: `vers_wilaya` (and other snake_case French) states showed the
   parcel as «تم التأكيد والشحن» instead of «في مركز الفرز» (2026-08-10,
   trinkl DEPLOYED). ZR's real state names are snake_case French
