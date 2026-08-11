@@ -74,6 +74,39 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- Delivery traffic light on order cards (2026-08-12, ghost-only; not yet
+  committed). Per the owner's spec: a mini vertical traffic light in each
+  order card's upper-left corner (left of the price block, in the always-
+  visible header so folded cards keep it too). All dots lit off by default;
+  GREEN when the delivery attempt begins — home: earliest out-for-delivery
+  event (reuses `OUT_FOR_DELIVERY_RE`), office/Stop Desk: an explicit
+  arrival-at-desk event matched by a new `AT_DESK_RE` (stop desk / point de
+  retrait / disponible / pickup / `confirme_au_bureau` / "arrivé|déposé au"
+  …) that must ALSO pass a best-effort destination-wilaya check
+  (`isDestinationEvent`: event location/center vs order `wilayaFr`/`wilaya`,
+  accents-normalized — this disambiguates ZR's `confirme_au_bureau` origin
+  hub from the destination desk). ORANGE after 24h without delivery, RED
+  after 48h — i.e. the carrier has had ~3 days to reach the client. The
+  light DISAPPEARS ENTIRELY once delivered (`isDelivered`) or returned/
+  cancelled (`trackingStatus.stage == null`); a delivery-problem alert
+  (e.g. «الزبون لا يرد») does NOT hide it while the parcel is still out.
+  Clock anchors to the carrier's own event timestamps (earliest match), so
+  it's correct regardless of when the admin last hit 🔄 تتبع; a 60s
+  `setInterval` tick re-renders the list so an open tab escalates live.
+  All in `components/admin/views/orders-view.tsx` (`TrafficLight`,
+  `trafficLightState`, `deliveryAttemptStart`, `AT_DESK_RE`,
+  `isDestinationEvent`); `nowMs()` from `lib/time.ts`. Colors reuse the
+  existing literals: green `var(--green)`, orange `#E8A413`, red `#E5484D`,
+  off-dot `var(--border)`, pill on `var(--card-2)`. Purely client-side — no
+  function/rules/schema changes. `npx tsc --noEmit` + `npx eslint` +
+  `npm run build` clean. Known limitation: Noest's desk-arrival wording has
+  never been seen in real data, so Noest office parcels may stay all-off
+  until the regex is tuned against one; home parcels and ZR/Yalidine desk
+  parcels are covered by the existing out-for-delivery regex + the new
+  AT_DESK_RE. Real-data verification pending: the ZR parcel
+  `04-8A7BKDIWSC-ZR` (out for delivery 2026-08-10/11) should already show
+  orange/red on the admin panel.
+
 - Client-not-answering alert now fires for ZR too (2026-08-11, trinkl functions
   DEPLOYED from the `lookup-parcel` worktree; ghost client change pending push).
   ZR reports "customer doesn't answer" as a parcel SITUATION («Ne répond pas 1»,

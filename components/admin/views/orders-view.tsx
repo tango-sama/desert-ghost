@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { priceFmt, productImages } from "@/lib/firebase";
 import {
   callFn,
@@ -180,6 +180,125 @@ function cardAlert(o: Order): string | null {
   if (ts.lastLabel && NO_ANSWER_RE.test(ts.lastLabel))
     return "الزبون لا يرد — اتصل به لتسوية التوصيل";
   return null;
+}
+
+/* ── Delivery traffic light ──
+   A mini traffic light on each order card's upper-left corner. All off by
+   default; green once the delivery attempt has begun (out for delivery for
+   home, arrived at the pickup desk for Stop Desk), orange after 24h without
+   delivery, red after 48h — the carrier has had ~3 days to reach the client.
+   The light disappears entirely once the parcel is delivered or returned.
+   The clock anchors to the carrier's own EVENT timestamps, so it stays
+   correct no matter when the admin last hit 🔄 تتبع. */
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+// Explicit carrier events that prove a Stop Desk parcel reached the pickup
+// desk. ZR reports `confirme_au_bureau` at EVERY hub (origin and destination),
+// so these events must ALSO pass isDestinationEvent to disambiguate — only the
+// destination one lights green. Kept intentionally conservative: if a
+// carrier's wording never matches, its office parcels simply stay all-off
+// until resolved rather than light green at the wrong moment.
+const AT_DESK_RE =
+  /stop[_\s-]?desk|point de retrait|pr[êe]t pour retrait|disponible|pickup|confirme_au_bureau|arriv[ée] au|d[ée]p[ôo]s[ée] au|au bureau/i;
+
+// Best-effort "is this event in the destination wilaya?" check for desk
+// arrivals. When either side carries no place name, accept the keyword match
+// rather than silently never lighting up; when both exist, they must agree.
+function isDestinationEvent(o: Order, e: TrackEvent): boolean {
+  const place = `${e.location ?? ""} ${e.center ?? ""}`.trim();
+  if (!place) return true;
+  const norm = (s: string) =>
+    s
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .toLowerCase();
+  const p = norm(place);
+  const fr = norm(String(o.wilayaFr ?? "")).trim();
+  const ar = norm(String(o.wilaya ?? "")).trim();
+  if (!fr && !ar) return true;
+  if (fr && p.includes(fr)) return true;
+  if (ar && p.includes(ar)) return true;
+  return false;
+}
+
+// When the delivery "clock" starts for an order: the timestamp of the earliest
+// event proving the parcel reached the delivery-attempt stage — out for
+// delivery (home) or arrived at the pickup desk (Stop Desk). Null = not yet
+// started → the light stays all-off.
+function deliveryAttemptStart(o: Order, ts: TrackingStatus): number | null {
+  const isOffice = o.deliveryType === "office";
+  const evs = (ts.events ?? [])
+    .filter((e) => e && e.date)
+    .sort((a, b) => new Date(a.date!).getTime() - new Date(b.date!).getTime());
+  for (const e of evs) {
+    const t = new Date(e.date!).getTime();
+    if (isNaN(t)) continue;
+    const text = `${e.label ?? ""} ${e.content ?? ""}`;
+    if (isOffice) {
+      if (AT_DESK_RE.test(text) && isDestinationEvent(o, e)) return t;
+    } else if (OUT_FOR_DELIVERY_RE.test(String(e.label ?? ""))) {
+      return t;
+    }
+  }
+  // Home fallback: stage 3 IS "out for delivery" by definition — a parcel
+  // whose event wording slipped past the regex still has the stage to prove it.
+  if (!isOffice && ts.stage != null && ts.stage >= WARN_IDX) {
+    const t = ts.lastDate != null ? new Date(ts.lastDate).getTime() : NaN;
+    if (isNaN(t) && ts.updatedAt) return ts.updatedAt;
+    return isNaN(t) ? null : t;
+  }
+  return null;
+}
+
+type LightState = "hidden" | "off" | "green" | "orange" | "red";
+
+function trafficLightState(o: Order): LightState {
+  const carrier = orderCarrier(o);
+  const ts = o.trackingStatus;
+  if (!carrier || !ts || ts.carrier !== carrier || ts.tracking !== o[carrier]?.tracking)
+    return "off";
+  if (isDelivered(o)) return "hidden";
+  // Return / cancel — no forward progress, delivery attempt over: no light.
+  if (ts.stage == null) return "hidden";
+  const start = deliveryAttemptStart(o, ts);
+  if (start == null) return "off";
+  const elapsed = nowMs() - start;
+  if (elapsed < DAY_MS) return "green";
+  if (elapsed < 2 * DAY_MS) return "orange";
+  return "red";
+}
+
+function TrafficLight({ state }: { state: LightState }) {
+  if (state === "hidden") return null;
+  const tips: Record<LightState, string> = {
+    hidden: "",
+    off: "لم تصل الشحنة إلى مرحلة التوصيل بعد",
+    green: "جاري التوصيل — أقل من 24 ساعة",
+    orange: "أكثر من 24 ساعة بدون تسليم",
+    red: "أكثر من 48 ساعة بدون تسليم",
+  };
+  const dots: { key: "green" | "orange" | "red"; cls: string; glow: string }[] = [
+    { key: "green", cls: "bg-[var(--green)]", glow: "shadow-[0_0_6px_rgba(34,197,94,.95)]" },
+    { key: "orange", cls: "bg-[#E8A413]", glow: "shadow-[0_0_6px_rgba(232,164,19,.95)]" },
+    { key: "red", cls: "bg-[#E5484D]", glow: "shadow-[0_0_6px_rgba(229,72,77,.95)]" },
+  ];
+  return (
+    <div
+      title={tips[state]}
+      aria-label={tips[state]}
+      className="flex flex-col items-center gap-[3px] rounded-full border border-border bg-[var(--card-2)] p-[4px]"
+    >
+      {dots.map((d) => (
+        <span
+          key={d.key}
+          className={cn(
+            "block h-[7px] w-[7px] rounded-full transition-all",
+            state === d.key ? cn(d.cls, d.glow) : "bg-[var(--border)]"
+          )}
+        />
+      ))}
+    </div>
+  );
 }
 
 // Horizontally centre a stepper on its current/last-reached step by
@@ -660,6 +779,15 @@ export function OrdersView() {
   const [newOrderOpen, setNewOrderOpen] = useState(false);
   const [linkOrderOpen, setLinkOrderOpen] = useState(false);
   const [editItemsOrderId, setEditItemsOrderId] = useState<string | null>(null);
+
+  // The traffic light's 24h/48h escalation is computed from wall-clock time —
+  // tick once a minute so an open tab flips green→orange→red live without a
+  // manual refresh or a Firestore change.
+  const [, setClock] = useState(0);
+  useEffect(() => {
+    const id = setInterval(() => setClock((t) => t + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   const cache = useDeliveryData();
   // When a Stop Desk order's delivery company is switched to one other than
@@ -1660,15 +1788,18 @@ export function OrdersView() {
                     {when ? fmtDate(when) : ""}
                   </div>
                 </div>
-                <div className="text-left">
-                  <div className="text-[1.1rem] font-black text-[var(--rose)]">
-                    {priceFmt(o.total != null ? o.total : o.subtotal)}
-                  </div>
-                  {o.deliveryFee != null && (
-                    <div className="mt-0.5 text-[.7rem] text-[var(--ink-3)]">
-                      منتجات {priceFmt(o.subtotal)} + توصيل {priceFmt(o.deliveryFee)}
+                <div className="flex items-start gap-2">
+                  <div className="text-left">
+                    <div className="text-[1.1rem] font-black text-[var(--rose)]">
+                      {priceFmt(o.total != null ? o.total : o.subtotal)}
                     </div>
-                  )}
+                    {o.deliveryFee != null && (
+                      <div className="mt-0.5 text-[.7rem] text-[var(--ink-3)]">
+                        منتجات {priceFmt(o.subtotal)} + توصيل {priceFmt(o.deliveryFee)}
+                      </div>
+                    )}
+                  </div>
+                  <TrafficLight state={trafficLightState(o)} />
                 </div>
               </div>
 
