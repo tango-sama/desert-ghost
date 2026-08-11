@@ -74,6 +74,20 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- «تفاصيل الشحنة» now shows the parcel's status + situation (2026-08-11,
+  ghost-only, not yet committed). On every order card's expanded tracking
+  log, a summary card sits at the top of 📋 تفاصيل الشحنة: **حالة الشحنة**
+  (the Arabic stage badge — or the 🔺 alert / ⚠️ return badge when one
+  applies — plus «حالة {carrier}: {lastLabel}» with the carrier's raw
+  status text) and **وضعية الشحنة** (the single most recent activity event:
+  label, driver/agent/center, 📍 location, 📝 reason, 🕒 date — picked by
+  max date via a reduce, so it stays correct even if events arrive
+  unsorted). The full events log renders unchanged below it. Purely
+  frontend in `components/admin/views/orders-view.tsx` (`TrackStepper`);
+  no function/API changes. `npx tsc --noEmit` clean; `npx eslint` clean for
+  this file (the 4 remaining repo lint errors are pre-existing in
+  `cart-drawer.tsx` and `.venv`). Not yet committed.
+
 - Noest tracker now shows the livreur holding the parcel (2026-08-10,
   trinkl DEPLOYED). Noest reports the assigned driver top-level
   (`OrderInfo.driver_name` / `driver_phone`) and per-event `driver`, but the

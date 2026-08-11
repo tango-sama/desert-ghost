@@ -9,6 +9,7 @@ import {
   orderStamp,
   type Order,
   type TrackingStatus,
+  type TrackEvent,
   type CarrierKey,
 } from "@/lib/admin";
 import { useAdminStore } from "@/stores/admin-store";
@@ -232,6 +233,14 @@ function TrackStepper({
   // clear what step we display AND exactly what the delivery API reported.
   const stageAr = !isReturn && ts.stage != null ? labels[ts.stage] : null;
   const evs = (ts.events ?? []).filter((e) => e && e.date);
+  // The single most recent activity event — the parcel's current "situation".
+  // Picked by max date so it stays correct even if events ever arrive
+  // unsorted, not by array position.
+  const latest = evs.reduce<TrackEvent | null>(
+    (best, e) =>
+      !best || new Date(e.date!).getTime() > new Date(best.date!).getTime() ? e : best,
+    null
+  );
 
   return (
     <div
@@ -366,6 +375,55 @@ function TrackStepper({
             📋 تفاصيل الشحنة ({evs.length})
           </summary>
           <div className="mt-2">
+            {/* Current status + latest situation, above the full activity log. */}
+            <div className="mb-2.5 rounded-[11px] bg-[var(--card-2)] px-3 py-2.5">
+              <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-[.72rem]">
+                <span className="font-extrabold text-[var(--ink-3)]">حالة الشحنة:</span>
+                {isReturn ? (
+                  <span className="max-w-full rounded-xl bg-[rgba(229,72,77,.2)] px-2.5 py-1 font-extrabold break-words text-[var(--alert-ink)]">
+                    ⚠️ {ts.alert || "—"}
+                  </span>
+                ) : hasAlert ? (
+                  <span className="max-w-full rounded-xl bg-[var(--alert-bg)] px-2.5 py-1 font-extrabold break-words text-[var(--alert-ink)]">
+                    🔺 {ts.alert}
+                  </span>
+                ) : stageAr ? (
+                  <span className="whitespace-nowrap rounded-full bg-[var(--ok-bg)] px-2.5 py-1 font-extrabold text-[var(--ok-ink)]">
+                    {stageAr}
+                  </span>
+                ) : null}
+                {ts.lastLabel && (
+                  <span className="text-[var(--ink-2)]">
+                    حالة {carrierName}:{" "}
+                    <b className="font-extrabold text-foreground">{ts.lastLabel}</b>
+                  </span>
+                )}
+              </div>
+              <div className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-[.7rem] text-[var(--ink-3)]">
+                <span className="font-extrabold text-[var(--ink-2)]">وضعية الشحنة:</span>
+                {latest ? (
+                  <>
+                    <b className="font-extrabold text-foreground">
+                      {latest.label || "—"}
+                    </b>
+                    {latest.driver && <span>🚚 المندوب: {latest.driver}</span>}
+                    {latest.by && (
+                      <span>
+                        {latest.driver ? `🏢 ${latest.by}` : `🚚 ${latest.by}`}
+                      </span>
+                    )}
+                    {latest.center && <span>🏢 {latest.center}</span>}
+                    {latest.location && (
+                      <span className="text-[var(--teal-ink)]">📍 {latest.location}</span>
+                    )}
+                    {latest.content && <span>📝 {latest.content}</span>}
+                    {latest.date && <span>🕒 {fmtDate(latest.date)}</span>}
+                  </>
+                ) : (
+                  <span>لا توجد تفاصيل نشاط بعد</span>
+                )}
+              </div>
+            </div>
             {evs
               .slice()
               .reverse()
