@@ -74,6 +74,25 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- ZR tracker stage misclassification fixed (2026-08-11, trinkl DEPLOYED via
+  `firebase deploy --only functions` from the `lookup-parcel` worktree).
+  DS-7308 (`19-8ANH32JK4N-ZR`) showed «تم التأكيد والشحن» (stage 1) while the
+  parcel was actually sitting at its DESTINATION sorting center (Hub El Eulma 19,
+  Sétif) — ZR reuses the state name `confirme_au_bureau` at every hub (origin bag
+  creation, transit, destination validation), so the current state name alone
+  under-reported. Fix: `zrNormalize` now normalizes ZR's underscore state names
+  (`commande_recue`/`pret_a_expedier`→0, `confirme_au_bureau`→disambiguated by
+  content, `vers_wilaya`→2, `sortie_en_livraison`→3, `livree`/`encaisse`→4,
+  `retour*`→alert) and `fetchZrStatus`/`zrWebhook` compute the stage as the
+  HIGHEST milestone across the whole state-history timeline (same model as the
+  Noest path) instead of trusting the single current state name. DS-7308 now
+  renders stage 2 «في مركز الفرز» with its 7-event timeline; other in-flight ZR
+  parcels self-correct on the next 🔄 تتبع refresh. Uncommitted in the
+  `claude/lookup-parcel` worktree. Note: ZR's current situation for DS-7308 is
+  «Ne répond pas 1» (customer not answering, 2026-08-10 11:20) — the tracker
+  doesn't surface situation names yet (see the pending server-side follow-up in
+  the out-for-delivery entry below).
+
 - Out-for-delivery tracking colors + whole-card glow, all carriers (2026-08-11,
   ghost-only; pushed to `main`, Vercel auto-deploys). From the real ZR parcel
   `04-8A7BKDIWSC-ZR` (state-history: `sortie_en_livraison` with situation

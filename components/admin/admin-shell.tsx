@@ -28,11 +28,11 @@ type ViewKey =
   | "settings";
 
 const NAV: { key: ViewKey; icon: string; label: string }[] = [
+  { key: "orders", icon: "📦", label: "الطلبات" },
   { key: "products", icon: "🧴", label: "المنتجات" },
   { key: "categories", icon: "📁", label: "التصنيفات" },
   { key: "featured", icon: "⭐", label: "المميزة" },
   { key: "storage", icon: "🧮", label: "عداد المخزون" },
-  { key: "orders", icon: "📦", label: "الطلبات" },
   { key: "messages", icon: "💬", label: "الرسائل" },
   { key: "income", icon: "💰", label: "الأرباح" },
   { key: "landing", icon: "🖼️", label: "صفحات الهبوط" },
