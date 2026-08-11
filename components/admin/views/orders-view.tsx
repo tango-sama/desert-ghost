@@ -56,6 +56,15 @@ const TRACK_ICONS = ["📥", "📦", "🏭", "🚚", "✅"];
 // ⚠️ marker sits on the line between "خرج للتوصيل" and the final step
 const WARN_IDX = 3;
 
+// Out-for-delivery state names across all three carriers' raw status text
+// (ZR snake_case French "sortie_en_livraison", Noest "En livraison",
+// Yalidine "Out for delivery"...). Used to detect redelivery.
+const OUT_FOR_DELIVERY_RE =
+  /out[_\s-]*for[_\s-]*delivery|en[_\s-]*livraison|en cours de livraison|chez livreur|dispatch|sorti/i;
+// Signals that an out-for-delivery is a REPEAT: ZR reports the situation name
+// "مجددا" (again); other carriers use "again"/"redelivery"/"deuxième tentative".
+const REDELIVERY_RE = /مجددا|again|redeliver|nouvelle tentative|deuxi[èe]me|2[eè]\b/i;
+
 // ZR Express "Swap" — these 11 wilayas only allow a same-wilaya swap, never
 // cross-wilaya (mirrored from the trinkl functions' own copy, which is the
 // enforcement of record; this client-side copy only drives the warning in
@@ -110,6 +119,31 @@ const CLR_INK: Record<string, string> = {
 // matter what the surrounding event's badge says.
 const URGENT_REASON =
   /ne r[ée]pond pas|injoignable|absent|refus[ée]?|annul[ée]?|report[ée]|adresse (erron[ée]e|incorrecte|introuvable)|num[ée]ro (erron[ée]|incorrect)|hors zone|endommag[ée]|colis perdu/i;
+
+// A "client not answering" state (ZR's "No Answer 1"/"No Answer 2", Noest's
+// "Client ne répond pas"... ) — the parcel is still out for delivery but the
+// delivery is failing, so the admin must call the client to settle it. The
+// server flags these as a delivery-problem alert when it knows the state;
+// this fallback catches the carrier's raw status text when it doesn't yet.
+const NO_ANSWER_RE = /no answer|sans r[ée]ponse|ne r[ée]pond pas|injoignable|absent/i;
+
+// Active delivery-problem alert for an order's parcel, surfaced at the CARD
+// level (red border + banner) — not just inside the tracker — because it needs
+// the admin to act on it by calling the client. Null when the parcel is
+// delivered, healthy, or the stored tracking status is stale for the order's
+// current carrier/tracking.
+function cardAlert(o: Order): string | null {
+  const ts = o.trackingStatus;
+  if (!ts) return null;
+  const carrier = orderCarrier(o);
+  if (!carrier || ts.carrier !== carrier || ts.tracking !== o[carrier]?.tracking)
+    return null;
+  if (isDelivered(o)) return null;
+  if (ts.alert) return ts.alert;
+  if (ts.lastLabel && NO_ANSWER_RE.test(ts.lastLabel))
+    return "الزبون لا يرد — اتصل به لتسوية التوصيل";
+  return null;
+}
 
 // Horizontally centre a stepper on its current/last-reached step by
 // adjusting only the stepper's own scroll — never the page (delta-based,
@@ -231,8 +265,27 @@ function TrackStepper({
   const carrierName = CO[carrier]?.name ?? carrier;
   // Show BOTH our Arabic stage and the carrier's own status text, so it's
   // clear what step we display AND exactly what the delivery API reported.
-  const stageAr = !isReturn && ts.stage != null ? labels[ts.stage] : null;
   const evs = (ts.events ?? []).filter((e) => e && e.date);
+  // A parcel that went out for delivery a SECOND time (redelivery) — ZR flags
+  // it with the situation name "مجددا" (again); other carriers log a repeat
+  // "en livraison" run. Detect both so the tracker can say «خرج للتوصيل مجددا».
+  const redelivery =
+    evs.some((e) => REDELIVERY_RE.test(`${e.label ?? ""} ${e.content ?? ""}`)) ||
+    evs.filter((e) => OUT_FOR_DELIVERY_RE.test(String(e.label ?? ""))).length >= 2;
+  const stageAr =
+    !isReturn && ts.stage != null
+      ? redelivery && ts.stage === WARN_IDX
+        ? `${labels[ts.stage]} مجددا`
+        : labels[ts.stage]
+      : null;
+  // Append «مجددا» to an out-for-delivery event that's part of a redelivery,
+  // unless the carrier already carried the situation name in the label.
+  const againFor = (e: TrackEvent) =>
+    redelivery &&
+    OUT_FOR_DELIVERY_RE.test(String(e.label ?? "")) &&
+    !/مجددا|again/i.test(String(e.label ?? ""))
+      ? `${e.label} مجددا`
+      : e.label || "—";
   // The single most recent activity event — the parcel's current "situation".
   // Picked by max date so it stays correct even if events ever arrive
   // unsorted, not by array position.
@@ -404,7 +457,7 @@ function TrackStepper({
                 {latest ? (
                   <>
                     <b className="font-extrabold text-foreground">
-                      {latest.label || "—"}
+                      {againFor(latest)}
                     </b>
                     {latest.driver && <span>🚚 المندوب: {latest.driver}</span>}
                     {latest.by && (
@@ -465,7 +518,7 @@ function TrackStepper({
                         CLR_INK[cls]
                       )}
                     >
-                      {e.label || "—"}
+                      {againFor(e)}
                     </div>
                     {bits.length > 0 && (
                       <div className="mt-0.5 flex flex-wrap gap-0.5 text-[.68rem] text-[var(--ink-3)]">
@@ -1355,34 +1408,66 @@ export function OrdersView() {
         const dimCls = o.fulfilled
           ? "opacity-55 grayscale-[.6] transition-all group-hover:opacity-85 group-hover:grayscale-[.25]"
           : "";
+        // A delivery-problem alert makes the WHOLE card red — including its
+        // source halo — because it overrides the customer/staff neon below:
+        // the admin must notice it and call the client, not scroll past it.
+        const cAlert = cardAlert(o);
 
         return (
           <div
             key={oid}
             className={cn(orderCardCls, "group", !isOpen && "opacity-[.82]")}
             style={
-              // Neon halo marks orders placed by website customers themselves;
-              // staff-entered orders (admin phone / seller direct) stay plain.
-              // The sunguard landing page gets its own pink neon so it's
-              // visually distinct from other customer-placed orders (blue) —
-              // checkout, collagen, and glutathione orders all share that
-              // blue halo (#00D1FF), distinguished from each other only by
-              // their badge tag below.
-              isSunguardOrder
+              cAlert
                 ? {
-                    borderColor: "#FF2EC4",
+                    borderColor: "var(--alert-ink)",
                     boxShadow:
-                      "inset 4px 0 0 #FF2EC4, 0 0 14px rgba(255,46,196,.35)",
+                      "inset 4px 0 0 var(--alert-ink), 0 0 18px rgba(229,72,77,.5)",
                   }
-                : !isStaffOrder
+                : // Neon halo marks orders placed by website customers themselves;
+                  // staff-entered orders (admin phone / seller direct) stay plain.
+                  // The sunguard landing page gets its own pink neon so it's
+                  // visually distinct from other customer-placed orders (blue) —
+                  // checkout, collagen, and glutathione orders all share that
+                  // blue halo (#00D1FF), distinguished from each other only by
+                  // their badge tag below.
+                  isSunguardOrder
                   ? {
-                      borderColor: "#00D1FF",
+                      borderColor: "#FF2EC4",
                       boxShadow:
-                        "inset 4px 0 0 #00D1FF, 0 0 14px rgba(0,209,255,.30)",
+                        "inset 4px 0 0 #FF2EC4, 0 0 14px rgba(255,46,196,.35)",
                     }
-                  : undefined
+                  : !isStaffOrder
+                    ? {
+                        borderColor: "#00D1FF",
+                        boxShadow:
+                          "inset 4px 0 0 #00D1FF, 0 0 14px rgba(0,209,255,.30)",
+                      }
+                    : undefined
             }
           >
+            {/* Delivery-problem alert — always visible, even on a folded card,
+                with a one-tap call so the admin can settle it with the client. */}
+            {cAlert && (
+              <div className="mb-3 flex flex-wrap items-center gap-x-2.5 gap-y-1.5 rounded-[10px] bg-[var(--alert-bg)] px-3 py-2 ring-1 ring-[var(--alert-ink)]">
+                <span className="text-[.8rem] font-extrabold text-[var(--alert-ink)]">
+                  🔺 {cAlert}
+                </span>
+                {o.phone && (
+                  <a
+                    href={`tel:${o.phone}`}
+                    className="rounded-md bg-card px-2.5 py-1 text-[.76rem] font-extrabold text-[var(--alert-ink)] no-underline hover:underline"
+                  >
+                    📞 اتصل بالزبون
+                  </a>
+                )}
+                {o.phone && (
+                  <span className="num text-[.74rem] text-[var(--ink-3)]">
+                    {o.phone}
+                  </span>
+                )}
+              </div>
+            )}
             {/* always-visible summary — click to fold/unfold */}
             <div
               className="cursor-pointer"

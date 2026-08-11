@@ -74,6 +74,27 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- Redelivery «خرج للتوصيل مجددا» + whole-card alert for client-not-answering
+  (2026-08-11, ghost-only, not yet committed). From the real ZR parcel
+  `04-8A7BKDIWSC-ZR` (state-history: `sortie_en_livraison` with situation
+  «مجددا»; current state «No Answer 1, No answer 2»): (1) `TrackStepper` now
+  detects redelivery — any event carrying «مجددا»/again, OR 2+ out-for-delivery
+  events — and shows «خرج للتوصيل مجددا» on the stage badge (when stage is the
+  out-for-delivery step) and appends «مجددا» to the out-for-delivery event
+  titles in 📋 تفاصيل الشحنة (incl. the وضعية الشحنة summary line); (2) when
+  the parcel is in a delivery-problem alert (`trackingStatus.alert`) or its raw
+  status text matches a client-not-answering state (ZR «No Answer», Noest
+  «Client ne répond pas»... via a new `NO_ANSWER_RE` fallback), the WHOLE order
+  card turns red — border + glow override the source neon — and an always-
+  visible 🔺 banner shows the alert with a one-tap «📞 اتصل بالزبون» `tel:`
+  link to the client's phone, so the admin can settle the delivery even on a
+  folded card. New `cardAlert(o)` helper in `orders-view.tsx`. Purely
+  client-side; `npx tsc --noEmit` + `npx eslint components/admin/views/
+  orders-view.tsx` clean. The ZR functions (trinkl) still drop ZR's situation
+  NAME («مجددا») from the event data and don't yet map «No Answer» to an alert
+  — the client heuristic covers both for now; server-side normalization is a
+  pending follow-up.
+
 - «تفاصيل الشحنة» now shows the parcel's status + situation (2026-08-11,
   ghost-only, not yet committed). On every order card's expanded tracking
   log, a summary card sits at the top of 📋 تفاصيل الشحنة: **حالة الشحنة**
