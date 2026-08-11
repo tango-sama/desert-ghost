@@ -74,6 +74,19 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- Client-not-answering alert now fires for ZR too (2026-08-11, trinkl functions
+  DEPLOYED from the `lookup-parcel` worktree; ghost client change pending push).
+  ZR reports "customer doesn't answer" as a parcel SITUATION («Ne répond pas 1»,
+  metadata «Appel sans réponse»), not as a state event — so it never reached the
+  admin panel, while Noest's "Tentative de livraison" already raised
+  «معلّق — مشكلة في التوصيل» (DS-7181). Fix: `fetchZrStatus` and `zrWebhook` now
+  surface `zrSituationName` on the TrackingStatus and, when the situation matches
+  no-answer/refusal (`ne répond|sans réponse|injoignable|absent|raccroch`), raise
+  the same `معلّق — مشكلة في التوصيل` alert → the order card shows the red banner
+  with 📞 اتصل بالزبون / 💬 واتساب + the client's phone. Client-side `cardAlert`
+  also checks `zrSituationName` as a fallback for cached rows. DS-7308 will show
+  it after a 🔄 تتبع refresh.
+
 - ZR tracker stage misclassification fixed (2026-08-11, trinkl DEPLOYED via
   `firebase deploy --only functions` from the `lookup-parcel` worktree).
   DS-7308 (`19-8ANH32JK4N-ZR`) showed «تم التأكيد والشحن» (stage 1) while the
@@ -87,11 +100,10 @@ not the intended state (see `development-workflow.md`).
   HIGHEST milestone across the whole state-history timeline (same model as the
   Noest path) instead of trusting the single current state name. DS-7308 now
   renders stage 2 «في مركز الفرز» with its 7-event timeline; other in-flight ZR
-  parcels self-correct on the next 🔄 تتبع refresh. Uncommitted in the
-  `claude/lookup-parcel` worktree. Note: ZR's current situation for DS-7308 is
-  «Ne répond pas 1» (customer not answering, 2026-08-10 11:20) — the tracker
-  doesn't surface situation names yet (see the pending server-side follow-up in
-  the out-for-delivery entry below).
+  parcels self-correct on the next 🔄 تتبع refresh. Committed+deployed on
+  `claude/lookup-parcel` (7a62fef). ZR's current situation for DS-7308 is
+  «Ne répond pas 1» (customer not answering, 2026-08-10 11:20) — surfaced now by
+  the client-not-answering alert entry above.
 
 - Out-for-delivery tracking colors + whole-card glow, all carriers (2026-08-11,
   ghost-only; pushed to `main`, Vercel auto-deploys). From the real ZR parcel

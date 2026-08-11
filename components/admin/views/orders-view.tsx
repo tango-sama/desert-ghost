@@ -172,6 +172,11 @@ function cardAlert(o: Order): string | null {
     return null;
   if (isDelivered(o)) return null;
   if (ts.alert) return ts.alert;
+  // ZR's "customer not answering" is a parcel situation, not a state — the
+  // server surfaces it as zrSituationName once it surfaces the alert; this
+  // fallback catches it on cached rows written before that server change.
+  if (ts.zrSituationName && NO_ANSWER_RE.test(ts.zrSituationName))
+    return "الزبون لا يرد — اتصل به لتسوية التوصيل";
   if (ts.lastLabel && NO_ANSWER_RE.test(ts.lastLabel))
     return "الزبون لا يرد — اتصل به لتسوية التوصيل";
   return null;

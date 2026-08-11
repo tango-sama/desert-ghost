@@ -64,7 +64,7 @@ const VIEWS: Record<ViewKey, React.ComponentType> = {
 };
 
 export function AdminShell() {
-  const [view, setView] = useState<ViewKey>("products");
+  const [view, setView] = useState<ViewKey>("orders");
   const [menuOpen, setMenuOpen] = useState(false);
   const loaded = useAdminStore((s) => s.loaded);
   const ordersSearch = useAdminStore((s) => s.ordersSearch);
