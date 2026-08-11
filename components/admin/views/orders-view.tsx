@@ -57,13 +57,29 @@ const TRACK_ICONS = ["📥", "📦", "🏭", "🚚", "✅"];
 const WARN_IDX = 3;
 
 // Out-for-delivery state names across all three carriers' raw status text
-// (ZR snake_case French "sortie_en_livraison", Noest "En livraison",
-// Yalidine "Out for delivery"...). Used to detect redelivery.
+// (ZR snake_case French "sortie_en_livraison"/"en_livraison", Noest
+// "En livraison"/"Enlevé par le livreur", Yalidine "Out for delivery").
+// Used to count delivery runs and detect redelivery.
 const OUT_FOR_DELIVERY_RE =
-  /out[_\s-]*for[_\s-]*delivery|en[_\s-]*livraison|en cours de livraison|chez livreur|dispatch|sorti/i;
+  /out[_\s-]*for[_\s-]*delivery|en[_\s-]*(cours[_\s-]*de[_\s-]*)?livraison|sorti[ée]?[_\s-]*en?[_\s-]*livraison|sorti[ée]?|dispatch|chez[_\s-]*(le[_\s-]*)?livreur|enl[ée]v[ée]|remis[ée]?[_\s-]*au[_\s-]*livreur/i;
 // Signals that an out-for-delivery is a REPEAT: ZR reports the situation name
 // "مجددا" (again); other carriers use "again"/"redelivery"/"deuxième tentative".
 const REDELIVERY_RE = /مجددا|again|redeliver|nouvelle tentative|deuxi[èe]me|2[eè]\b/i;
+
+// How many times a parcel has gone out for delivery. ZR logs one event per
+// attempt (`sortie_en_livraison` / `en_livraison`); an explicit «مجددا»/again
+// situation name (or another carrier's repeat wording) is treated as at least
+// a 2nd run even when the event log is thin. 0 = never out for delivery.
+function deliveryRuns(ts: TrackingStatus | null | undefined): number {
+  const evs = (ts?.events ?? []).filter((e) => e && e.date);
+  const out = evs.filter((e) =>
+    OUT_FOR_DELIVERY_RE.test(String(e.label ?? ""))
+  ).length;
+  const again = evs.some((e) =>
+    REDELIVERY_RE.test(`${e.label ?? ""} ${e.content ?? ""}`)
+  );
+  return Math.max(out, again ? 2 : 0);
+}
 
 // ZR Express "Swap" — these 11 wilayas only allow a same-wilaya swap, never
 // cross-wilaya (mirrored from the trinkl functions' own copy, which is the
@@ -126,6 +142,22 @@ const URGENT_REASON =
 // server flags these as a delivery-problem alert when it knows the state;
 // this fallback catches the carrier's raw status text when it doesn't yet.
 const NO_ANSWER_RE = /no answer|sans r[ée]ponse|ne r[ée]pond pas|injoignable|absent/i;
+
+// Stage-badge / redelivery color: green normally, amber/orange for a 1st
+// out-for-delivery run, red for a 2nd run or more. Applies to the stage badge
+// and to the redelivery event titles in the activity log.
+const AGAIN_TONE_CLS: Record<"ok" | "orange" | "red", string> = {
+  ok: "bg-[var(--ok-bg)] text-[var(--ok-ink)]",
+  orange: "bg-[var(--warn-bg)] text-[var(--warn-ink)]",
+  red: "bg-[var(--alert-bg)] text-[var(--alert-ink)]",
+};
+// Text-only variant for the event titles — the badge classes above add a
+// background, which a plain text run must not get.
+const AGAIN_TONE_INK: Record<"ok" | "orange" | "red", string> = {
+  ok: "text-[var(--ok-ink)]",
+  orange: "text-[var(--warn-ink)]",
+  red: "text-[var(--alert-ink)]",
+};
 
 // Active delivery-problem alert for an order's parcel, surfaced at the CARD
 // level (red border + banner) — not just inside the tracker — because it needs
@@ -266,25 +298,32 @@ function TrackStepper({
   // Show BOTH our Arabic stage and the carrier's own status text, so it's
   // clear what step we display AND exactly what the delivery API reported.
   const evs = (ts.events ?? []).filter((e) => e && e.date);
-  // A parcel that went out for delivery a SECOND time (redelivery) — ZR flags
-  // it with the situation name "مجددا" (again); other carriers log a repeat
-  // "en livraison" run. Detect both so the tracker can say «خرج للتوصيل مجددا».
-  const redelivery =
-    evs.some((e) => REDELIVERY_RE.test(`${e.label ?? ""} ${e.content ?? ""}`)) ||
-    evs.filter((e) => OUT_FOR_DELIVERY_RE.test(String(e.label ?? ""))).length >= 2;
+  // How many times the parcel has gone out for delivery (same count the order
+  // card's glow uses). A 1st run is amber/orange; a 2nd run or more is red and
+  // carries the «مجددا» (again) suffix — «مجددا مجددا» from the 3rd run on.
+  // The colour only shows while the parcel is CURRENTLY out for delivery.
+  const runs = deliveryRuns(ts);
+  const redelivery = runs >= 2;
+  const againSuffix = runs >= 3 ? " مجددا مجددا" : redelivery ? " مجددا" : "";
+  const outNow = !isReturn && !hasAlert && ts.stage === WARN_IDX;
+  const againTone: "ok" | "orange" | "red" =
+    outNow ? (redelivery ? "red" : "orange") : "ok";
+  const isAgainEvent = (e: TrackEvent) =>
+    runs >= 1 && OUT_FOR_DELIVERY_RE.test(String(e.label ?? ""));
   const stageAr =
     !isReturn && ts.stage != null
       ? redelivery && ts.stage === WARN_IDX
-        ? `${labels[ts.stage]} مجددا`
+        ? `${labels[ts.stage]}${againSuffix}`
         : labels[ts.stage]
       : null;
-  // Append «مجددا» to an out-for-delivery event that's part of a redelivery,
-  // unless the carrier already carried the situation name in the label.
+  // Append «مجددا»/«مجددا مجددا» to an out-for-delivery event that's part of
+  // a redelivery, unless the carrier already carried the situation name in
+  // the label.
   const againFor = (e: TrackEvent) =>
     redelivery &&
     OUT_FOR_DELIVERY_RE.test(String(e.label ?? "")) &&
     !/مجددا|again/i.test(String(e.label ?? ""))
-      ? `${e.label} مجددا`
+      ? `${e.label}${againSuffix}`
       : e.label || "—";
   // The single most recent activity event — the parcel's current "situation".
   // Picked by max date so it stays correct even if events ever arrive
@@ -377,7 +416,13 @@ function TrackStepper({
               🔺 {ts.alert}
             </span>
           ) : stageAr ? (
-            <span className="whitespace-nowrap rounded-full bg-[var(--ok-bg)] px-2.5 py-1 text-[.75rem] font-extrabold text-[var(--ok-ink)]">
+            <span
+              className={cn(
+                "rounded-full px-2.5 py-1 text-[.75rem] font-extrabold",
+                AGAIN_TONE_CLS[againTone],
+                againTone === "ok" && "whitespace-nowrap"
+              )}
+            >
               {stageAr}
             </span>
           ) : null}
@@ -441,7 +486,13 @@ function TrackStepper({
                     🔺 {ts.alert}
                   </span>
                 ) : stageAr ? (
-                  <span className="whitespace-nowrap rounded-full bg-[var(--ok-bg)] px-2.5 py-1 font-extrabold text-[var(--ok-ink)]">
+                  <span
+                    className={cn(
+                      "rounded-full px-2.5 py-1 font-extrabold",
+                      AGAIN_TONE_CLS[againTone],
+                      againTone === "ok" && "whitespace-nowrap"
+                    )}
+                  >
                     {stageAr}
                   </span>
                 ) : null}
@@ -456,7 +507,14 @@ function TrackStepper({
                 <span className="font-extrabold text-[var(--ink-2)]">وضعية الشحنة:</span>
                 {latest ? (
                   <>
-                    <b className="font-extrabold text-foreground">
+                    <b
+                      className={cn(
+                        "font-extrabold",
+                        isAgainEvent(latest)
+                          ? AGAIN_TONE_INK[againTone]
+                          : "text-foreground"
+                      )}
+                    >
                       {againFor(latest)}
                     </b>
                     {latest.driver && <span>🚚 المندوب: {latest.driver}</span>}
@@ -514,8 +572,10 @@ function TrackStepper({
                   >
                     <div
                       className={cn(
-                        "text-[.76rem] font-extrabold text-foreground",
-                        CLR_INK[cls]
+                        "text-[.76rem] font-extrabold",
+                        isAgainEvent(e)
+                          ? AGAIN_TONE_INK[againTone]
+                          : cn("text-foreground", CLR_INK[cls])
                       )}
                     >
                       {againFor(e)}
@@ -1412,6 +1472,19 @@ export function OrdersView() {
         // source halo — because it overrides the customer/staff neon below:
         // the admin must notice it and call the client, not scroll past it.
         const cAlert = cardAlert(o);
+        // A parcel CURRENTLY out for delivery also takes the halo over from
+        // the customer/staff neon: amber/orange on the 1st run, red on a 2nd
+        // run or more — so every parcel being delivered stands out and a
+        // repeat delivery reads as urgent. Same `deliveryRuns` count the
+        // tracker uses, so the card and its badge always agree.
+        const tsO = o.trackingStatus;
+        const runs = deliveryRuns(tsO);
+        const outNow =
+          tsO != null &&
+          tsO.alert == null &&
+          !isDelivered(o) &&
+          tsO.stage === WARN_IDX;
+        const odGlow = outNow ? (runs >= 2 ? "red" : "orange") : null;
 
         return (
           <div
@@ -1424,26 +1497,38 @@ export function OrdersView() {
                     boxShadow:
                       "inset 4px 0 0 var(--alert-ink), 0 0 18px rgba(229,72,77,.5)",
                   }
-                : // Neon halo marks orders placed by website customers themselves;
-                  // staff-entered orders (admin phone / seller direct) stay plain.
-                  // The sunguard landing page gets its own pink neon so it's
-                  // visually distinct from other customer-placed orders (blue) —
-                  // checkout, collagen, and glutathione orders all share that
-                  // blue halo (#00D1FF), distinguished from each other only by
-                  // their badge tag below.
-                  isSunguardOrder
+                : odGlow === "red"
                   ? {
-                      borderColor: "#FF2EC4",
+                      borderColor: "var(--alert-ink)",
                       boxShadow:
-                        "inset 4px 0 0 #FF2EC4, 0 0 14px rgba(255,46,196,.35)",
+                        "inset 4px 0 0 var(--alert-ink), 0 0 18px rgba(229,72,77,.5)",
                     }
-                  : !isStaffOrder
+                  : odGlow === "orange"
                     ? {
-                        borderColor: "#00D1FF",
+                        borderColor: "#E8A413",
                         boxShadow:
-                          "inset 4px 0 0 #00D1FF, 0 0 14px rgba(0,209,255,.30)",
+                          "inset 4px 0 0 #E8A413, 0 0 18px rgba(232,164,19,.45)",
                       }
-                    : undefined
+                    : // Neon halo marks orders placed by website customers themselves;
+                      // staff-entered orders (admin phone / seller direct) stay plain.
+                      // The sunguard landing page gets its own pink neon so it's
+                      // visually distinct from other customer-placed orders (blue) —
+                      // checkout, collagen, and glutathione orders all share that
+                      // blue halo (#00D1FF), distinguished from each other only by
+                      // their badge tag below.
+                      isSunguardOrder
+                      ? {
+                          borderColor: "#FF2EC4",
+                          boxShadow:
+                            "inset 4px 0 0 #FF2EC4, 0 0 14px rgba(255,46,196,.35)",
+                        }
+                      : !isStaffOrder
+                        ? {
+                            borderColor: "#00D1FF",
+                            boxShadow:
+                              "inset 4px 0 0 #00D1FF, 0 0 14px rgba(0,209,255,.30)",
+                          }
+                        : undefined
             }
           >
             {/* Delivery-problem alert — always visible, even on a folded card,
@@ -1459,6 +1544,16 @@ export function OrdersView() {
                     className="rounded-md bg-card px-2.5 py-1 text-[.76rem] font-extrabold text-[var(--alert-ink)] no-underline hover:underline"
                   >
                     📞 اتصل بالزبون
+                  </a>
+                )}
+                {o.phone && (
+                  <a
+                    href={`https://wa.me/${waIntl(o.phone)}`}
+                    target="_blank"
+                    rel="noreferrer"
+                    className="rounded-md bg-card px-2.5 py-1 text-[.76rem] font-extrabold text-[#25D366] no-underline hover:underline"
+                  >
+                    💬 واتساب
                   </a>
                 )}
                 {o.phone && (

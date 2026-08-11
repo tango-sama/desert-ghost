@@ -74,23 +74,30 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
-- Redelivery «خرج للتوصيل مجددا» + whole-card alert for client-not-answering
-  (2026-08-11, ghost-only, not yet committed). From the real ZR parcel
+- Out-for-delivery tracking colors + whole-card glow, all carriers (2026-08-11,
+  ghost-only; pushed to `main`, Vercel auto-deploys). From the real ZR parcel
   `04-8A7BKDIWSC-ZR` (state-history: `sortie_en_livraison` with situation
-  «مجددا»; current state «No Answer 1, No answer 2»): (1) `TrackStepper` now
-  detects redelivery — any event carrying «مجددا»/again, OR 2+ out-for-delivery
-  events — and shows «خرج للتوصيل مجددا» on the stage badge (when stage is the
-  out-for-delivery step) and appends «مجددا» to the out-for-delivery event
-  titles in 📋 تفاصيل الشحنة (incl. the وضعية الشحنة summary line); (2) when
-  the parcel is in a delivery-problem alert (`trackingStatus.alert`) or its raw
-  status text matches a client-not-answering state (ZR «No Answer», Noest
-  «Client ne répond pas»... via a new `NO_ANSWER_RE` fallback), the WHOLE order
-  card turns red — border + glow override the source neon — and an always-
-  visible 🔺 banner shows the alert with a one-tap «📞 اتصل بالزبون» `tel:`
-  link to the client's phone, so the admin can settle the delivery even on a
-  folded card. New `cardAlert(o)` helper in `orders-view.tsx`. Purely
-  client-side; `npx tsc --noEmit` + `npx eslint components/admin/views/
-  orders-view.tsx` clean. The ZR functions (trinkl) still drop ZR's situation
+  «مجددا»; current state «No Answer 1, No answer 2»): (1) new shared
+  `deliveryRuns(ts)` counts how many times a parcel has gone out for delivery
+  from the carrier events (`OUT_FOR_DELIVERY_RE` now covers ZR
+  `sortie_en_livraison`/`en_livraison`/`en cours de livraison`/`dispatch`,
+  Noest `En livraison`/`Enlevé par le livreur`/`remis au livreur`, Yalidine
+  `Out for delivery`; a «مجددا»/again situation name counts as at least a 2nd
+  run). A parcel CURRENTLY out for delivery shows AMBER/ORANGE on its 1st run
+  and RED on a 2nd run or more — same tone applied to the stage badge, the
+  وضعية الشحنة line, and the redelivery event titles in 📋 تفاصيل الشحنة, and
+  the ORDER CARD GLOWS to match (orange `#E8A413` halo on 1st run, red on 2nd+,
+  overriding the customer/staff neon like the alert does). A redelivery (2nd+)
+  reads «خرج للتوصيل مجددا» (orange→red was the earlier iteration; now 1st =
+  orange, 2nd = red per the owner's latest spec, with «مجددا مجددا» from the
+  3rd run on). (2) delivery-problem alerts still turn the WHOLE card red with
+  an always-visible 🔺 banner carrying one-tap «📞 اتصل بالزبون» `tel:` and
+  «💬 واتساب» `wa.me/` (via `waIntl`) buttons side by side (`cardAlert(o)` +
+  `NO_ANSWER_RE` fallback catches ZR «No Answer», Noest «Client ne répond
+  pas»...). New helpers `deliveryRuns`, `AGAIN_TONE_CLS`/`AGAIN_TONE_INK` in
+  `orders-view.tsx`. Purely client-side; `npx tsc --noEmit` + `npx eslint` +
+  `npm run build` clean; out-for-delivery regex verified against every real
+  state name per carrier. The ZR functions (trinkl) still drop ZR's situation
   NAME («مجددا») from the event data and don't yet map «No Answer» to an alert
   — the client heuristic covers both for now; server-side normalization is a
   pending follow-up.
