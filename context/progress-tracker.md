@@ -98,7 +98,19 @@ not the intended state (see `development-workflow.md`).
   and deployed as `functions:syncCarriers` to `desert-shop-24af9`
   (production) from branch `claude/commune-fees` (d303aa9, pushed to
   origin, NOT yet merged into trinkl `main` — merge when convenient, same
-  pattern as the `lookup-parcel`/`webhooks` branches above).
+  pattern as the `lookup-parcel`/`webhooks` branches above). Merging is not
+  a simple fast-forward, though: as of this entry, trinkl's LOCAL `main` is
+  simultaneously 7 commits ahead of `origin/main` (its own unpushed local
+  commits, e.g. `61e911e`, `9c1600a` — unrelated to this fix) and ~60
+  commits behind `origin/main` (a long, separate line of webhook/tracking/
+  lookupParcel work that only ever landed on `origin/main` via other
+  worktree branches), AND still carries the ~300-line uncommitted WIP diff
+  to `functions/index.js` mentioned above plus a few untracked asset files.
+  `claude/commune-fees` itself is clean (based on `origin/main`, only this
+  fix) — the divergence is entirely local `main`'s pre-existing state, not
+  anything this fix touched. Whoever reconciles it should treat local
+  `main`'s uncommitted WIP and unpushed commits as the owner's own
+  in-progress work to preserve, not discard.
   (2) ghost (`lib/delivery.ts`) — `CarrierData.communeFees` (optional,
   matches the new Firestore field), `baseFeeForCarrier`/`feeForCarrier` now
   accept an optional `commune` and check the per-commune table first,
