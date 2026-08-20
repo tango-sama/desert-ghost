@@ -74,6 +74,64 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- Yalidine per-commune delivery fee ("Supplément commune") now affects
+  price (2026-08-21). Closes the gap flagged in the 2026-07-22 entry below:
+  Yalidine's real fee varies by destination COMMUNE within a wilaya, not
+  just the wilaya — e.g. the owner's own example: 950 DA base + 100 DA
+  Supplément commune = 1050 DA total for that specific commune's Home
+  delivery. Two-repo fix (Cloud Functions change + browser change kept as
+  separate steps per `ai-workflow-rules.md`):
+  (1) trinkl (`tango-sama/trinkl`, `functions/index.js`) — `yalidineFeeTable`
+  already fetched `per_commune` from Yalidine's `/v1/fees` response for the
+  existing per-wilaya mode calculation but discarded the per-commune values;
+  it now ALSO returns a `communeFees` table (wilaya id -> commune name ->
+  {home, desk}), read from each commune's own `express_home`/`express_desk`
+  (falls back to the `per_commune` object's own key if `commune_name` is
+  ever absent from a response — the exact field name is unconfirmed against
+  a live response, see Verification below). No extra API calls — the data
+  was already in every response. `writeCarrierData` stores it as an
+  OPTIONAL `communeFees` field on `delivery_data/yalidine` (omitted
+  entirely when empty, so Noest/ZR docs are untouched — schema stays
+  append-only per architecture-context.md invariant 4). Built in an
+  isolated worktree off `origin/main` (local trinkl `main` has ~300 lines
+  of unrelated pre-existing uncommitted WIP — left completely untouched)
+  and deployed as `functions:syncCarriers` to `desert-shop-24af9`
+  (production) from branch `claude/commune-fees` (d303aa9, pushed to
+  origin, NOT yet merged into trinkl `main` — merge when convenient, same
+  pattern as the `lookup-parcel`/`webhooks` branches above).
+  (2) ghost (`lib/delivery.ts`) — `CarrierData.communeFees` (optional,
+  matches the new Firestore field), `baseFeeForCarrier`/`feeForCarrier` now
+  accept an optional `commune` and check the per-commune table first,
+  falling back to the per-wilaya `fees` entry (unsynced carrier, no match,
+  or a Stop Desk pick with no commune of its own). FEE_OVERRIDES still wins
+  over the per-commune fee on purpose — the Alger (wilaya 16) override was
+  owner-confirmed against a real order back when the synced grid used the
+  wrong origin wilaya; re-verify it against a real order now that
+  per-commune data syncs and remove the override if it's now redundant.
+  Every order-creation surface now passes the selected commune through:
+  `checkout-form.tsx`, `seller-order-modal.tsx`, `new-order-modal.tsx`
+  (admin), `link-order-modal.tsx` (admin) only sharpen the HOME fee to a
+  commune (Stop Desk has no commune — the customer picks a specific desk,
+  not an address); `collagen`/`glutathione`/`sunguard`'s order modals have
+  no separate desk picker (one commune select drives both delivery types)
+  so they sharpen both Home and Office lookups to the same commune.
+  `orders-view.tsx`'s carrier-switch desk-fee recompute is unchanged
+  (office/desk-only context, no commune involved).
+  Verified: `npx tsc --noEmit`, `npx eslint` (all changed files), and
+  `npm run build` all clean; trinkl's `node --check` clean; the isolated
+  worktree diff was confirmed to contain ONLY this change (71
+  insertions/18 deletions against origin/main, nothing from the unrelated
+  local WIP). NOT yet verified: a real `syncCarriers` run (the owner should
+  trigger it from admin Settings) confirming `delivery_data/yalidine`
+  actually gains a non-empty `communeFees` map with names matching the
+  `communes` list, AND a real commune change in checkout actually moving
+  the displayed price — the `commune_name` field assumption inside
+  `per_commune` is unconfirmed against a live Yalidine response, so a
+  mismatch there would silently degrade to "no per-commune fee found,
+  keep using the wilaya fee" (safe, not a crash, but worth confirming).
+  ghost's frontend changes are NOT yet committed/pushed (this repo's `main`
+  auto-deploys to production via Vercel on push) — pending owner go-ahead.
+
 - Delivery traffic light on order cards (2026-08-12, ghost-only; not yet
   committed). Per the owner's spec: a mini vertical traffic light in each
   order card's upper-left corner (left of the price block, in the always-

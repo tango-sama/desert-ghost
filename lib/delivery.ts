@@ -35,6 +35,16 @@ export type CarrierData = {
   communes: Record<string, string[]>;
   centers?: Record<string, CarrierCenter[]>;
   fees: Record<string, { home: number; desk: number }>;
+  // Per-commune fee overrides within a wilaya — Yalidine's own "Supplément
+  // commune" (its real price varies by destination commune, not just
+  // wilaya). Currently only synced for Yalidine (see syncCarriers /
+  // yalidineFeeTable in tango-sama/trinkl); optional because Noest/ZR docs
+  // never carry it. Keyed by wilaya id -> exact commune name (as it appears
+  // in `communes` above) -> { home, desk }. Callers must fall back to the
+  // wilaya-level `fees` entry when the commune has no entry here (a Stop
+  // Desk destination, an unsynced carrier, or a name that doesn't match
+  // exactly) — see baseFeeForCarrier.
+  communeFees?: Record<string, Record<string, { home: number; desk: number }>>;
 };
 export type CarrierCache = Partial<Record<Carrier, CarrierData>>;
 
@@ -114,20 +124,34 @@ const FEE_OVERRIDES: Partial<Record<Carrier, Record<string, { home: number; desk
   },
 };
 
-// Base (home | desk) delivery fee for a destination wilaya. Resolution
-// order: owner-confirmed override → this carrier's live-synced grid →
-// static defaults. This is the fee "including commune tax" but WITHOUT any
-// weight surcharge — see feeForCarrier() for the total actually charged.
+// Base (home | desk) delivery fee for a destination wilaya, optionally
+// sharpened to a specific commune. Resolution order: owner-confirmed
+// override → this carrier's per-commune fee (when `commune` is given and
+// synced — Yalidine's real "Supplément commune") → this carrier's
+// live-synced per-wilaya grid → static defaults. This is the fee "including
+// commune tax" but WITHOUT any weight surcharge — see feeForCarrier() for
+// the total actually charged.
+//
+// NOTE: FEE_OVERRIDES still wins over the per-commune fee on purpose — it
+// was owner-confirmed against a real Yalidine order back when the synced
+// grid used the wrong origin wilaya. Now that syncCarriers also captures
+// real per-commune fees, re-verify wilaya 16 (Alger) against a live order
+// and remove its override once the synced per-commune numbers are trusted.
 export function baseFeeForCarrier(
   company: Carrier,
   id: number | string,
   type: DeliveryType,
-  cache: CarrierCache
+  cache: CarrierCache,
+  commune?: string
 ): number {
   const stop = type === "office" || type === "desk";
   const ov = FEE_OVERRIDES[company]?.[String(id)];
   if (ov) return stop ? ov.desk : ov.home;
   const d = cache[company];
+  if (commune) {
+    const cf = d?.communeFees?.[String(id)]?.[commune];
+    if (cf) return stop ? cf.desk : cf.home;
+  }
   const f = d?.fees[String(id)];
   if (f) return stop ? f.desk : f.home;
   return fee(id, type, company);
@@ -170,17 +194,22 @@ export function weightFee(
 
 // Total delivery fee actually charged to the customer: base fee + weight
 // fee. Weight defaults to the store's fixed 1 kg, for which the weight fee
-// is 0, so the total equals the base fee. Kept as the single source of
-// truth for every order surface (checkout, seller quick-order, collagen).
+// is 0, so the total equals the base fee. `commune` sharpens the base fee to
+// that exact destination (Yalidine's per-commune "Supplément commune") when
+// synced data for it exists — pass it whenever a specific commune is
+// selected, omit it (or pass "") for a Stop Desk pick that has no commune of
+// its own. Kept as the single source of truth for every order surface
+// (checkout, seller quick-order, admin, collagen, ...).
 export function feeForCarrier(
   company: Carrier,
   id: number | string,
   type: DeliveryType,
   cache: CarrierCache,
+  commune?: string,
   weightKg: number = PARCEL_WEIGHT_KG,
   oversizeRatePerKg = 0
 ): number {
-  return baseFeeForCarrier(company, id, type, cache) + weightFee(weightKg, oversizeRatePerKg);
+  return baseFeeForCarrier(company, id, type, cache, commune) + weightFee(weightKg, oversizeRatePerKg);
 }
 
 const PHONE_RE = /^0[567][0-9]{8}$/;

@@ -132,7 +132,12 @@ export function LinkOrderModal({
       ? commune
       : pkg?.commune || "";
   const communeLabel = isOffice ? selectedDesk?.name ?? pkg?.commune ?? "" : communeValue;
-  const deliveryFee = selectedWilaya ? feeForCarrier(carrier, selectedWilaya.id, deliveryType, cache) : 0;
+  // Yalidine's Home fee varies by destination COMMUNE within the wilaya
+  // (its own "Supplément commune") — Stop Desk has no commune of its own,
+  // so only sharpen the lookup to a commune for Home.
+  const deliveryFee = selectedWilaya
+    ? feeForCarrier(carrier, selectedWilaya.id, deliveryType, cache, isOffice ? undefined : communeValue || undefined)
+    : 0;
 
   const subtotal = items.reduce((n, it) => n + it.price * it.qty, 0);
   const total = subtotal + deliveryFee;

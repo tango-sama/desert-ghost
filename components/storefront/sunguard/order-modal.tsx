@@ -73,9 +73,12 @@ export function OrderModal({
   const selectedWilaya = carrierReady && pending.wilaya ? wilayaForCarrier(company, pending.wilaya, cache) : null;
   const communeOptions = selectedWilaya ? communesForCarrier(company, selectedWilaya.id, cache) : [];
   const communeValue = communeOptions.includes(pending.baladiya) ? pending.baladiya : "";
-  const feeHome = selectedWilaya ? feeForCarrier(company, selectedWilaya.id, "home", cache) : null;
-  const feeOffice = selectedWilaya ? feeForCarrier(company, selectedWilaya.id, "office", cache) : null;
-  const fee = selectedWilaya ? feeForCarrier(company, selectedWilaya.id, delivery, cache) : 0;
+  // This page has no separate Stop Desk picker — the same commune select
+  // drives both delivery types — so Yalidine's per-commune "Supplément
+  // commune" applies to both Home and Office lookups here.
+  const feeHome = selectedWilaya ? feeForCarrier(company, selectedWilaya.id, "home", cache, communeValue || undefined) : null;
+  const feeOffice = selectedWilaya ? feeForCarrier(company, selectedWilaya.id, "office", cache, communeValue || undefined) : null;
+  const fee = selectedWilaya ? feeForCarrier(company, selectedWilaya.id, delivery, cache, communeValue || undefined) : 0;
 
   const subtotal = product.price * qty;
 

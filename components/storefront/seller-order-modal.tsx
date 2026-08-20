@@ -118,9 +118,14 @@ export function SellerOrderModal({
   // What actually gets saved/displayed as the destination — the commune
   // name for Home, the desk's own name for Stop Desk (never its raw id).
   const communeLabel = isOffice ? selectedDesk?.name ?? "" : communeValue;
-  const feeHome = selectedWilaya ? feeForCarrier(company, selectedWilaya.id, "home", cache) : null;
+  // Yalidine's Home fee varies by destination COMMUNE within the wilaya
+  // (its own "Supplément commune") — Stop Desk has no commune of its own
+  // (the customer picks a specific desk, not an address), so only the Home
+  // lookup is ever sharpened to a commune.
+  const homeCommune = isOffice ? undefined : communeValue || undefined;
+  const feeHome = selectedWilaya ? feeForCarrier(company, selectedWilaya.id, "home", cache, homeCommune) : null;
   const feeOffice = selectedWilaya ? feeForCarrier(company, selectedWilaya.id, "office", cache) : null;
-  const deliveryFee = selectedWilaya ? feeForCarrier(company, selectedWilaya.id, deliveryType, cache) : 0;
+  const deliveryFee = selectedWilaya ? feeForCarrier(company, selectedWilaya.id, deliveryType, cache, homeCommune) : 0;
 
   const title = product.title || product.name || "";
   const subtotal = priceNum(product.price) * qty;
