@@ -355,12 +355,18 @@ export function SettingsView() {
     setBusyKey("sync", true);
     try {
       const res = await callFn<{
-        result?: Record<string, { wilayas?: number; centers?: number }>;
+        result?: Record<string, { wilayas?: number; centers?: number; communeFees?: number }>;
       }>("syncCarriers");
       const r = res?.result ?? {};
       const desks = (r.yalidine?.centers ?? 0) + (r.noest?.centers ?? 0) + (r.zr?.centers ?? 0);
+      // Surfaces whether Yalidine's real per-commune fees ("Supplément
+      // commune") actually got captured this sync — otherwise there's no
+      // visible signal that the commune-level price ever populated.
+      const communeNote = r.yalidine?.communeFees
+        ? ` — ${r.yalidine.communeFees} سعر بلدية خاص (Yalidine)`
+        : "";
       toast(
-        `تم التحديث ✓ — Yalidine ${r.yalidine?.wilayas ?? 0} ولاية، Noest ${r.noest?.wilayas ?? 0} ولاية، ZR ${r.zr?.wilayas ?? 0} ولاية — ${desks} مكتب (Stop Desk)`
+        `تم التحديث ✓ — Yalidine ${r.yalidine?.wilayas ?? 0} ولاية، Noest ${r.noest?.wilayas ?? 0} ولاية، ZR ${r.zr?.wilayas ?? 0} ولاية — ${desks} مكتب (Stop Desk)${communeNote}`
       );
     } catch (e) {
       console.error("syncCarriers", e);
