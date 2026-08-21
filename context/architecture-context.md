@@ -97,6 +97,25 @@
   make every product's full un-decremented `stock` look like its live
   closet count. Consistent with invariant 2 below.
 
+## Analytics
+
+- Meta Pixel ("amel", id in `NEXT_PUBLIC_META_PIXEL_ID`) loads once from
+  `app/layout.tsx` via `components/analytics/meta-pixel.tsx` — never
+  per-funnel — so it survives client-side navigation without
+  re-initializing. `components/analytics/meta-pixel-route-tracker.tsx`
+  fires `PageView` again on each subsequent route change. Funnel
+  components call the shared `trackPixelEvent()` helper (`lib/meta-pixel.ts`)
+  for `ViewContent`/`Purchase` instead of touching `window.fbq` directly.
+- Currently wired for `/glutathione` only (`ViewContent` on mount in
+  `glutathione-page.tsx`, `Purchase` after a confirmed `saveOrder()` success
+  in `order-modal.tsx`, keyed to the real order total/items — never a
+  hardcoded value). `/sunguard` and `/collagen` follow the same
+  `order-modal.tsx` pattern and are expected to reuse this same
+  infrastructure once `/glutathione` is verified.
+- No server-side Conversions API yet. `Purchase`'s Pixel call already
+  passes `eventID: orderRef.id` (the Firestore order doc id) so a future
+  CAPI call for the same order can dedupe against it.
+
 ## Auth Model
 
 - Customers browse and order anonymously — no customer accounts.
