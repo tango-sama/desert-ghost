@@ -74,6 +74,33 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- Empty "📝 اسم المنتج على وصل التوصيل" no longer leaks the real product
+  name onto the carrier's label (2026-08-21, both repos DEPLOYED). This
+  admin field exists precisely so a real product name never has to appear
+  on the parcel manifest a delivery driver sees — its own placeholder
+  promises "لن يظهر الاسم الحقيقي" — but leaving it empty didn't actually
+  keep that promise: all three `create*Parcel` functions (trinkl
+  `functions/index.js`, `createYalidineParcel`/`createNoestParcel`/
+  `createZrParcel`) fell back to the REAL `o.items` titles whenever
+  `deliveryLabel` was empty/unset, for ANY order the admin hadn't
+  explicitly labeled (not just typed-then-cleared — simply never touching
+  the field before creating the parcel hit the same fallback). Owner asked
+  for "cosm" as the default text. Fixed both ends: (1) trinkl — the
+  fallback in all three carrier functions is now the literal string
+  `'cosm'` instead of the joined real item titles, applied uniformly since
+  the field/intent is carrier-agnostic; deployed
+  `createYalidineParcel`/`createNoestParcel`/`createZrParcel` from the same
+  `claude/commune-fees` worktree/branch as the fixes above (6253f77,
+  pushed — still not merged into trinkl `main`). (2) ghost
+  (`orders-view.tsx`) — the pre-shipping note field's `onBlur` now saves
+  `"cosm"` (not `""`) when left blank, so the order's own `deliveryLabel`
+  stays consistent with what actually gets sent to the carrier; placeholder
+  updated to say so. Verified: `node --check`, `npx tsc --noEmit`,
+  `npx eslint`, `npm run build` all clean. NOT yet verified live: create
+  one more order with this field left untouched, create its parcel, and
+  confirm the carrier's label/manifest shows "cosm", not the real product
+  name.
+
 - Yalidine parcel creation was double-charging the delivery fee (2026-08-21,
   trinkl DEPLOYED — `functions:createYalidineParcel`, branch
   `claude/commune-fees` c91f48d, pushed). Owner report: after creating a

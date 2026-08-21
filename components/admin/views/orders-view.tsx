@@ -1990,7 +1990,7 @@ export function OrdersView() {
                         <input
                           className={cn(inp, "px-3.5 py-[.55rem] text-[.85rem]")}
                           value={draft.note ?? o.deliveryLabel ?? ""}
-                          placeholder="مثال: منتج تجميل — لن يظهر الاسم الحقيقي"
+                          placeholder="اتركيه فارغاً لاستخدام 'cosm' تلقائياً — لن يظهر الاسم الحقيقي"
                           onChange={(e) =>
                             setDrafts((d) => ({
                               ...d,
@@ -1998,7 +1998,11 @@ export function OrdersView() {
                             }))
                           }
                           onBlur={(e) => {
-                            const v = e.target.value.trim();
+                            // Leaving this blank must never fall through to
+                            // the real product name on the carrier's label —
+                            // 'cosm' is the safe default (matches the
+                            // create*Parcel fallback in trinkl functions).
+                            const v = e.target.value.trim() || "cosm";
                             if (v === (o.deliveryLabel ?? "")) return;
                             patchOrder(oid, { deliveryLabel: v });
                             updateDocIn("orders", oid, { deliveryLabel: v }).catch(
