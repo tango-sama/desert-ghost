@@ -74,6 +74,40 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- Yalidine webhook: fixed a real activation gap + a credential-save data-
+  loss bug (2026-08-21, ghost-only). While walking the owner through
+  enabling Yalidine's "🔔 تفعيل التتبع التلقائي (Webhook)" button, automatic
+  registration was refused (as the code already anticipated) and the owner
+  went to Yalidine's own manual webhook-creation screen — which turned out
+  to show an "Email d'alerte" field and a 64-hex-char token IT generates
+  itself, confirmed by the owner. The existing code's manual-fallback alert
+  wrongly assumed Yalidine would accept OUR generated secret pasted into
+  its dashboard (it has no such field) — so the manual path could never
+  actually produce a working webhook: our `yalidineWebhook` receiver would
+  keep verifying against a secret Yalidine never signed with, silently
+  rejecting every real event as 401 forever, with no visible symptom.
+  Fix in `settings-view.tsx`: corrected the alert copy (create the endpoint
+  on Yalidine's dashboard with our URL, then copy the secret YALIDINE shows
+  back to us — not the reverse), and added a new "سر Webhook من لوحة
+  Yalidine" paste-in field + `saveYalidineWebhookSecret()` that writes it to
+  `private/yalidine.webhookSecret` (merge:true) and marks
+  `yalidineWebhookReady`. Separately found and fixed a related bug while in
+  this code: `setDocIn()` (`lib/admin.ts`) did a plain Firestore `setDoc`
+  with NO merge, so `saveYalidine`/`saveNoest`/`saveZr` — used every time
+  the admin re-saves carrier API credentials — were silently WIPING
+  `private/yalidine` and `private/zrexpress`'s server-written webhook
+  fields (`webhookSecret`, `webhookUrl`, `webhookAt`, `webhookEndpointId`)
+  on every credential re-save, which would have broken an already-working
+  webhook the next time the admin touched those API keys. `setDocIn` now
+  takes an optional `merge` param (defaults to false — every other call
+  site unchanged); the three carrier credential saves now pass `true`.
+  Verified: `npx tsc --noEmit`, `npx eslint`, `npm run build` all clean.
+  NOT yet verified: the owner still needs to actually create the webhook on
+  Yalidine's dashboard, paste the secret Yalidine shows into the new field,
+  and confirm a real Yalidine status change lands on an order's
+  `trackingStatus` with `viaWebhook: true` — this fix removes the blocker,
+  it doesn't complete the setup.
+
 - Yalidine per-commune delivery fee ("Supplément commune") now affects
   price (2026-08-21). Closes the gap flagged in the 2026-07-22 entry below:
   Yalidine's real fee varies by destination COMMUNE within a wilaya, not

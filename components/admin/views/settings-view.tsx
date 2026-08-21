@@ -89,6 +89,12 @@ export function SettingsView() {
   const [origin, setOrigin] = useState(String(settings.originWilaya ?? ""));
   const [yalId, setYalId] = useState("");
   const [yalToken, setYalToken] = useState("");
+  // Yalidine's own webhook dashboard generates ITS OWN signing secret when
+  // the automatic registration is refused and the admin creates the
+  // endpoint manually there — it doesn't accept one we choose. This pastes
+  // that Yalidine-generated secret back into our system so yalidineWebhook's
+  // signature check has the right value to verify against.
+  const [yalWebhookSecretInput, setYalWebhookSecretInput] = useState("");
   const [noToken, setNoToken] = useState("");
   const [noGuid, setNoGuid] = useState("");
   const [zrTenant, setZrTenant] = useState("");
@@ -270,11 +276,12 @@ export function SettingsView() {
     }
     try {
       if (hasCreds)
-        await setDocIn("private", "yalidine", {
-          apiId,
-          apiToken: token,
-          updatedAt: Date.now(),
-        });
+        await setDocIn(
+          "private",
+          "yalidine",
+          { apiId, apiToken: token, updatedAt: Date.now() },
+          true
+        );
       await persistSettings(
         { originWilaya: origin, yalidineReady: hasCreds || alreadyReady },
         "تم حفظ ربط Yalidine ✓"
@@ -302,11 +309,12 @@ export function SettingsView() {
     }
     try {
       if (hasCreds)
-        await setDocIn("private", "noest", {
-          apiToken: token,
-          userGuid: guid,
-          updatedAt: Date.now(),
-        });
+        await setDocIn(
+          "private",
+          "noest",
+          { apiToken: token, userGuid: guid, updatedAt: Date.now() },
+          true
+        );
       await persistSettings(
         { noestReady: hasCreds || alreadyReady },
         "تم حفظ ربط Noest ✓"
@@ -334,11 +342,12 @@ export function SettingsView() {
     }
     try {
       if (hasCreds)
-        await setDocIn("private", "zrexpress", {
-          tenantId: tenant,
-          secretKey: key,
-          updatedAt: Date.now(),
-        });
+        await setDocIn(
+          "private",
+          "zrexpress",
+          { tenantId: tenant, secretKey: key, updatedAt: Date.now() },
+          true
+        );
       await persistSettings(
         { zrReady: hasCreds || alreadyReady },
         "تم حفظ ربط ZR Express ✓"
@@ -411,19 +420,44 @@ export function SettingsView() {
           "تم تفعيل التتبع التلقائي (Webhook) ✓"
         );
       } else if (r.manual) {
+        // Yalidine's own dashboard generates its own secret when you create
+        // the webhook there manually — it has no field to paste one in, so
+        // don't hand the admin our secret and tell her to paste it there
+        // (confirmed against the real dashboard: it shows an "Email
+        // d'alerte" field + its own generated token, no secret input).
         alert(
-          "لم يقبل Yalidine التسجيل التلقائي — فعّليه يدوياً من لوحة Yalidine (قسم Webhooks):\n\n" +
+          "لم يقبل Yalidine التسجيل التلقائي — أنشئي الـ Webhook يدوياً من لوحة Yalidine (قسم Webhooks):\n\n" +
             `الرابط (URL):\n${r.url}\n\n` +
-            `السر (Secret):\n${r.secret}\n\n` +
-            "اختاري حدث parcel_status_updated ثم احفظي."
+            "اختاري حدث parcel_status_updated ثم احفظي — ستُظهر لكِ Yalidine سرّاً (Secret) خاصاً بها. " +
+            "انسخيه والصقيه في حقل «سر Webhook من لوحة Yalidine» أسفل هذه البطاقة ثم احفظيه."
         );
-        toast("أكملي تسجيل الـ Webhook من لوحة Yalidine");
+        toast("أكملي التسجيل من لوحة Yalidine ثم الصقي السر الذي تُظهره هنا");
       }
     } catch (e) {
       console.error(e);
       toast((e as Error | null)?.message || "فشل تفعيل الـ Webhook");
     } finally {
       setBusyKey("yalWh", false);
+    }
+  }
+
+  // Saves the secret YALIDINE'S dashboard generated (not one we chose) —
+  // merge:true so this never disturbs apiId/apiToken/webhookUrl already on
+  // the doc. Marks the webhook ready since pasting the real secret is the
+  // last step of the manual flow above.
+  async function saveYalidineWebhookSecret() {
+    const secret = yalWebhookSecretInput.trim();
+    if (!secret) {
+      toast("الصقي السر الذي أظهرته لوحة Yalidine أولاً");
+      return;
+    }
+    try {
+      await setDocIn("private", "yalidine", { webhookSecret: secret, webhookAt: Date.now() }, true);
+      await persistSettings({ yalidineWebhookReady: true }, "تم حفظ سر Webhook ✓");
+      setYalWebhookSecretInput("");
+    } catch (e) {
+      console.error(e);
+      toast("فشل حفظ السر");
     }
   }
 
@@ -732,6 +766,33 @@ export function SettingsView() {
             on={yalEnabled}
             onClick={() => toggleCarrier("yalidineEnabled", yalEnabled, "Yalidine")}
           />
+        </div>
+        <div className={grid2}>
+          <Field label="سر Webhook من لوحة Yalidine">
+            <input
+              className={inp}
+              type="password"
+              autoComplete="off"
+              dir="ltr"
+              value={yalWebhookSecretInput}
+              onChange={(e) => setYalWebhookSecretInput(e.target.value)}
+              placeholder="الصقي السر الذي أظهرته لوحة Yalidine هنا"
+            />
+          </Field>
+          <div className="flex items-end">
+            <button
+              type="button"
+              className={btn("gray")}
+              onClick={saveYalidineWebhookSecret}
+            >
+              💾 حفظ سر Webhook
+            </button>
+          </div>
+        </div>
+        <div className="mb-1 mt-[-.3rem] text-[.75rem] text-[var(--ink-3)]">
+          فقط إذا رفض Yalidine التسجيل التلقائي أعلاه: أنشئي الـ Webhook يدوياً من
+          لوحتها (بالرابط الذي ظهر في التنبيه)، ثم الصقي السر الذي تُظهره
+          Yalidine هنا واحفظيه — هي التي تُنشئ السر، وليس نحن.
         </div>
       </div>
 

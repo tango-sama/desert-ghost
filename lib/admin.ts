@@ -253,12 +253,19 @@ export function watchExpenses(cb: (expenses: Expense[]) => void): () => void {
 
 // ───────── admin writes (generic, same numeric-string ids as the old admin) ─────────
 
+// `merge` defaults to false (plain overwrite) to keep every existing caller's
+// behavior unchanged. Pass true for a doc that Cloud Functions also write
+// fields onto independently (e.g. private/yalidine's webhookSecret) — an
+// unmerged overwrite from here would silently erase those server-written
+// fields the next time the admin re-saves this doc from the client.
 export function setDocIn(
   coll: string,
   id: string | number,
-  data: Record<string, unknown>
+  data: Record<string, unknown>,
+  merge = false
 ) {
-  return fsSetDoc(doc(db, coll, String(id)), data);
+  const ref = doc(db, coll, String(id));
+  return merge ? fsSetDoc(ref, data, { merge: true }) : fsSetDoc(ref, data);
 }
 
 export function updateDocIn(
