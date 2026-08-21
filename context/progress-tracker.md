@@ -98,16 +98,13 @@ not the intended state (see `development-workflow.md`).
   had delivery baked in. `node --check` clean; deployed from the same
   `claude/commune-fees` worktree as the per-commune fee fix above (still
   NOT merged into trinkl `main` — see that entry for the divergence note).
-  **OPEN QUESTION for the owner**: Noest's and ZR's create-parcel payloads
-  (`createNoestParcel`'s `montant`, `createZrParcel`'s `amount`) only ever
-  send a single all-inclusive COD figure with no separate freight field the
-  carrier adds on top — unlike Yalidine's split model — so this looks
-  Yalidine-specific and both were deliberately left untouched. But this is
-  inferred from the payload shape, not confirmed against a real created
-  Noest/ZR parcel. If the owner has ALSO seen a doubled delivery fee on a
-  real Noest or ZR parcel, that assumption is wrong and needs its own
-  carrier-specific fix (same subtract-deliveryFee pattern, applied only
-  after confirming that carrier truly adds its own freight on top).
+  **RESOLVED — Yalidine-only, confirmed by the owner** (2026-08-21): asked
+  directly whether Noest/ZR parcels also showed a doubled delivery fee —
+  owner confirmed no, only Yalidine. `createNoestParcel`'s `montant` and
+  `createZrParcel`'s `amount` are deliberately left untouched (they send a
+  single all-inclusive COD figure with no separate freight field the
+  carrier adds on top — unlike Yalidine's split "price + independently
+  computed freight" model, which is what caused this bug).
   NOT yet verified end-to-end: the owner should create one more real
   Yalidine order and parcel now and confirm "Total à ramasser" on
   Yalidine's side matches the order's actual total (not double delivery).
