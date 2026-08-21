@@ -2464,6 +2464,24 @@ not the intended state (see `development-workflow.md`).
   featured section's order matches `/amelhadj`'s Storage Counter "في
   المحل" column, highest first.
 
+- 2026-08-21: Admin "المنتجات" (Products) tab list now sorts by quantity
+  too, matching the Storage Counter tab and the storefront featured grid
+  instead of being the one place left on plain recency. Previously
+  `components/admin/views/products-view.tsx` sorted purely by
+  `lastModified ?? id` descending, with no quantity signal at all. Now
+  pulls `orders` from the admin store (same slice `StorageCounterView`
+  already reads) and computes each product's `closetFor(stock,
+  statsByProduct(orders)[id])` — the same "في المحل" (in-closet) number
+  shown in the Storage Counter tab, not the raw `stock` total-ever-stocked
+  field (that one's documented as NOT a live quantity) — sorts most-in-
+  closet first, and ties (equal closet count, including untracked
+  products both landing at 0) fall back to the pre-existing recency sort.
+  Verified: `npx tsc --noEmit`, `npm run lint`, `npm run build` all clean
+  (same two pre-existing, unrelated findings noted in the prior entries —
+  `cart-drawer.tsx`/`sunguard/product-section.tsx`). NOT exercised: the
+  actual reordering against real stock/order data in a live `/amelhadj`
+  session (same standing sandbox constraint as the other entries above).
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)
