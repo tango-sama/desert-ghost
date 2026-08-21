@@ -5,6 +5,7 @@ import { cn } from "@/lib/utils";
 import type { SiteSettings } from "@/lib/firebase";
 import { saveOrder } from "@/lib/firebase";
 import { generateOrderNumber } from "@/lib/order";
+import { trackPixelEvent } from "@/lib/meta-pixel";
 import {
   carrierDataReady,
   communesForCarrier,
@@ -56,6 +57,7 @@ export function OrderModal({
   const [errors, setErrors] = useState<Partial<Record<keyof Pending, boolean>>>({});
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<SuccessInfo | null>(null);
+  const [submitError, setSubmitError] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -94,10 +96,17 @@ export function OrderModal({
     setPending(EMPTY_PENDING);
     setErrors({});
     setSuccess(null);
+    setSubmitError(false);
     onClose();
   }
 
   async function submit() {
+    // Belt-and-suspenders alongside disabled={submitting} on the button
+    // below: that prop only takes effect on the next render/commit, so a
+    // second click landing in the gap before the DOM actually disables
+    // could otherwise start a second saveOrder() for the same order.
+    if (submitting) return;
+
     const bad: Partial<Record<keyof Pending, boolean>> = {
       name: !pending.name.trim(),
       phone: !pending.phone.trim() || !isValidPhone(pending.phone),
@@ -115,6 +124,7 @@ export function OrderModal({
     }
 
     setSubmitting(true);
+    setSubmitError(false);
     const num = generateOrderNumber();
     const order = {
       num,
@@ -138,13 +148,38 @@ export function OrderModal({
       total: subtotal + fee,
       source: "landing_glutathione",
     };
+    // Purchase must only ever fire from this success path — never from the
+    // click above, never from validation, never from the success UI
+    // rendering. `orderRef.id` (the real Firestore order id) doubles as the
+    // Pixel eventID so a future server-side CAPI Purchase for this same
+    // order can dedupe against this one instead of counting twice.
     try {
-      await saveOrder(order);
+      const orderRef = await saveOrder(order);
+      // Isolated from the order-creation try/catch on purpose: the order is
+      // already saved at this point, so a broken/blocked fbq must never
+      // read as an order failure to the customer — see the outer catch
+      // below, which only ever means saveOrder() itself failed.
+      try {
+        trackPixelEvent(
+          "Purchase",
+          {
+            value: order.total,
+            currency: "DZD",
+            content_ids: order.items.map((item) => item.id),
+            content_type: "product",
+          },
+          { eventID: orderRef.id }
+        );
+      } catch (trackingErr) {
+        console.error("[DS] trackPixelEvent Purchase", trackingErr);
+      }
+      setSuccess({ firstName: order.customer.split(" ")[0] ?? order.customer, phone: order.phone, qty });
     } catch (err) {
       console.error("[DS] saveOrder", err);
+      setSubmitError(true);
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
-    setSuccess({ firstName: order.customer.split(" ")[0] ?? order.customer, phone: order.phone, qty });
   }
 
   return (
@@ -310,6 +345,11 @@ export function OrderModal({
                   </div>
                 </div>
 
+                {submitError && (
+                  <p className={styles.glNote} style={{ color: "var(--destructive)" }}>
+                    تعذّر إرسال الطلب، يرجى المحاولة مجدداً.
+                  </p>
+                )}
                 <button type="button" className={styles.glSubmit} disabled={submitting} onClick={submit}>
                   {submitting ? "⏳ جاري الإرسال..." : "✅ تأكيد الطلب"}
                 </button>
