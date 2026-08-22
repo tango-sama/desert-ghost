@@ -2550,6 +2550,38 @@ not the intended state (see `development-workflow.md`).
   actual reordering against real stock/order data in a live `/amelhadj`
   session (same standing sandbox constraint as the other entries above).
 
+## Completed (this session, 2026-08-22)
+
+- Meta Pixel `AddToCart`/`InitiateCheckout` wired into the main
+  `/product/[id]` → `/checkout` funnel (per architecture-context.md's
+  Analytics section, Pixel infra had only ever been wired for
+  `/glutathione`'s `ViewContent`/`Purchase` — the standard product-grid +
+  cart flow fired nothing). All three call sites use the shared
+  `trackPixelEvent()` helper with the same `content_ids`/`content_type`/
+  `value`/`currency: "DZD"` shape as the working `Purchase` call in
+  `order-modal.tsx`:
+  - `AddToCart` in `components/storefront/product-detail.tsx`'s
+    `handleAdd()` (the PDP's "أضيفي إلى السلة" button) — `value` is
+    `priceNum(product.price) * qty`.
+  - `AddToCart` in `components/storefront/product-card.tsx`'s quick-add
+    button too (product grid / related-products tiles) — same event
+    shape, `value` for one unit, since it's the same add-to-cart action
+    just from a different surface.
+  - `InitiateCheckout` in `components/storefront/checkout-form.tsx`, fired
+    once on mount once the cart has items (ref-guarded against Strict
+    Mode's double-invoke, same pattern as `ViewContent` in
+    `glutathione-page.tsx`) — covers both a direct `/checkout` load and
+    navigating there via the cart drawer's "إتمام الطلب" link, without
+    double-firing on the pre-hydration empty-cart flash.
+  - Note: `checkout-form.tsx`'s `placeOrder()` still does NOT fire
+    `Purchase` — out of scope for this task (only `AddToCart`/
+    `InitiateCheckout` were requested), but it's the same gap and should
+    follow the `order-modal.tsx` pattern (`saveOrder()` succeeds → fire
+    `Purchase` with `eventID: orderRef.id`) when picked up.
+  Verified: `npx tsc --noEmit` and `npx eslint` on the three touched files
+  both clean. NOT exercised: an actual `fbq` call captured in a real
+  browser session (same standing sandbox constraint as other entries).
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)

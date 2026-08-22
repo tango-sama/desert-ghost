@@ -3,9 +3,10 @@
 import { useState } from "react";
 import { Check, CreditCard, Minus, Package, Plus, ShieldCheck, Truck } from "lucide-react";
 import type { Product } from "@/lib/firebase";
-import { benefits, priceFmt, productImages } from "@/lib/firebase";
+import { benefits, priceFmt, priceNum, productImages } from "@/lib/firebase";
 import { waLink } from "@/lib/whatsapp";
 import type { SiteSettings } from "@/lib/firebase";
+import { trackPixelEvent } from "@/lib/meta-pixel";
 import { useCartStore } from "@/stores/cart-store";
 import { SellerOrderBadge, SellerOrderModal, SellerOrderTrigger } from "@/components/storefront/seller-order-modal";
 
@@ -36,6 +37,16 @@ export function ProductDetail({
 
   function handleAdd() {
     for (let i = 0; i < qty; i++) add(product, { silent: i < qty - 1 });
+    // Same shape as ViewContent/Purchase (glutathione-page.tsx,
+    // order-modal.tsx) so this event lines up with what's already working
+    // there: content_ids/content_type/value/currency.
+    trackPixelEvent("AddToCart", {
+      content_ids: [product.id],
+      content_type: "product",
+      content_name: title,
+      value: priceNum(product.price) * qty,
+      currency: "DZD",
+    });
   }
 
   function handleWhatsApp() {

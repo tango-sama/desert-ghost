@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Check, Minus, Plus, ShieldCheck, Trash2, Truck } from "lucide-react";
 import { priceFmt, saveOrder, type SiteSettings } from "@/lib/firebase";
 import { waLink } from "@/lib/whatsapp";
-import { useCartStore, cartTotal } from "@/stores/cart-store";
+import { trackPixelEvent } from "@/lib/meta-pixel";
+import { useCartStore, cartCount, cartTotal } from "@/stores/cart-store";
 import { useDeliveryData } from "@/hooks/use-delivery-data";
 import { useIsStaff, setStaffFlag } from "@/hooks/use-staff";
 import { useStorageCloset } from "@/hooks/use-storage-closet";
@@ -102,6 +103,26 @@ export function CheckoutForm({ settings }: { settings: SiteSettings }) {
 
   const subtotal = cartTotal(items);
   const total = subtotal + deliveryFee;
+
+  // Fires once per real checkout start (page load with a non-empty cart, or
+  // the cart hydrating from localStorage right after mount — whichever
+  // lands items here first). Ref guard, not just an empty dep array, so
+  // this survives Strict Mode's dev-only double-invoke of mount effects —
+  // same pattern as ViewContent in glutathione-page.tsx. Never fires on the
+  // empty-cart placeholder below since it bails out until items exist.
+  const initiateCheckoutFired = useRef(false);
+  useEffect(() => {
+    if (initiateCheckoutFired.current || items.length === 0) return;
+    initiateCheckoutFired.current = true;
+    trackPixelEvent("InitiateCheckout", {
+      content_ids: items.map((i) => i.id),
+      content_type: "product",
+      num_items: cartCount(items),
+      value: subtotal,
+      currency: "DZD",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.length]);
 
   // Wilaya change reloads the commune/desk list (derived from selectedWilaya
   // above) and clears whatever was previously picked from the old wilaya.
