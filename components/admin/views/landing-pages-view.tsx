@@ -14,6 +14,7 @@ import { cn } from "@/lib/utils";
 import { SUNGUARD_PRODUCT } from "@/components/storefront/sunguard/product";
 import { COLLAGEN_PRODUCTS } from "@/components/storefront/collagen/products";
 import { GLUTATHIONE_PRODUCT } from "@/components/storefront/glutathione/product";
+import { CARNITINE_PRODUCT } from "@/components/storefront/carnitine/product";
 import {
   inp,
   txt,
@@ -37,6 +38,7 @@ const PAGES: { key: LandingPageKey; label: string; folder: string }[] = [
   { key: "sunguard", label: "🍉 واقي الشمس", folder: "landing_sunguard" },
   { key: "collagen", label: "✨ الكولاجين", folder: "landing_collagen" },
   { key: "glutathione", label: "💊 الجلوتاثيون", folder: "landing_glutathione" },
+  { key: "carnitine", label: "🔥 التنحيف", folder: "landing_carnitine" },
 ];
 
 const HERO_PLACEHOLDER: Record<LandingPageKey, { title: string; lead: string }> = {
@@ -51,6 +53,10 @@ const HERO_PLACEHOLDER: Record<LandingPageKey, { title: string; lead: string }> 
   glutathione: {
     title: "اكتشفي إشراقتكِ الطبيعية من الداخل",
     lead: "تساعد على دعم مضادات الأكسدة وتعزيز صحة البشرة، وتوحيد لونها وتفتيحها، من أجل بشرة أكثر نضارة وحيوية — 100 كبسولة.",
+  },
+  carnitine: {
+    title: "خطوتكِ نحو جسم أخف ونشاط أكبر",
+    lead: "كبسولات HHS A1 L-Carnitine Lepidium، مكمل غذائي عشبي تركي بمكونات طبيعية — إل-كارنيتين وعشبة الليبيديوم — يساعد على دعم فقدان الوزن، تحسين عملية التمثيل الغذائي، وزيادة مستويات الطاقة.",
   },
 };
 
@@ -71,6 +77,10 @@ const BA_SLOTS: Record<LandingPageKey, { label: string; title: string; text: str
     { label: "بطاقة 3 — البشرة", title: "بشرة أكثر نضارة وإشراقاً", text: "خطوط أدق، ترطيب أعمق، وإشراقة تلاحظينها خلال 4–8 أسابيع من الانتظام." },
   ],
   glutathione: [],
+  // No before/after slots — this product has no real customer transformation
+  // photos, and this landing page deliberately doesn't invent illustrative
+  // ones (see carnitine/carnitine-page.tsx).
+  carnitine: [],
 };
 
 type SlotForm = { title: string; text: string; before: string; after: string };
@@ -114,11 +124,19 @@ const PRODUCT_DEFAULTS: Record<
       image: GLUTATHIONE_PRODUCT.image,
     },
   ],
+  carnitine: [
+    {
+      label: "المنتج",
+      title: CARNITINE_PRODUCT.title,
+      price: CARNITINE_PRODUCT.price,
+      image: CARNITINE_PRODUCT.image,
+    },
+  ],
 };
 
 // Pages with one SKU store the override at `product`; collagen's multi-SKU
 // page stores an array at `products` indexed by position.
-const SINGLE_PRODUCT_PAGES: LandingPageKey[] = ["sunguard", "glutathione"];
+const SINGLE_PRODUCT_PAGES: LandingPageKey[] = ["sunguard", "glutathione", "carnitine"];
 
 type ProductForm = { title: string; price: string; image: string };
 

@@ -74,6 +74,74 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- New single-product landing page `/carnitine` for the real catalog item
+  "HHS A1 L-Carnitine Lepidium — كبسولات تنحيف الجسم" (Firestore
+  `products/1768873325495`, 14,500 د.ج, weight-loss/slimming category)
+  (2026-08-22, ghost-only, not yet committed to a PR). Requested as a
+  premium marketing landing page for this specific product; built as a
+  fully self-contained funnel following the exact architecture already
+  established by `/sunguard` and `/glutathione` (architecture-context.md:
+  own top bar/footer, no shared storefront Nav/Footer/CartDrawer,
+  `force-dynamic`, hardcoded product data separate from the live
+  Firestore `products` collection except that this page deliberately
+  keeps `id: "1768873325495"` equal to the real catalog doc id instead of
+  a made-up slug, so admin-side traceability isn't lost).
+  New `components/storefront/carnitine/` (own "flame" amber/terracotta
+  CSS Module palette — `carnitine.module.css` — distinct from sunguard's
+  pink, glutathione's gold, and collagen's teal; energy/fat-burn visual
+  metaphor): `product.ts` (hardcoded SKU, real product photo downloaded
+  from the live Firestore Storage URL into
+  `public/assets/carnitine/product-shot.webp`), `topbar.tsx`, `hero.tsx`
+  (flame-icon hero with a real-photo spotlight card, no illustrated
+  cutout), `problems.tsx` (why weight-loss attempts stall — appetite,
+  energy, metabolism), `ingredients.tsx` (the two real actives from the
+  Firestore description — L-Carnitine and Lepidium — no invented third
+  ingredient), `benefits.tsx`, `product-section.tsx`, `usage-section.tsx`
+  (deliberately no invented dosage schedule — the source description only
+  states 30 capsules per box, so copy stays generic and points to the
+  box's own label instead of fabricating a regimen), `trust-strip.tsx`,
+  `faq.tsx`, `cta-banner.tsx`, `footer.tsx`, `sticky-bar.tsx`,
+  `order-modal.tsx` (byte-for-byte the same Noest/Yalidine-only carrier
+  logic, validation, and totals math as sunguard/order-modal.tsx, just
+  restyled and `source: "landing_carnitine"`), `carnitine-page.tsx`
+  (assembler). Deliberately has NO before/after slider section (unlike
+  sunguard/collagen) — there are no real customer transformation photos
+  for this product, and inventing illustrative "before/after" weight-loss
+  imagery for a slimming supplement was judged misleading rather than
+  just cosmetic, so that section is skipped rather than faked.
+  Wired into the existing multi-landing-page infrastructure exactly like
+  the other three pages: `app/carnitine/page.tsx` (redirects to an
+  admin-set custom slug when one exists, same as
+  `app/sunguard/page.tsx`), `lib/firebase.ts` (`LandingPageKey` and
+  `LANDING_RESERVED_SLUGS` both gained `"carnitine"`), `app/[slug]/page.tsx`
+  (new `META.carnitine` entry + routing branch), and
+  `components/admin/views/landing-pages-view.tsx` (new `"carnitine"` tab —
+  🔥 التنحيف — added to `PAGES`/`HERO_PLACEHOLDER`/`PRODUCT_DEFAULTS`/
+  `SINGLE_PRODUCT_PAGES`, with an empty `BA_SLOTS.carnitine` array since
+  this page has no before/after section to edit) so an admin can edit the
+  hero copy, product name/price/image, and custom URL slug for this page
+  the same way they already do for the other three.
+  Verified: `npx tsc --noEmit`, `npx eslint` (only the same pre-existing
+  `no-img-element` warning `product-section.tsx` already carries on
+  sunguard's identical file), and `npm run build` (`/carnitine` compiles
+  as a dynamic route) all clean. Also verified live in a real headless
+  Chromium session against `npm run dev`: hero/problems/ingredients/
+  benefits/product-card/usage-steps/trust-strip/FAQ/CTA-banner/footer all
+  render correctly end-to-end with the real product photo and real price,
+  and the order modal opens with correct qty stepper, field validation,
+  delivery-type toggle, and live totals math. The sandboxed test
+  environment's headless browser could not reach the Firestore
+  websocket/streaming backend (network egress restriction specific to
+  this session, not the app), so the wilaya/commune selects correctly
+  showed their existing "⏳ جاري التحميل..." loading-state fallback
+  instead of live carrier data — expected behavior per
+  `carrierDataReady()`, the same fallback every other landing page relies
+  on, not something this change could exercise further in this sandbox.
+  NOT yet verified: a real submitted order against production Firestore,
+  and the live wilaya/commune dropdowns populating with real carrier data
+  on an unrestricted network (both blocked by this session's own network
+  sandbox, not by the code). NOT yet committed/pushed — pending review.
+
 - Empty "📝 اسم المنتج على وصل التوصيل" no longer leaks the real product
   name onto the carrier's label (2026-08-21, both repos DEPLOYED). This
   admin field exists precisely so a real product name never has to appear
