@@ -69,6 +69,7 @@ export function CheckoutForm({ settings }: { settings: SiteSettings }) {
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
   const [order, setOrder] = useState<{ num: string; message: string } | null>(null);
+  const [submitError, setSubmitError] = useState(false);
 
   // Never show wilaya/commune options from another carrier's shape (or the
   // generic static list) while this carrier's own live list is still
@@ -197,6 +198,13 @@ export function CheckoutForm({ settings }: { settings: SiteSettings }) {
   }
 
   async function placeOrder(openWa: boolean) {
+    // Belt-and-suspenders alongside disabled={submitting} on both submit
+    // buttons below: that prop only takes effect on the next render/commit,
+    // so a second click landing in the gap before the DOM actually disables
+    // could otherwise start a second saveOrder() for the same order — same
+    // guard as order-modal.tsx.
+    if (submitting) return;
+
     const bad: Record<string, boolean> = {
       name: !name.trim(),
       phone: !phone.trim(),
@@ -214,6 +222,7 @@ export function CheckoutForm({ settings }: { settings: SiteSettings }) {
     }
 
     setSubmitting(true);
+    setSubmitError(false);
     const num = generateOrderNumber();
     const orderItems = items.map((i) => ({ id: i.id, title: i.title, price: i.price, qty: i.qty, image: i.image }));
     const data = {
@@ -235,10 +244,40 @@ export function CheckoutForm({ settings }: { settings: SiteSettings }) {
       ...(staff ? { source: "admin_phone" } : {}),
     };
 
+    // The success UI, cart clear, and Purchase pixel event must only ever
+    // follow a CONFIRMED saveOrder() — previously this swallowed the error
+    // and fell through to "success" regardless, which both lied to the
+    // customer and would have fired Purchase for orders that were never
+    // actually saved (fake conversions poisoning the Pixel's data).
+    let orderRef;
     try {
-      await saveOrder(data);
+      orderRef = await saveOrder(data);
     } catch (e) {
       console.error("[DS] saveOrder", e);
+      setSubmitError(true);
+      setSubmitting(false);
+      return;
+    }
+
+    // Isolated from the saveOrder() try/catch on purpose: the order is
+    // already saved at this point, so a broken/blocked fbq must never read
+    // as an order failure to the customer. `orderRef.id` (the real
+    // Firestore order id) doubles as the Pixel eventID so a future
+    // server-side CAPI Purchase for this same order can dedupe against it
+    // instead of counting twice — same pattern as order-modal.tsx.
+    try {
+      trackPixelEvent(
+        "Purchase",
+        {
+          value: total,
+          currency: "DZD",
+          content_ids: orderItems.map((item) => item.id),
+          content_type: "product",
+        },
+        { eventID: orderRef.id }
+      );
+    } catch (trackingErr) {
+      console.error("[DS] trackPixelEvent Purchase", trackingErr);
     }
 
     const message = buildMessage({
@@ -478,6 +517,11 @@ export function CheckoutForm({ settings }: { settings: SiteSettings }) {
               </Field>
             )}
 
+            {submitError && (
+              <p className="mt-4 rounded-xl bg-[#FFF0F3] px-4 py-3 text-center text-sm font-bold text-[var(--rose-deep)]">
+                تعذّر إرسال الطلب، يرجى المحاولة مجدداً.
+              </p>
+            )}
             <button
               type="submit"
               disabled={submitting}

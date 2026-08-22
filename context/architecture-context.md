@@ -106,12 +106,24 @@
   fires `PageView` again on each subsequent route change. Funnel
   components call the shared `trackPixelEvent()` helper (`lib/meta-pixel.ts`)
   for `ViewContent`/`Purchase` instead of touching `window.fbq` directly.
-- Currently wired for `/glutathione` only (`ViewContent` on mount in
-  `glutathione-page.tsx`, `Purchase` after a confirmed `saveOrder()` success
-  in `order-modal.tsx`, keyed to the real order total/items — never a
-  hardcoded value). `/sunguard` and `/collagen` follow the same
-  `order-modal.tsx` pattern and are expected to reuse this same
-  infrastructure once `/glutathione` is verified.
+- Wired for `/glutathione` (`ViewContent` on mount in `glutathione-page.tsx`,
+  `Purchase` after a confirmed `saveOrder()` success in `order-modal.tsx`,
+  keyed to the real order total/items — never a hardcoded value).
+  `/sunguard` and `/collagen` follow the same `order-modal.tsx` pattern and
+  are expected to reuse this same infrastructure once `/glutathione` is
+  verified.
+- Also wired for the main `/product/[id]` → `/checkout` funnel:
+  `AddToCart` fires from both the product page's add-to-cart button
+  (`product-detail.tsx`) and the product-grid quick-add button
+  (`product-card.tsx`); `InitiateCheckout` fires once on `/checkout` mount
+  once the cart has items (`checkout-form.tsx`, same ref-guarded
+  once-per-mount pattern as `ViewContent`); `Purchase` fires from
+  `checkout-form.tsx`'s `placeOrder()` after a confirmed `saveOrder()`
+  success, same shape/eventID convention as `order-modal.tsx`. Fixing this
+  also fixed a real bug: `placeOrder()` used to swallow a failed
+  `saveOrder()` and fall through to the success UI/cart-clear regardless —
+  it now only treats a genuine `saveOrder()` resolution as success, so
+  Purchase can never fire for an order that wasn't actually saved.
 - No server-side Conversions API yet. `Purchase`'s Pixel call already
   passes `eventID: orderRef.id` (the Firestore order doc id) so a future
   CAPI call for the same order can dedupe against it.

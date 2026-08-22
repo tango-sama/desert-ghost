@@ -2573,14 +2573,27 @@ not the intended state (see `development-workflow.md`).
     `glutathione-page.tsx`) — covers both a direct `/checkout` load and
     navigating there via the cart drawer's "إتمام الطلب" link, without
     double-firing on the pre-hydration empty-cart flash.
-  - Note: `checkout-form.tsx`'s `placeOrder()` still does NOT fire
-    `Purchase` — out of scope for this task (only `AddToCart`/
-    `InitiateCheckout` were requested), but it's the same gap and should
-    follow the `order-modal.tsx` pattern (`saveOrder()` succeeds → fire
-    `Purchase` with `eventID: orderRef.id`) when picked up.
   Verified: `npx tsc --noEmit` and `npx eslint` on the three touched files
   both clean. NOT exercised: an actual `fbq` call captured in a real
   browser session (same standing sandbox constraint as other entries).
+
+- Follow-up (same day): added the missing `Purchase` event to
+  `checkout-form.tsx`'s `placeOrder()`, same `order-modal.tsx` shape/
+  `eventID: orderRef.id` convention as the other funnels. This also fixed
+  a real pre-existing bug in `placeOrder()`, not just a Pixel gap: it used
+  to `try { await saveOrder(data) } catch (e) { console.error(e) }` and
+  then fall through UNCONDITIONALLY to the success UI, cart clear, and
+  WhatsApp message — so a failed `saveOrder()` (offline, Firestore rules,
+  etc.) still told the customer "order received" while nothing was
+  actually saved. `placeOrder()` now `return`s early on a `saveOrder()`
+  failure, shows a real inline error (`submitError` state, mirrors
+  `order-modal.tsx`'s pattern) instead of the false-success screen, and
+  only fires `Purchase` after a genuine `saveOrder()` resolution — so the
+  Pixel can no longer log a conversion for an order that was never saved.
+  `architecture-context.md`'s Analytics section updated to match.
+  Verified: `npx tsc --noEmit` and `npx eslint` on `checkout-form.tsx`
+  clean. NOT exercised: a real failed-`saveOrder()` path or a captured
+  `fbq('track','Purchase', ...)` call in a live browser session.
 
 ## Next Up
 
