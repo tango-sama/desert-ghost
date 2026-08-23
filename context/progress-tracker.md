@@ -2595,6 +2595,39 @@ not the intended state (see `development-workflow.md`).
   clean. NOT exercised: a real failed-`saveOrder()` path or a captured
   `fbq('track','Purchase', ...)` call in a live browser session.
 
+## Completed (this session, 2026-08-23)
+
+- Fixed the main `/product/[id]` funnel's missing `ViewContent`: reported
+  as ViewContent/AddToCart/InitiateCheckout/Purchase all appearing to fire
+  on the homepage URL instead of each individual product page, breaking
+  Dynamic Ads/retargeting. Root cause was narrower than the report:
+  AddToCart, InitiateCheckout, and Purchase were already wired correctly
+  (2026-08-22 entry above) with the right `content_ids` and, via `fbq`'s
+  own automatic `event_source_url`, the right page URL — but
+  `components/storefront/product-detail.tsx` never fired `ViewContent` at
+  all. Pixel infra had only ever wired `ViewContent` for the `/glutathione`
+  landing funnel (`glutathione-page.tsx`); the standard catalog product
+  page every other product actually uses had zero view-content signal, so
+  Meta had no per-product ViewContent to key Dynamic Ads/retargeting off
+  for any of the catalog's real products — only the four special landing
+  pages ever produced one.
+  - Added the same ref-guarded once-per-mount `ViewContent` (survives
+    Strict Mode's dev-only double-invoke, keyed off `product.id` alone so
+    an admin price override loading async after mount can't cause a
+    second fire) to `product-detail.tsx`, right next to its existing
+    `AddToCart`. Same event shape as everywhere else: `content_ids`,
+    `content_type: "product"`, `content_name`, `value`, `currency: "DZD"`.
+  - No `event_source_url` override needed/added — `fbq` reads
+    `window.location.href` fresh at call time, so a `ViewContent` fired
+    from `product-detail.tsx` on `/product/{id}` already reports that
+    product's own URL, not the homepage's, once it fires at all.
+  - `architecture-context.md`'s Analytics section updated to document
+    `ViewContent` as part of the `/product/[id]` → `/checkout` funnel.
+  Verified: `npx tsc --noEmit`, `npx eslint`, and `npm run build` all
+  clean. NOT exercised: a captured `fbq('track','ViewContent', ...)` call
+  in a live browser session or a real Meta Events Manager check (same
+  standing sandbox constraint as the other Pixel entries above).
+
 ## Next Up
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)

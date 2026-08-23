@@ -113,6 +113,10 @@
   are expected to reuse this same infrastructure once `/glutathione` is
   verified.
 - Also wired for the main `/product/[id]` → `/checkout` funnel:
+  `ViewContent` fires once per product-page mount (`product-detail.tsx`,
+  same ref-guarded once-per-mount pattern keyed off `product.id`, so it
+  carries that product's own id/name/price and — via `fbq`'s own automatic
+  `event_source_url` — that product's own page URL, not the homepage's);
   `AddToCart` fires from both the product page's add-to-cart button
   (`product-detail.tsx`) and the product-grid quick-add button
   (`product-card.tsx`); `InitiateCheckout` fires once on `/checkout` mount

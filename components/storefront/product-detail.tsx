@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, CreditCard, Minus, Package, Plus, ShieldCheck, Truck } from "lucide-react";
 import type { Product } from "@/lib/firebase";
 import { benefits, priceFmt, priceNum, productImages } from "@/lib/firebase";
@@ -34,6 +34,30 @@ export function ProductDetail({
   const add = useCartStore((s) => s.add);
   const title = product.title || product.name || "";
   const benefitList = benefits(product.description);
+
+  // Fires once per real product-page view. Same ref-guard pattern as
+  // glutathione-page.tsx's ViewContent (survives Strict Mode's dev-only
+  // double-invoke of mount effects) and keyed off `product.id` alone so an
+  // admin edit loaded async after mount can't cause a second fire. This was
+  // the missing half of the main /product/[id] funnel: AddToCart below,
+  // InitiateCheckout (checkout-form.tsx) and Purchase (checkout-form.tsx)
+  // were already wired, but no ViewContent ever fired from an individual
+  // product page itself — every product's view signal was going untracked
+  // instead of carrying that product's own id/name/price and page URL,
+  // which is exactly what Dynamic Ads/retargeting key off per product.
+  const viewContentFired = useRef(false);
+  useEffect(() => {
+    if (viewContentFired.current) return;
+    viewContentFired.current = true;
+    trackPixelEvent("ViewContent", {
+      content_ids: [product.id],
+      content_type: "product",
+      content_name: title,
+      value: priceNum(product.price),
+      currency: "DZD",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]);
 
   function handleAdd() {
     for (let i = 0; i < qty; i++) add(product, { silent: i < qty - 1 });
