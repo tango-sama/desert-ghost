@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Check, ShieldCheck, Store, X } from "lucide-react";
 import type { Product, SiteSettings } from "@/lib/firebase";
 import { priceFmt, priceNum, productImages, saveOrder } from "@/lib/firebase";
+import { sendCapiPurchase, setAdvancedMatching, trackPixelEvent } from "@/lib/meta-pixel";
 import { useIsStaff } from "@/hooks/use-staff";
 import { useDeliveryData } from "@/hooks/use-delivery-data";
 import { useStorageCloset } from "@/hooks/use-storage-closet";
@@ -167,8 +168,42 @@ export function SellerOrderModal({
       total,
       source: "seller_direct",
     };
+    // Purchase must only ever fire from this success path — never from the
+    // click above, never from validation. `orderRef.id` doubles as the
+    // Pixel eventID so a future server-side CAPI Purchase for this same
+    // order can dedupe against this one. Same pattern as
+    // checkout-form.tsx/order-modal.tsx — this "leave order with seller"
+    // flow saves a real order too and previously fired no Purchase at all.
     try {
-      await saveOrder(order);
+      const orderRef = await saveOrder(order);
+      // Isolated from the order-creation try/catch on purpose: the order is
+      // already saved at this point, so a broken/blocked fbq must never
+      // read as an order failure to the customer.
+      try {
+        setAdvancedMatching({ phone: order.phone, firstName: order.customer.split(" ")[0] });
+        trackPixelEvent(
+          "Purchase",
+          {
+            value: order.total,
+            currency: "DZD",
+            content_ids: [product.id],
+            content_type: "product",
+          },
+          { eventID: orderRef.id }
+        );
+        // Server-side CAPI double-send, same eventID for dedup — no-ops
+        // until META_CAPI_ACCESS_TOKEN is configured (app/api/meta-capi).
+        sendCapiPurchase({
+          eventId: orderRef.id,
+          contentIds: [product.id],
+          value: order.total,
+          currency: "DZD",
+          phone: order.phone,
+          firstName: order.customer.split(" ")[0],
+        });
+      } catch (trackingErr) {
+        console.error("[DS] trackPixelEvent Purchase", trackingErr);
+      }
       onSuccess(num);
     } catch (err) {
       console.error("[DS] saveOrder", err);

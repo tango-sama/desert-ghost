@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Check, Minus, Plus, ShieldCheck, Trash2, Truck } from "lucide-react";
 import { priceFmt, saveOrder, type SiteSettings } from "@/lib/firebase";
 import { waLink } from "@/lib/whatsapp";
-import { trackPixelEvent } from "@/lib/meta-pixel";
+import { sendCapiPurchase, setAdvancedMatching, trackPixelEvent } from "@/lib/meta-pixel";
 import { useCartStore, cartCount, cartTotal } from "@/stores/cart-store";
 import { useDeliveryData } from "@/hooks/use-delivery-data";
 import { useIsStaff, setStaffFlag } from "@/hooks/use-staff";
@@ -266,6 +266,11 @@ export function CheckoutForm({ settings }: { settings: SiteSettings }) {
     // server-side CAPI Purchase for this same order can dedupe against it
     // instead of counting twice — same pattern as order-modal.tsx.
     try {
+      // Advanced Matching: only fired here, never earlier — this is the
+      // first point in the funnel where phone/name have actually passed
+      // validation (the `bad` checks above), so it's the first point
+      // where handing them to Meta is safe/meaningful.
+      setAdvancedMatching({ phone: data.phone, firstName: data.customer.split(" ")[0] });
       trackPixelEvent(
         "Purchase",
         {
@@ -276,6 +281,18 @@ export function CheckoutForm({ settings }: { settings: SiteSettings }) {
         },
         { eventID: orderRef.id }
       );
+      // Server-side CAPI double-send, same eventID for dedup — recovers
+      // this Purchase if the client-side call above never reaches Meta
+      // (ad-blocker/Safari ITP/iOS). No-ops until META_CAPI_ACCESS_TOKEN is
+      // configured (see app/api/meta-capi/route.ts).
+      sendCapiPurchase({
+        eventId: orderRef.id,
+        contentIds: orderItems.map((item) => item.id),
+        value: total,
+        currency: "DZD",
+        phone: data.phone,
+        firstName: data.customer.split(" ")[0],
+      });
     } catch (trackingErr) {
       console.error("[DS] trackPixelEvent Purchase", trackingErr);
     }

@@ -105,13 +105,26 @@
   re-initializing. `components/analytics/meta-pixel-route-tracker.tsx`
   fires `PageView` again on each subsequent route change. Funnel
   components call the shared `trackPixelEvent()` helper (`lib/meta-pixel.ts`)
-  for `ViewContent`/`Purchase` instead of touching `window.fbq` directly.
-- Wired for `/glutathione` (`ViewContent` on mount in `glutathione-page.tsx`,
-  `Purchase` after a confirmed `saveOrder()` success in `order-modal.tsx`,
-  keyed to the real order total/items — never a hardcoded value).
-  `/sunguard` and `/collagen` follow the same `order-modal.tsx` pattern and
-  are expected to reuse this same infrastructure once `/glutathione` is
-  verified.
+  for `ViewContent`/`AddToCart`/`InitiateCheckout`/`Purchase`/`Lead`/
+  `Contact`/`Search` instead of touching `window.fbq` directly.
+- All five landing funnels — `/glutathione` (and its `/glutathione-3d` A/B
+  variant, which imports `/glutathione`'s own `order-modal.tsx` directly
+  rather than duplicating it), `/sunguard`, `/collagen`, `/carnitine` — now
+  fire the same three events: `ViewContent` once per page mount (ref-guarded
+  once-per-mount pattern; `/collagen` reports all displayed products'
+  `content_ids`/summed value since it's a multi-SKU page, the other three
+  report the single product), `InitiateCheckout` once per real order-modal
+  open (ref resets on close, so reopening later in the same visit produces
+  a fresh signal — `/collagen`'s modal reports whatever's selected at open
+  time, falling back to every product id if the modal was opened generically
+  with nothing pre-picked), and `Purchase` after a confirmed `saveOrder()`
+  success, keyed to the real order total/items with `eventID: orderRef.id`.
+  `/sunguard`, `/collagen`, and `/carnitine` previously had NONE of this —
+  fixing it also fixed a real bug in their `order-modal.tsx`s: `submit()`
+  used to swallow a failed `saveOrder()` and fall through to the success UI
+  regardless (same class of bug the main `/checkout` funnel had, see below)
+  — `submitError` now gates success/`Purchase` on a genuine `saveOrder()`
+  resolution, same as `/glutathione`'s already-correct `order-modal.tsx`.
 - Also wired for the main `/product/[id]` → `/checkout` funnel:
   `ViewContent` fires once per product-page mount (`product-detail.tsx`,
   same ref-guarded once-per-mount pattern keyed off `product.id`, so it
@@ -128,9 +141,43 @@
   `saveOrder()` and fall through to the success UI/cart-clear regardless —
   it now only treats a genuine `saveOrder()` resolution as success, so
   Purchase can never fire for an order that wasn't actually saved.
-- No server-side Conversions API yet. `Purchase`'s Pixel call already
-  passes `eventID: orderRef.id` (the Firestore order doc id) so a future
-  CAPI call for the same order can dedupe against it.
+  `seller-order-modal.tsx` (the PDP's "leave order with seller" phone-order
+  flow) also saves a real order via the same `saveOrder()` and now fires
+  `Purchase` the same way — it previously fired nothing at all.
+- Non-order conversion signals: `contact-form.tsx` fires `Lead` after a
+  confirmed `saveMessage()` (same swallowed-error bug fixed here too —
+  success/WhatsApp-handoff/`Lead` now all gate on a real resolution, not a
+  logged-and-ignored failure); `product-detail.tsx`'s direct-WhatsApp button
+  and the site-wide `whatsapp-float.tsx` button both fire `Contact` (the
+  latter with no product context — it isn't tied to any one page);
+  `products-browser.tsx` fires `Search` with `search_string` ~600ms after
+  the customer stops typing (debounced, and only once per distinct settled
+  query — not per keystroke).
+- Advanced Matching: `lib/meta-pixel.ts`'s `setAdvancedMatching({ phone,
+  firstName })` re-issues `fbq('init', pixelId, { ph, fn })` with the
+  customer's validated phone/name right before every `Purchase` call above
+  (checkout, every landing order-modal, seller-order-modal) — the JS SDK
+  hashes these client-side before they ever leave the browser. This is what
+  lets Meta match an event to a real identity instead of just a browser
+  cookie; previously `fbq('init', ...)` never passed any matching data at
+  all. Phone is normalized to E.164 first (`normalizeDzPhone`, exported from
+  `lib/meta-pixel.ts` — Algerian local numbers are always `0[567]XXXXXXXX`
+  per `lib/delivery.ts`'s `isValidPhone`).
+- Server-side Conversions API (CAPI): `app/api/meta-capi/route.ts` (a Next.js
+  Route Handler, matching this repo's `app/api/storage-closet` convention —
+  not the separate `tango-sama/trinkl` Firebase Functions) double-sends
+  `Purchase` to the Graph API, called fire-and-forget via
+  `sendCapiPurchase()` alongside every client-side `Purchase` call above,
+  same `eventID` for dedup. Recovers conversions the client-side Pixel call
+  never reaches Meta with at all (ad-blockers/Safari ITP/iOS), which no
+  client-side fix can close. Needs `META_CAPI_ACCESS_TOKEN` (Business
+  Manager → System Users → a token with pixel/ads_management access) — NOT
+  YET SET, so this is currently a documented no-op (degrades gracefully,
+  same "missing credential" invariant as `lib/firebase-admin.ts`'s
+  `FIREBASE_SERVICE_ACCOUNT_KEY`). Once the token is set, it hashes
+  em/ph server-side (Graph API expects pre-hashed values, unlike the client
+  SDK) and includes `_fbp`/`_fbc` cookies read client-side and threaded
+  through the same call.
 
 ## Auth Model
 

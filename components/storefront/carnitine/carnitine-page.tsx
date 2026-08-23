@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { SiteSettings } from "@/lib/firebase";
 import { useDeliveryData } from "@/hooks/use-delivery-data";
+import { trackPixelEvent } from "@/lib/meta-pixel";
 import { TikTokLiveButton } from "@/components/storefront/tiktok-live-button";
 import { Topbar } from "./topbar";
 import { Hero } from "./hero";
@@ -57,6 +58,24 @@ export function CarnitinePage({
     image: override?.image?.trim() || CARNITINE_PRODUCT.image,
     price: override?.price && override.price > 0 ? override.price : CARNITINE_PRODUCT.price,
   };
+
+  // Fires once per real page view. Ref guard (not just an empty dep array)
+  // so this survives Strict Mode's dev-only double-invoke of mount effects —
+  // same pattern as glutathione-page.tsx. Keyed off `product.id` alone, not
+  // `product`, so an admin price override doesn't cause a second fire.
+  const viewContentFired = useRef(false);
+  useEffect(() => {
+    if (viewContentFired.current) return;
+    viewContentFired.current = true;
+    trackPixelEvent("ViewContent", {
+      content_ids: [product.id],
+      content_type: "product",
+      content_name: product.title,
+      value: product.price,
+      currency: "DZD",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]);
 
   return (
     <div className={styles.carnitine} dir="rtl">

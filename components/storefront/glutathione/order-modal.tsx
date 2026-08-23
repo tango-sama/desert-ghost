@@ -1,11 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { SiteSettings } from "@/lib/firebase";
 import { saveOrder } from "@/lib/firebase";
 import { generateOrderNumber } from "@/lib/order";
-import { trackPixelEvent } from "@/lib/meta-pixel";
+import { sendCapiPurchase, setAdvancedMatching, trackPixelEvent } from "@/lib/meta-pixel";
 import {
   carrierDataReady,
   communesForCarrier,
@@ -71,6 +71,29 @@ export function OrderModal({
       document.body.style.overflow = "";
     };
   }, [open, onClose]);
+
+  // Fires once per real modal open (not once per page mount, since this
+  // modal stays mounted the whole time and just toggles `display`) — the
+  // ref resets on close so a customer who closes and reopens the modal
+  // later in the same visit produces a fresh "started checkout" signal
+  // instead of being silently suppressed. Real retargeting value: this was
+  // previously the only funnel-start point with zero pixel signal at all —
+  // every other landing page and the main /checkout both already had it.
+  const initiateCheckoutFired = useRef(false);
+  useEffect(() => {
+    if (!open) {
+      initiateCheckoutFired.current = false;
+      return;
+    }
+    if (initiateCheckoutFired.current) return;
+    initiateCheckoutFired.current = true;
+    trackPixelEvent("InitiateCheckout", {
+      content_ids: [product.id],
+      content_type: "product",
+      value: product.price,
+      currency: "DZD",
+    });
+  }, [open, product.id, product.price]);
 
   const carrierReady = carrierDataReady(company, cache);
   const wilayaList = carrierReady ? wilayasFor(company, cache) : [];
@@ -160,6 +183,11 @@ export function OrderModal({
       // read as an order failure to the customer — see the outer catch
       // below, which only ever means saveOrder() itself failed.
       try {
+        // Advanced Matching: only fired here, never earlier — this is the
+        // first point in the funnel where the phone/name have actually
+        // passed validation (the `bad` checks above), so it's the first
+        // point where handing them to Meta is safe/meaningful.
+        setAdvancedMatching({ phone: order.phone, firstName: order.customer.split(" ")[0] });
         trackPixelEvent(
           "Purchase",
           {
@@ -170,6 +198,16 @@ export function OrderModal({
           },
           { eventID: orderRef.id }
         );
+        // Server-side CAPI double-send, same eventID for dedup — no-ops
+        // until META_CAPI_ACCESS_TOKEN is configured (app/api/meta-capi).
+        sendCapiPurchase({
+          eventId: orderRef.id,
+          contentIds: order.items.map((item) => item.id),
+          value: order.total,
+          currency: "DZD",
+          phone: order.phone,
+          firstName: order.customer.split(" ")[0],
+        });
       } catch (trackingErr) {
         console.error("[DS] trackPixelEvent Purchase", trackingErr);
       }

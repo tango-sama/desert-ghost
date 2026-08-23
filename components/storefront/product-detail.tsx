@@ -75,6 +75,10 @@ export function ProductDetail({
 
   function handleWhatsApp() {
     const text = `مرحباً، أريد طلب هذا المنتج:\n${title}\nالسعر: ${priceFmt(product.price)}\nالكمية: ${qty}`;
+    // Meta's "Contact" standard event: a direct message-the-business intent,
+    // distinct from AddToCart/InitiateCheckout — this button skips the cart
+    // entirely, so without this the intent was invisible to the Pixel.
+    trackPixelEvent("Contact", { content_ids: [product.id], content_name: title });
     window.open(waLink(settings, text), "_blank");
   }
 

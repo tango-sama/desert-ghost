@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { SiteSettings } from "@/lib/firebase";
 import { saveOrder } from "@/lib/firebase";
 import { generateOrderNumber } from "@/lib/order";
+import { sendCapiPurchase, setAdvancedMatching, trackPixelEvent } from "@/lib/meta-pixel";
 import {
   carrierDataReady,
   communesForCarrier,
@@ -54,6 +55,7 @@ export function OrderModal({
   const [errors, setErrors] = useState<Partial<Record<keyof Pending, boolean>>>({});
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<SuccessInfo | null>(null);
+  const [submitError, setSubmitError] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -67,6 +69,26 @@ export function OrderModal({
       document.body.style.overflow = "";
     };
   }, [open, onClose]);
+
+  // Fires once per real modal open (not once per page mount, since this
+  // modal stays mounted the whole time and just toggles `display`) — the
+  // ref resets on close so a customer who closes and reopens the modal
+  // later in the same visit produces a fresh "started checkout" signal.
+  const initiateCheckoutFired = useRef(false);
+  useEffect(() => {
+    if (!open) {
+      initiateCheckoutFired.current = false;
+      return;
+    }
+    if (initiateCheckoutFired.current) return;
+    initiateCheckoutFired.current = true;
+    trackPixelEvent("InitiateCheckout", {
+      content_ids: [product.id],
+      content_type: "product",
+      value: product.price,
+      currency: "DZD",
+    });
+  }, [open, product.id, product.price]);
 
   const carrierReady = carrierDataReady(company, cache);
   const wilayaList = carrierReady ? wilayasFor(company, cache) : [];
@@ -92,6 +114,7 @@ export function OrderModal({
     setPending(EMPTY_PENDING);
     setErrors({});
     setSuccess(null);
+    setSubmitError(false);
     onClose();
   }
 
@@ -113,6 +136,7 @@ export function OrderModal({
     }
 
     setSubmitting(true);
+    setSubmitError(false);
     const num = generateOrderNumber();
     const order = {
       num,
@@ -133,13 +157,48 @@ export function OrderModal({
       total: subtotal + fee,
       source: "landing_carnitine",
     };
+    // Purchase must only ever fire from this success path — never from the
+    // click above, never from validation. `orderRef.id` doubles as the
+    // Pixel eventID so a future server-side CAPI Purchase for this same
+    // order can dedupe against this one. Same pattern as
+    // glutathione/order-modal.tsx.
     try {
-      await saveOrder(order);
+      const orderRef = await saveOrder(order);
+      // Isolated from the order-creation try/catch on purpose: the order is
+      // already saved at this point, so a broken/blocked fbq must never
+      // read as an order failure to the customer.
+      try {
+        setAdvancedMatching({ phone: order.phone, firstName: order.customer.split(" ")[0] });
+        trackPixelEvent(
+          "Purchase",
+          {
+            value: order.total,
+            currency: "DZD",
+            content_ids: order.items.map((item) => item.id),
+            content_type: "product",
+          },
+          { eventID: orderRef.id }
+        );
+        // Server-side CAPI double-send, same eventID for dedup — no-ops
+        // until META_CAPI_ACCESS_TOKEN is configured (app/api/meta-capi).
+        sendCapiPurchase({
+          eventId: orderRef.id,
+          contentIds: order.items.map((item) => item.id),
+          value: order.total,
+          currency: "DZD",
+          phone: order.phone,
+          firstName: order.customer.split(" ")[0],
+        });
+      } catch (trackingErr) {
+        console.error("[DS] trackPixelEvent Purchase", trackingErr);
+      }
+      setSuccess({ firstName: order.customer.split(" ")[0] ?? order.customer, phone: order.phone, qty });
     } catch (err) {
       console.error("[DS] saveOrder", err);
+      setSubmitError(true);
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
-    setSuccess({ firstName: order.customer.split(" ")[0] ?? order.customer, phone: order.phone, qty });
   }
 
   return (
@@ -297,6 +356,11 @@ export function OrderModal({
                   </div>
                 </div>
 
+                {submitError && (
+                  <p className={styles.cnNote} style={{ color: "var(--destructive)" }}>
+                    تعذّر إرسال الطلب، يرجى المحاولة مجدداً.
+                  </p>
+                )}
                 <button type="button" className={styles.cnSubmit} disabled={submitting} onClick={submit}>
                   {submitting ? "⏳ جاري الإرسال..." : "✅ تأكيد الطلب"}
                 </button>

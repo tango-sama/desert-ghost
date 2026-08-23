@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { SiteSettings } from "@/lib/firebase";
 import { saveOrder } from "@/lib/firebase";
 import { generateOrderNumber } from "@/lib/order";
+import { sendCapiPurchase, setAdvancedMatching, trackPixelEvent } from "@/lib/meta-pixel";
 import {
   carrierDataReady,
   communesForCarrier,
@@ -64,6 +65,7 @@ export function OrderModal({
   const [errors, setErrors] = useState<Partial<Record<keyof Pending, boolean>>>({});
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<SuccessInfo | null>(null);
+  const [submitError, setSubmitError] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -93,6 +95,36 @@ export function OrderModal({
   const picked = products.filter((p) => selected.includes(p.id));
   const subtotal = picked.reduce((n, p) => n + p.price, 0);
 
+  // Fires once per real modal open (not once per page mount, since this
+  // modal stays mounted the whole time and just toggles `display`) — the
+  // ref resets on close so reopening later in the same visit produces a
+  // fresh "started checkout" signal. Uses whatever's selected at the
+  // moment the modal opens (a specific product if opened via that
+  // product's own "order" button — CollagenPage batches that selection
+  // with the same state update that opens the modal — or every product
+  // when opened generically from the hero/CTA with nothing pre-picked
+  // yet), deliberately NOT kept in sync with later in-modal selection
+  // changes (dep array is `[open]` only) since InitiateCheckout marks the
+  // start of checkout, not every edit to the cart within it.
+  const initiateCheckoutFired = useRef(false);
+  useEffect(() => {
+    if (!open) {
+      initiateCheckoutFired.current = false;
+      return;
+    }
+    if (initiateCheckoutFired.current) return;
+    initiateCheckoutFired.current = true;
+    const startIds = picked.length ? picked.map((p) => p.id) : products.map((p) => p.id);
+    const startValue = picked.length ? subtotal : products.reduce((n, p) => n + p.price, 0);
+    trackPixelEvent("InitiateCheckout", {
+      content_ids: startIds,
+      content_type: "product",
+      value: startValue,
+      currency: "DZD",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [open]);
+
   function toggle(id: string) {
     setSelected((s) => (s.includes(id) ? s.filter((x) => x !== id) : [...s, id]));
   }
@@ -107,6 +139,7 @@ export function OrderModal({
     setPending(EMPTY_PENDING);
     setErrors({});
     setSuccess(null);
+    setSubmitError(false);
     onClose();
   }
 
@@ -132,6 +165,7 @@ export function OrderModal({
     }
 
     setSubmitting(true);
+    setSubmitError(false);
     const num = generateOrderNumber();
     const order = {
       num,
@@ -152,18 +186,53 @@ export function OrderModal({
       total: subtotal + fee,
       source: "landing_collagen",
     };
+    // Purchase must only ever fire from this success path — never from the
+    // click above, never from validation. `orderRef.id` doubles as the
+    // Pixel eventID so a future server-side CAPI Purchase for this same
+    // order can dedupe against this one. Same pattern as
+    // glutathione/order-modal.tsx.
     try {
-      await saveOrder(order);
+      const orderRef = await saveOrder(order);
+      // Isolated from the order-creation try/catch on purpose: the order is
+      // already saved at this point, so a broken/blocked fbq must never
+      // read as an order failure to the customer.
+      try {
+        setAdvancedMatching({ phone: order.phone, firstName: order.customer.split(" ")[0] });
+        trackPixelEvent(
+          "Purchase",
+          {
+            value: order.total,
+            currency: "DZD",
+            content_ids: order.items.map((item) => item.id),
+            content_type: "product",
+          },
+          { eventID: orderRef.id }
+        );
+        // Server-side CAPI double-send, same eventID for dedup — no-ops
+        // until META_CAPI_ACCESS_TOKEN is configured (app/api/meta-capi).
+        sendCapiPurchase({
+          eventId: orderRef.id,
+          contentIds: order.items.map((item) => item.id),
+          value: order.total,
+          currency: "DZD",
+          phone: order.phone,
+          firstName: order.customer.split(" ")[0],
+        });
+      } catch (trackingErr) {
+        console.error("[DS] trackPixelEvent Purchase", trackingErr);
+      }
+      setSuccess({
+        firstName: order.customer.split(" ")[0] ?? order.customer,
+        namesList: picked.map((p) => p.title).join("، "),
+        phone: order.phone,
+        count: picked.length,
+      });
     } catch (err) {
       console.error("[DS] saveOrder", err);
+      setSubmitError(true);
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
-    setSuccess({
-      firstName: order.customer.split(" ")[0] ?? order.customer,
-      namesList: picked.map((p) => p.title).join("، "),
-      phone: order.phone,
-      count: picked.length,
-    });
   }
 
   return (
@@ -335,6 +404,11 @@ export function OrderModal({
                   </div>
                 )}
 
+                {submitError && (
+                  <p className={styles.clNote} style={{ color: "var(--destructive)" }}>
+                    تعذّر إرسال الطلب، يرجى المحاولة مجدداً.
+                  </p>
+                )}
                 <button type="button" className={styles.clSubmit} disabled={submitting} onClick={submit}>
                   {submitting ? "⏳ جاري الإرسال..." : "✅ تأكيد الطلب"}
                 </button>

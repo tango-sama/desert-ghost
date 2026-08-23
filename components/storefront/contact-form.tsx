@@ -7,14 +7,19 @@ import { Textarea } from "@/components/ui/textarea";
 import { Button } from "@/components/ui/button";
 import { saveMessage, type SiteSettings } from "@/lib/firebase";
 import { waLink } from "@/lib/whatsapp";
+import { trackPixelEvent } from "@/lib/meta-pixel";
 import { SectionHead } from "@/components/storefront/section-head";
 
 export function ContactForm({ settings }: { settings: SiteSettings }) {
   const [name, setName] = useState("");
   const [phone, setPhone] = useState("");
   const [message, setMessage] = useState("");
-  const [status, setStatus] = useState<"idle" | "sending" | "sent">("idle");
+  const [status, setStatus] = useState<"idle" | "sending" | "sent" | "error">("idle");
 
+  // The success UI, form clear, WhatsApp handoff, and Lead pixel event must
+  // only ever follow a CONFIRMED saveMessage() — previously this swallowed
+  // the error and fell through to "sent" regardless, same false-success bug
+  // checkout-form.tsx had before its own fix (see progress-tracker.md).
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     if (!name.trim() || !message.trim()) return;
@@ -23,7 +28,13 @@ export function ContactForm({ settings }: { settings: SiteSettings }) {
       await saveMessage({ name: name.trim(), phone: phone.trim(), message: message.trim() });
     } catch (err) {
       console.error("[DS] saveMessage", err);
+      setStatus("error");
+      return;
     }
+    // A genuine inbound inquiry — Meta's "Lead" standard event, not
+    // "Contact" (that's for a direct WhatsApp click with no form/contact
+    // info attached, see product-detail.tsx's handleWhatsApp).
+    trackPixelEvent("Lead", { content_name: "contact_form" });
     setStatus("sent");
     if (settings.waEnabled !== false) {
       const text = `مرحباً، اسمي ${name}${phone ? `\nهاتف: ${phone}` : ""}\n\n${message}`;
@@ -99,6 +110,11 @@ export function ContactForm({ settings }: { settings: SiteSettings }) {
             <label className="mb-2 block text-[0.74rem] font-extrabold text-[var(--ink-2)]">رسالتكِ</label>
             <Textarea value={message} onChange={(e) => setMessage(e.target.value)} required placeholder="كيف يمكننا مساعدتكِ؟" />
           </div>
+          {status === "error" && (
+            <p className="mb-3 text-center text-sm font-bold text-destructive">
+              تعذّر إرسال الرسالة، يرجى المحاولة مجدداً.
+            </p>
+          )}
           <Button type="submit" disabled={status === "sending"} className="w-full rounded-full" size="lg">
             {status === "sent" ? "تم الإرسال ✓" : status === "sending" ? "جارٍ الإرسال..." : "إرسال الرسالة"}
           </Button>

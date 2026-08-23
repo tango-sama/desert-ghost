@@ -2628,7 +2628,75 @@ not the intended state (see `development-workflow.md`).
   in a live browser session or a real Meta Events Manager check (same
   standing sandbox constraint as the other Pixel entries above).
 
+- Follow-up (same day): full Pixel signal-quality pass across every
+  remaining funnel, prompted by an owner ask for the max useful signal Meta
+  can get out of this site. An audit turned up `/sunguard`, `/collagen`,
+  and `/carnitine` firing ZERO pixel events despite being structurally
+  identical to `/glutathione` (which had `ViewContent`/`Purchase` already);
+  `seller-order-modal.tsx` (a real order-saving path) firing nothing;
+  every WhatsApp/contact-form inquiry going untracked; no Advanced
+  Matching; no server-side Conversions API. See
+  `architecture-context.md`'s Analytics section for the full, current
+  picture — summary of what changed:
+  - `/sunguard`, `/collagen`, `/carnitine`, and the `/glutathione-3d` A/B
+    variant now all fire `ViewContent` (page mount) and `InitiateCheckout`
+    (order-modal open, ref resets on close so a reopen fires again) —
+    `/glutathione` itself was retrofitted with `InitiateCheckout` too,
+    since it had never had it either. `/sunguard`/`/collagen`/`/carnitine`'s
+    `order-modal.tsx`s now also fire `Purchase` after a confirmed
+    `saveOrder()` — this required fixing the same swallowed-`saveOrder()`-
+    error bug `checkout-form.tsx` had before its 2026-08-22 fix (`submit()`
+    used to log the error and fall through to the success UI regardless);
+    added `submitError` state/UI to match `/glutathione`'s already-correct
+    modal.
+  - `seller-order-modal.tsx` (PDP "leave order with seller" flow) now fires
+    `Purchase` on a confirmed order — it saves a real order via the same
+    `saveOrder()` `checkout-form.tsx` uses and previously fired nothing.
+  - New non-order signals: `contact-form.tsx` fires `Lead` (and got the
+    same swallowed-error fix as above — success/WhatsApp-handoff/`Lead` now
+    gate on a real `saveMessage()` resolution); `product-detail.tsx`'s
+    direct-WhatsApp button and the site-wide `whatsapp-float.tsx` button
+    (converted to a client component for this) both fire `Contact`;
+    `products-browser.tsx` fires `Search` with `search_string`, debounced
+    ~600ms after typing stops and deduped per distinct settled query.
+  - Advanced Matching: new `setAdvancedMatching()` in `lib/meta-pixel.ts`
+    re-issues `fbq('init', pixelId, { ph, fn })` with the customer's
+    validated phone/name right before every `Purchase` call (checkout,
+    every landing order-modal, seller-order-modal) — previously `fbq('init',
+    ...)` never passed any matching data, so Meta could only match events
+    to a browser cookie, never a real identity. Phone normalized to E.164
+    via the new exported `normalizeDzPhone()`.
+  - Server-side Conversions API: new `app/api/meta-capi/route.ts` (Next.js
+    Route Handler, same convention as `app/api/storage-closet` — not the
+    separate `trinkl` Firebase Functions) double-sends `Purchase` to the
+    Graph API via a new `sendCapiPurchase()` helper, fire-and-forget,
+    called alongside every client-side `Purchase` call above with the same
+    `eventID` for dedup. **NOT YET ACTIVE** — needs `META_CAPI_ACCESS_TOKEN`
+    (Business Manager → System Users → generate a token with
+    pixel/ads_management access), which nothing in this repo has yet (same
+    "owner must generate + set the env var on whichever platform serves
+    production" situation as `FIREBASE_SERVICE_ACCOUNT_KEY` above). Until
+    it's set, the route is a documented no-op (`{ skipped: true }`) — every
+    call site already fires-and-forgets it, so this can't break checkout
+    either way.
+  Verified: `npx tsc --noEmit`, `npx eslint` on every touched file, and
+  `npm run build` all clean. NOT exercised: any of this against real Meta
+  infrastructure (same standing sandbox constraint as every prior Pixel
+  entry) — once deployed, verify via Meta Events Manager's Test Events tool
+  + the Meta Pixel Helper browser extension, and check the "Event Match
+  Quality" score after Advanced Matching lands. CAPI additionally can't be
+  exercised at all until `META_CAPI_ACCESS_TOKEN` is set.
+
 ## Next Up
+
+- **Owner action required**: generate a Meta CAPI access token (Business
+  Manager → System Users → a token with pixel/ads_management access) and
+  set it as `META_CAPI_ACCESS_TOKEN` on whichever platform serves
+  production traffic, to activate the server-side `Purchase` double-send
+  in `app/api/meta-capi/route.ts` (see the entry above and
+  `architecture-context.md`'s Analytics section) — until then it's a
+  no-op, same fail-safe pattern as the Storage Counter endpoint's missing
+  `FIREBASE_SERVICE_ACCOUNT_KEY` above.
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)
   to also sync each carrier's stop-desk/agency list into
