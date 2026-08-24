@@ -3036,4 +3036,50 @@ not the intended state (see `development-workflow.md`).
   clean, and a real `npm run dev` + `curl` check confirmed the search
   icon renders in the nav (`aria-label="بحث"`) and that
   `/products?q=عطر` server-renders the search input pre-filled with
-  `value="عطر"`.
+  `value="عطر"`.- 2026-08-24: Meta Conversions API (CAPI) reworked from a client-relayed
+  Purchase-only stub into a real server-side implementation, and
+  `ViewContent` added as a second dual-sent event. New `lib/meta-capi.ts`
+  holds the SERVER-ONLY transport (`sendMetaEvent()` + `buildUserData()`);
+  `app/api/meta-capi/route.ts` was rewritten around it. Three real defects
+  in the previous version are fixed: (1) the endpoint accepted a
+  client-supplied `value`, so anyone with curl could inject fake
+  conversions — Purchase now sends nothing but `orderId` and the route
+  re-reads the order from Firestore with the Admin SDK, deriving value/
+  `contents`/`num_items`/`order_id`/matching from the stored document, so a
+  Purchase can only exist for an order that genuinely does; (2) the
+  server-side phone hash was computed over the `+213…` form, which Meta can
+  never match — it now hashes digits-only per Meta's spec (this silently
+  destroyed all server-side phone matching); (3) there was no idempotency —
+  a Firestore transaction now claims the send via `meta.purchaseInFlight`
+  (5-minute stale-claim escape) and records `meta.{purchaseEventId,
+  purchaseSent,purchaseSentAt,purchaseError}`, so a retry can never produce
+  a second Purchase while a genuine failure can still be retried. Event ids
+  are built in exactly one place each (`purchaseEventId()` /
+  `trackViewContent()`) so the browser and server copies cannot drift;
+  Purchase's is derived from the Firestore order id and is therefore stable
+  across retries. Match quality raised well beyond the previous `ph`+`fn`:
+  `ln`, `ct` (Latin `communeFr`/`baladiya`), `st` (Latin `wilayaFr`),
+  `country`, and `external_id` — a random per-browser `ds_vid` written by
+  the base pixel script BEFORE `fbq('init')` so every browser event carries
+  it, including the ones with no server twin. `_fbc` is now reconstructed
+  from a `fbclid` URL param when the cookie is absent, so ad-click
+  attribution survives a blocked pixel. Call sites collapsed onto two
+  helpers (`trackPurchase()` × 6 order flows, `trackViewContent()` × 6
+  product/landing pages); no checkout logic, order schema, or UI changed.
+  Verified: `npx tsc --noEmit` clean; `npm run lint` clean apart from the
+  same two pre-existing unrelated findings (`cart-drawer.tsx`,
+  `*/product-section.tsx`); `npm run build` clean; the built client bundles
+  contain neither `META_CAPI_ACCESS_TOKEN` nor `graph.facebook.com`
+  (server/client boundary holds); a 19-assertion runtime check of the
+  hashing/normalization and event-id construction passed (including proof
+  the digits-only phone hash differs from the old `+`-form); and a live
+  `next start` + curl run confirmed every failure path returns HTTP 200
+  (garbage body, unknown event, forged Purchase for a nonexistent order,
+  Graph API error) with the access token never appearing in any log line.
+  NOT verifiable from the dev sandbox: a successful Graph API round-trip —
+  `graph.facebook.com` is outside this environment's egress allowlist, so
+  the send path was exercised only through its error branch. Needs
+  confirming in Events Manager → Test Events after `META_CAPI_ACCESS_TOKEN`
+  and `FIREBASE_SERVICE_ACCOUNT_KEY` are set (Purchase CAPI now depends on
+  the latter too — without Admin credentials the order can't be verified
+  and nothing is sent).

@@ -6,7 +6,7 @@ import type { Product } from "@/lib/firebase";
 import { benefits, priceFmt, priceNum, productImages } from "@/lib/firebase";
 import { waLink } from "@/lib/whatsapp";
 import type { SiteSettings } from "@/lib/firebase";
-import { trackPixelEvent } from "@/lib/meta-pixel";
+import { trackPixelEvent, trackViewContent } from "@/lib/meta-pixel";
 import { useCartStore } from "@/stores/cart-store";
 import { SellerOrderBadge, SellerOrderModal, SellerOrderTrigger } from "@/components/storefront/seller-order-modal";
 
@@ -49,12 +49,10 @@ export function ProductDetail({
   useEffect(() => {
     if (viewContentFired.current) return;
     viewContentFired.current = true;
-    trackPixelEvent("ViewContent", {
-      content_ids: [product.id],
-      content_type: "product",
-      content_name: title,
+    trackViewContent({
+      contentIds: [product.id],
+      contentName: title,
       value: priceNum(product.price),
-      currency: "DZD",
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [product.id]);
