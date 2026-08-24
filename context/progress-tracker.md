@@ -2687,6 +2687,50 @@ not the intended state (see `development-workflow.md`).
   Quality" score after Advanced Matching lands. CAPI additionally can't be
   exercised at all until `META_CAPI_ACCESS_TOKEN` is set.
 
+## Completed (this session, 2026-08-24)
+
+- Yalidine delivered-parcel Excel export (NOT RUN AGAINST LIVE DATA — see
+  below). New standalone ops script `scripts/yalidine-export.mjs` plus a
+  dependency-free OOXML writer `scripts/lib/xlsx.mjs` and `scripts/README.md`.
+  Pulls `GET /v1/parcels/` from the Yalidine REST API, keeps only parcels
+  Yalidine reports as successfully delivered (`last_status === "Livré"`), and
+  writes an `.xlsx` with a "Delivered Parcels" sheet (28 columns, frozen +
+  autofiltered header, real Excel dates, numeric money, phone kept as text so
+  leading zeros survive) and a "Summary" sheet (counts, total parcel value,
+  total delivery fees, per-wilaya breakdown). Read-only — it never creates,
+  edits or cancels a parcel.
+  Credentials come from `--id/--token`, `YALIDINE_API_ID`/`YALIDINE_API_TOKEN`,
+  or `.env.local`/`.env`; they are only ever sent as request headers and never
+  written to the workbook, so the "secrets stay out of committed/client-visible
+  files" invariant in `code-standards.md` holds. The script is deliberately
+  standalone (not a Cloud Function, not an admin-panel view) because it is a
+  one-off reporting pull, not part of the order lifecycle.
+  Paging follows `has_more`, de-duplicates by tracking number (a live list can
+  shift under a paged read), backs off on 429/5xx, and respects Yalidine's
+  `second-quota-left` / `minute-quota-left` headers. The status filter is sent
+  server-side AND re-checked locally so an ignored filter cannot leak
+  undelivered parcels into a report titled "delivered".
+  Verified in the sandbox against a mock Yalidine server reproducing the real
+  contract (auth headers, `has_more`/`total_data`/`data`, quota headers,
+  status + `date_last_status` range filters): multi-page paging (3 pages at
+  `--page-size 25`), the date-range filter, a 401 producing a clean
+  credentials message (exit 1), and missing credentials (exit 2). The produced
+  workbook was parsed by two independent readers — Python `openpyxl` and
+  Node SheetJS — both confirming valid structure, both sheets, freeze pane,
+  autofilter, dates as real dates, money as numbers, UTF-8 (`Livré`, `Cité`)
+  intact, XML-hostile text (`Nom<24>&`) round-tripping, and ASCII control
+  characters stripped from free-text address fields. `npx eslint scripts/`
+  clean.
+  NOT verifiable from the dev sandbox, and NOT yet done: the actual data pull.
+  `api.yalidine.app` is outside this environment's egress allowlist (the proxy
+  answers 403 to CONNECT), and this session has no Yalidine credentials — they
+  live only in the `private/yalidine` Firestore doc, which is not
+  client-readable by design. The script therefore has never touched the real
+  API. The owner must run it locally with real credentials to produce the
+  workbook, and confirm the delivered count matches Yalidine's own dashboard.
+  If Yalidine's parcel list turns out to expose a field this store needs that
+  isn't in the 28 exported columns, `--json` dumps the raw records to check.
+
 ## Next Up
 
 - **Owner action required**: generate a Meta CAPI access token (Business
