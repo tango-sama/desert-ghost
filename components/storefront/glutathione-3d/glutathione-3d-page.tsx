@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { SiteSettings } from "@/lib/firebase";
 import { useDeliveryData } from "@/hooks/use-delivery-data";
-import { trackPixelEvent } from "@/lib/meta-pixel";
+import { trackViewContent } from "@/lib/meta-pixel";
 import { TikTokLiveButton } from "@/components/storefront/tiktok-live-button";
 import { Topbar } from "@/components/storefront/glutathione/topbar";
 import { Benefits } from "@/components/storefront/glutathione/benefits";
@@ -66,12 +66,10 @@ export function Glutathione3DPage({
   useEffect(() => {
     if (viewContentFired.current) return;
     viewContentFired.current = true;
-    trackPixelEvent("ViewContent", {
-      content_ids: [product.id],
-      content_type: "product",
-      content_name: product.title,
+    trackViewContent({
+      contentIds: [product.id],
+      contentName: product.title,
       value: product.price,
-      currency: "DZD",
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

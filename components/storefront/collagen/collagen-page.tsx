@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { SiteSettings } from "@/lib/firebase";
 import { useDeliveryData } from "@/hooks/use-delivery-data";
-import { trackPixelEvent } from "@/lib/meta-pixel";
+import { trackViewContent } from "@/lib/meta-pixel";
 import { TikTokLiveButton } from "@/components/storefront/tiktok-live-button";
 import { Topbar } from "./topbar";
 import { Hero } from "./hero";
@@ -70,11 +70,9 @@ export function CollagenPage({
   useEffect(() => {
     if (viewContentFired.current) return;
     viewContentFired.current = true;
-    trackPixelEvent("ViewContent", {
-      content_ids: products.map((p) => p.id),
-      content_type: "product",
+    trackViewContent({
+      contentIds: products.map((p) => p.id),
       value: products.reduce((sum, p) => sum + p.price, 0),
-      currency: "DZD",
     });
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);

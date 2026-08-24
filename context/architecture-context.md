@@ -154,30 +154,65 @@
   the customer stops typing (debounced, and only once per distinct settled
   query — not per keystroke).
 - Advanced Matching: `lib/meta-pixel.ts`'s `setAdvancedMatching({ phone,
-  firstName })` re-issues `fbq('init', pixelId, { ph, fn })` with the
-  customer's validated phone/name right before every `Purchase` call above
-  (checkout, every landing order-modal, seller-order-modal) — the JS SDK
-  hashes these client-side before they ever leave the browser. This is what
-  lets Meta match an event to a real identity instead of just a browser
-  cookie; previously `fbq('init', ...)` never passed any matching data at
-  all. Phone is normalized to E.164 first (`normalizeDzPhone`, exported from
-  `lib/meta-pixel.ts` — Algerian local numbers are always `0[567]XXXXXXXX`
-  per `lib/delivery.ts`'s `isValidPhone`).
-- Server-side Conversions API (CAPI): `app/api/meta-capi/route.ts` (a Next.js
-  Route Handler, matching this repo's `app/api/storage-closet` convention —
-  not the separate `tango-sama/trinkl` Firebase Functions) double-sends
-  `Purchase` to the Graph API, called fire-and-forget via
-  `sendCapiPurchase()` alongside every client-side `Purchase` call above,
-  same `eventID` for dedup. Recovers conversions the client-side Pixel call
-  never reaches Meta with at all (ad-blockers/Safari ITP/iOS), which no
-  client-side fix can close. Needs `META_CAPI_ACCESS_TOKEN` (Business
-  Manager → System Users → a token with pixel/ads_management access) — NOT
-  YET SET, so this is currently a documented no-op (degrades gracefully,
-  same "missing credential" invariant as `lib/firebase-admin.ts`'s
-  `FIREBASE_SERVICE_ACCOUNT_KEY`). Once the token is set, it hashes
-  em/ph server-side (Graph API expects pre-hashed values, unlike the client
-  SDK) and includes `_fbp`/`_fbc` cookies read client-side and threaded
-  through the same call.
+  firstName })` re-issues `fbq('init', pixelId, { ph, fn, external_id })`
+  with the customer's validated phone/name right before every `Purchase`
+  (called from inside `trackPurchase()`, so no call site can forget it) —
+  the JS SDK hashes these client-side before they ever leave the browser.
+  Phone is normalized to E.164 first (`normalizeDzPhone` — Algerian local
+  numbers are always `0[567]XXXXXXXX` per `lib/delivery.ts`'s
+  `isValidPhone`).
+- Identity for browser-only events (`ds_vid` / `external_id`): the base
+  pixel script writes a random per-browser id to `localStorage.ds_vid`
+  BEFORE `fbq('init', ...)` and passes it as `external_id`, so every
+  browser event from page load onward carries it — including the ones with
+  no server twin (PageView, AddToCart, InitiateCheckout, Lead, Contact,
+  Search). This is Meta's documented fallback for events that can't be sent
+  with a shared event id. It is random, not derived from the person.
+- `_fbc` / `fbclid`: the same inline script reconstructs `_fbc` as
+  `fb.1.<ts>.<fbclid>` from the URL when the cookie is absent, so ad-click
+  attribution survives a blocked pixel. An existing `_fbc` is never
+  overwritten. `getFbc()` (`lib/meta-pixel.ts`) applies the same fallback
+  when reading.
+- Server-side Conversions API (CAPI): `lib/meta-capi.ts` is the SERVER-ONLY
+  transport (`sendMetaEvent()` + `buildUserData()`, which applies each PII
+  field's Meta-specified normalization before SHA-256); it is imported by
+  `app/api/meta-capi/route.ts` and by nothing else. The client half
+  (`lib/meta-pixel.ts`) never imports it — it only POSTs to that route — so
+  `META_CAPI_ACCESS_TOKEN` has no path into a browser bundle. The token
+  travels in the request BODY, not the query string, so it cannot leak into
+  a proxy/access log.
+- Two events are dual-sent, each with ONE shared event id built in a single
+  place so the browser and server copies cannot drift:
+  `Purchase` (`purchase_<firestoreOrderId>` — stable, so a retry reuses it
+  instead of minting a second conversion) and `ViewContent` (`vc_<uuid>`,
+  generated inside `trackViewContent()` which fires both copies).
+- Purchase is Firestore-verified and idempotent. Orders are created with
+  the CLIENT SDK (`saveOrder`), so there is no server-side creation hook to
+  hang Purchase off; instead the browser posts nothing but `orderId` and the
+  route re-reads that order with the Admin SDK, deriving value/`contents`/
+  `num_items`/`order_id` and all customer matching from the STORED
+  document. Consequences: a Purchase can only exist for an order that
+  genuinely exists (the endpoint cannot be used to inject conversions at an
+  arbitrary value, which the earlier client-supplied-`value` version
+  allowed anyone with curl), and Purchase CAPI needs
+  `FIREBASE_SERVICE_ACCOUNT_KEY` as well as `META_CAPI_ACCESS_TOKEN`.
+  A Firestore transaction claims the send via `meta.purchaseInFlight`
+  (+ a 5-minute stale-claim escape) and records
+  `meta.{purchaseEventId,purchaseSent,purchaseSentAt,purchaseError}` —
+  `purchaseSent: true` permanently blocks a duplicate, while a failed send
+  clears the claim so a genuine retry can still get through.
+- ViewContent has no Firestore record to verify against (landing-page
+  products are defined in code), so its payload is client-supplied and
+  validated/clamped instead — it carries no purchase value, so the
+  injection exposure Purchase had does not apply.
+- Every failure path returns 200 `{ skipped: true }` and every CAPI call is
+  fire-and-forget: a Meta outage, a missing credential, or a blocked `fbq`
+  can never surface as an order failure to the customer. Logs carry the
+  event name, event id and Meta's own error text — never the token, never
+  customer data.
+- `META_TEST_EVENT_CODE` (optional, env-driven, never hardcoded) routes
+  events to Events Manager → Test Events. `META_GRAPH_VERSION` overrides the
+  Graph version (default `v23.0`) without a code deploy.
 
 ## Auth Model
 

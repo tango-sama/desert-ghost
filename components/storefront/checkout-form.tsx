@@ -5,7 +5,7 @@ import Link from "next/link";
 import { Check, Minus, Plus, ShieldCheck, Trash2, Truck } from "lucide-react";
 import { priceFmt, saveOrder, type SiteSettings } from "@/lib/firebase";
 import { waLink } from "@/lib/whatsapp";
-import { sendCapiPurchase, setAdvancedMatching, trackPixelEvent } from "@/lib/meta-pixel";
+import { trackPixelEvent, trackPurchase } from "@/lib/meta-pixel";
 import { useCartStore, cartCount, cartTotal } from "@/stores/cart-store";
 import { useDeliveryData } from "@/hooks/use-delivery-data";
 import { useIsStaff, setStaffFlag } from "@/hooks/use-staff";
@@ -259,43 +259,22 @@ export function CheckoutForm({ settings }: { settings: SiteSettings }) {
       return;
     }
 
-    // Isolated from the saveOrder() try/catch on purpose: the order is
-    // already saved at this point, so a broken/blocked fbq must never read
-    // as an order failure to the customer. `orderRef.id` (the real
-    // Firestore order id) doubles as the Pixel eventID so a future
-    // server-side CAPI Purchase for this same order can dedupe against it
-    // instead of counting twice — same pattern as order-modal.tsx.
-    try {
-      // Advanced Matching: only fired here, never earlier — this is the
-      // first point in the funnel where phone/name have actually passed
-      // validation (the `bad` checks above), so it's the first point
-      // where handing them to Meta is safe/meaningful.
-      setAdvancedMatching({ phone: data.phone, firstName: data.customer.split(" ")[0] });
-      trackPixelEvent(
-        "Purchase",
-        {
-          value: total,
-          currency: "DZD",
-          content_ids: orderItems.map((item) => item.id),
-          content_type: "product",
-        },
-        { eventID: orderRef.id }
-      );
-      // Server-side CAPI double-send, same eventID for dedup — recovers
-      // this Purchase if the client-side call above never reaches Meta
-      // (ad-blocker/Safari ITP/iOS). No-ops until META_CAPI_ACCESS_TOKEN is
-      // configured (see app/api/meta-capi/route.ts).
-      sendCapiPurchase({
-        eventId: orderRef.id,
-        contentIds: orderItems.map((item) => item.id),
-        value: total,
-        currency: "DZD",
-        phone: data.phone,
-        firstName: data.customer.split(" ")[0],
-      });
-    } catch (trackingErr) {
-      console.error("[DS] trackPixelEvent Purchase", trackingErr);
-    }
+    // Fires BOTH the browser Pixel and the server-side CAPI copy with one
+    // shared event id (`purchase_<firestoreOrderId>`), built inside
+    // trackPurchase() so the two can never drift apart. Deliberately NOT
+    // wrapped in a try/catch: trackPurchase never throws — the Pixel call
+    // and the fire-and-forget CAPI post are each isolated internally — so
+    // a blocked fbq or an unreachable network can't read as an order
+    // failure to the customer. The server copy re-reads this order from
+    // Firestore and sends nothing that isn't in the saved document.
+    trackPurchase({
+      orderId: orderRef.id,
+      orderNumber: num,
+      items: orderItems,
+      value: total,
+      phone: data.phone,
+      firstName: data.customer.split(" ")[0],
+    });
 
     const message = buildMessage({
       num,
