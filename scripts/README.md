@@ -55,6 +55,40 @@ Two sheets:
 `--json <path>` additionally dumps the raw API records, useful when a column
 you need isn't in the sheet yet.
 
+### Meta customer list (`--meta-csv`)
+
+`--meta-csv <path>` also writes a Facebook/Meta **customer list**: one row per
+unique customer, ready to upload as a Custom Audience and use as a value-based
+lookalike seed.
+
+```bash
+node scripts/yalidine-export.mjs --meta-csv reports/meta-audience.csv
+node scripts/yalidine-export.mjs --meta-csv reports/meta-audience.csv --value-field price
+```
+
+Columns are `phone,country,value`:
+
+- **phone** — normalized to Meta's digits-only international form
+  (`213XXXXXXXXX`). Non-mobile or unparseable numbers are dropped and counted
+  in the run summary; a cell holding two numbers keeps the first.
+- **country** — always `dz`; Yalidine only ships inside Algeria.
+- **value** — the customer's **lifetime** total across all their delivered
+  parcels, so a repeat customer is one row carrying their full worth rather
+  than several rows each understating it. `--value-field` picks the source:
+  `product_to_collect` (default — the full amount collected at the door) or
+  `price` (product value only, excluding freight).
+
+Names and city/state are deliberately **not** included. Yalidine's
+`firstname`/`familyname` mix Arabic and Latin script and their order is
+inconsistent between records, so any split would be guesswork, and city/state
+add little to Meta's match rate without a reliable name to pair them with.
+Phone alone is a strong identifier in Algeria.
+
+**This file is customer PII in plaintext.** That is correct for the Ads Manager
+upload flow — your browser hashes it locally at upload time — but it must never
+be committed or sent anywhere else. Write it under `reports/`, which is
+gitignored along with the default workbook name.
+
 ### Notes
 
 - Yalidine's status filter is applied server-side *and* re-checked locally, so

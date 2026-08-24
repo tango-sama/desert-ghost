@@ -2731,6 +2731,34 @@ not the intended state (see `development-workflow.md`).
   If Yalidine's parcel list turns out to expose a field this store needs that
   isn't in the 28 exported columns, `--json` dumps the raw records to check.
 
+- Meta customer-list output added to the Yalidine export (2026-08-24, same
+  branch). `scripts/yalidine-export.mjs` gained `--meta-csv <path>` and
+  `--value-field product_to_collect|price`, plus exported helpers
+  `normalizePhone()` and `buildCustomerList()`. It emits a Facebook/Meta
+  customer list — `phone,country,value`, one row per UNIQUE customer with
+  their LIFETIME total across all delivered parcels — so refreshing the ad
+  audience is one script run instead of a manual dashboard export.
+  Phone is normalized to Meta's `213XXXXXXXXX` form (handles `+213`/`00213`/
+  leading-zero input, and a cell holding two numbers keeps the first);
+  unusable numbers are dropped and counted in the run summary. Country is
+  hardcoded `dz` (Yalidine is Algeria-only). Names and city/state are
+  deliberately excluded — `firstname`/`familyname` mix Arabic and Latin script
+  with inconsistent ordering, so a split would be guesswork, and geo adds
+  little to Meta's match rate without a reliable name beside it.
+  `.gitignore` now covers `/yalidine-delivered-*.xlsx` and `/reports/`: the
+  CSV is customer PII in plaintext (correct for Ads Manager, which hashes in
+  the browser at upload) and must never be committed.
+  Verified against the mock Yalidine server, extended to emit repeat customers
+  and messy phone cells: 60 delivered parcels collapsed to 17 unique customers
+  (15 repeat), matching an independently recomputed expectation exactly — same
+  customer set, zero value mismatches, 244,520 DA total. Edge cases confirmed:
+  two-numbers-in-one-cell rescued, `+213 660 12 34 56` normalized, `0` and
+  empty dropped, output sorted by value descending. `--value-field price`
+  gives 215,520 DA (the freight difference), and an invalid value exits 2.
+  The xlsx output is unaffected. `npx eslint scripts/` clean.
+  Still NOT run against the live API — `api.yalidine.app` remains outside this
+  environment's egress allowlist.
+
 ## Next Up
 
 - **Owner action required**: generate a Meta CAPI access token (Business

@@ -25,6 +25,15 @@ const DELIVERED_STATUS = "Livré";
 // Yalidine caps a page at 100 records; larger values are rejected.
 const MAX_PAGE_SIZE = 100;
 
+// Meta wants an ISO-3166 alpha-2 country, lowercased. Yalidine only ships
+// inside Algeria, so every customer this export can produce is Algerian.
+const CUSTOMER_COUNTRY = "dz";
+// Which parcel field represents what the customer was worth. `product_to_collect`
+// is the full amount collected at the door (product + freight); `price` is the
+// product value alone. The default matches the totals used for the existing
+// Meta audience, so refreshed uploads stay comparable to what is already there.
+const VALUE_FIELDS = ["product_to_collect", "price"];
+
 // ───────── config ─────────
 
 function loadDotEnv() {
@@ -68,6 +77,11 @@ Options:
   --token <api-token> Yalidine API token (else YALIDINE_API_TOKEN)
   --base-url <url>    Override the API base (testing only)
   --json <path>       Also dump the raw parcel JSON alongside the workbook
+  --meta-csv <path>   Also write a Meta customer-list CSV (one row per unique
+                      customer, phone + country + lifetime value) ready to
+                      upload as a Custom Audience / value-based lookalike seed
+  --value-field <f>   Which field is the customer's value in that CSV:
+                      product_to_collect (default) or price
   -h, --help          Show this help
 `.trim();
 
@@ -297,6 +311,66 @@ function summarySheet(parcels, meta) {
   };
 }
 
+// ───────── meta customer list ─────────
+//
+// Meta matches a customer list on hashed identifiers. Phone is the only strong
+// one this data carries: Yalidine's `firstname`/`familyname` mix Arabic and
+// Latin script and their order is inconsistent between records, so splitting a
+// name would be guesswork, and city/state add little to the match rate without
+// a name to pair them with. So the list is phone + country + value.
+//
+// Ads Manager hashes in the browser at upload time, so this file is written in
+// plaintext — do NOT commit it or pass it anywhere it isn't going straight to
+// Meta. It is customer PII.
+
+// An Algerian mobile in the digits-only form Meta expects: country code, no
+// "+", no separators. Returns "" for anything that isn't a mobile number.
+export function normalizePhone(value) {
+  // Operators sometimes land two numbers in one field ("0771... , 0551...");
+  // the first is the one the parcel was actually delivered against.
+  const first = String(value ?? "").split(/[,;/]| ou /i)[0];
+  let d = first.replace(/\D/g, "");
+  if (d.startsWith("00213")) d = d.slice(5);
+  else if (d.startsWith("213")) d = d.slice(3);
+  else if (d.startsWith("0")) d = d.slice(1);
+  return /^[567]\d{8}$/.test(d) ? "213" + d : "";
+}
+
+// Collapse parcels into one row per customer, summing what they were worth.
+// A repeat customer must be a single row carrying their lifetime value —
+// uploading them once per order would both duplicate the person and understate
+// their value to Meta's value-based model.
+export function buildCustomerList(parcels, valueField = VALUE_FIELDS[0]) {
+  const byPhone = new Map();
+  let unusable = 0;
+
+  for (const p of parcels) {
+    const phone = normalizePhone(p.contact_phone);
+    if (!phone) {
+      unusable++;
+      continue;
+    }
+    const amount = Number(p[valueField]);
+    const entry = byPhone.get(phone) ?? { phone, orders: 0, value: 0 };
+    entry.orders++;
+    entry.value += Number.isFinite(amount) ? amount : 0;
+    byPhone.set(phone, entry);
+  }
+
+  const customers = [...byPhone.values()].sort((a, b) => b.value - a.value);
+  return { customers, unusable };
+}
+
+// Every column is digits or the literal "dz", so no CSV quoting is needed.
+function writeMetaCsv(path, customers) {
+  const lines = ["phone,country,value"];
+  for (const c of customers) {
+    lines.push(`${c.phone},${CUSTOMER_COUNTRY},${Math.round(c.value)}`);
+  }
+  mkdirSync(dirname(path), { recursive: true });
+  writeFileSync(path, lines.join("\n") + "\n", "utf8");
+}
+
 // ───────── main ─────────
 
 async function main() {
@@ -331,6 +405,12 @@ async function main() {
       console.error(`${name} must be YYYY-MM-DD, got "${value}"`);
       return 2;
     }
+  }
+
+  const valueField = typeof args.value_field === "string" ? args.value_field : VALUE_FIELDS[0];
+  if (!VALUE_FIELDS.includes(valueField)) {
+    console.error(`--value-field must be one of ${VALUE_FIELDS.join(" | ")}, got "${valueField}"`);
+    return 2;
   }
 
   const today = new Date().toISOString().slice(0, 10);
@@ -389,6 +469,23 @@ async function main() {
     mkdirSync(dirname(jsonPath), { recursive: true });
     writeFileSync(jsonPath, JSON.stringify(delivered, null, 2));
     console.error(`Wrote ${jsonPath}`);
+  }
+
+  if (typeof args.meta_csv === "string") {
+    const csvPath = resolve(args.meta_csv);
+    const { customers, unusable } = buildCustomerList(delivered, valueField);
+    writeMetaCsv(csvPath, customers);
+    const repeat = customers.filter((c) => c.orders > 1).length;
+    const total = customers.reduce((t, c) => t + c.value, 0);
+    console.error(
+      `Wrote ${csvPath} — ${customers.length} unique customer(s) from ` +
+        `${delivered.length} parcel(s); ${repeat} repeat, ` +
+        `${Math.round(total).toLocaleString("en-US")} DA total (${valueField}).`
+    );
+    if (unusable > 0) {
+      console.error(`  note: ${unusable} parcel(s) had no usable mobile number and were skipped`);
+    }
+    console.error("  contains customer PII in plaintext — upload it to Meta, do not commit it.");
   }
 
   console.log(`Wrote ${out} — ${delivered.length} delivered parcel(s).`);
