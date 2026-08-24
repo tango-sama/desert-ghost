@@ -42,3 +42,8 @@ next-env.d.ts
 
 .vercel
 .env*
+
+# Delivered-parcel exports and Meta customer lists (scripts/yalidine-export.mjs).
+# These contain customer names, phone numbers and order values — never commit them.
+/yalidine-delivered-*.xlsx
+/reports/
