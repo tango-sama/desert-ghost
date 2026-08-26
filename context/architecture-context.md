@@ -214,6 +214,85 @@
   events to Events Manager → Test Events. `META_GRAPH_VERSION` overrides the
   Graph version (default `v23.0`) without a code deploy.
 
+## WhatsApp Cloud API (customer messaging)
+
+- Two different WhatsApp surfaces live in this repo and must not be confused.
+  `lib/whatsapp.ts` builds public `wa.me` deep links and is client-safe;
+  `lib/whatsapp-cloud.ts` talks to the Graph API **as the business** and is
+  server-only. Only the second one holds credentials.
+- Inbound: `app/api/whatsapp/route.ts`. `GET` answers Meta's one-time
+  verification handshake; `POST` receives messages. Two rules govern the POST
+  path and neither is optional:
+  1. `X-Hub-Signature-256` is HMAC-verified against the **raw** body
+     (`await req.text()`) before any parsing — re-serializing parsed JSON
+     changes key order and whitespace, and the HMAC would never match. An
+     unset `WHATSAPP_APP_SECRET` makes every request fail verification rather
+     than pass it.
+  2. The 200 goes out first. Meta retries with backoff and eventually
+     disables a slow or failing webhook, so the model call happens in
+     `after()` (`next/server`), never inline.
+- Storage: `wa_threads/{waId}` with a `messages/{wamid}` subcollection, written
+  server-side only by `lib/wa-store.ts` (Admin SDK). Message docs are keyed by
+  Meta's own `wamid`, which makes webhook retries idempotent by construction —
+  the same property carrier parcel creation has per order (invariant 5). The
+  admin panel READS this collection with the signed-in admin's own credentials
+  (`watchWaThreads` / `watchWaMessages` in `lib/admin.ts`).
+- **`wa_threads` holds customer phone numbers and message bodies, so it is in
+  the same admin-only class as `orders` and `messages`:** `firestore.rules`
+  must grant it `allow read, write: if isAdmin()` and nothing to anonymous
+  clients. Those rules live with the Cloud Functions project, not this repo.
+- Outbound: `app/api/whatsapp/send/route.ts`. **This is the first route here
+  that must not be open** — the other two (`meta-capi`, `storage-closet`) are
+  safely anonymous, but an unauthenticated send endpoint would let anyone send
+  WhatsApp messages from the shop's own number. Every request carries the
+  admin's Firebase ID token; `isAdminRequest()` (`lib/firebase-admin.ts`)
+  verifies it and checks the email against `ADMIN_EMAIL` — the same identity
+  `isAdmin()` recognizes in `firestore.rules`, so the two must be widened
+  together or not at all. It fails closed: a missing, malformed, expired or
+  unverifiable token is a 401, including when Admin credentials are absent.
+- **The 24-hour window.** WhatsApp accepts a free-form business reply only
+  within 24h of the customer's last inbound message. `waWindowOpen()` is the
+  single source of truth; the send route refuses a closed window with 409
+  before spending a Graph call, and the panel disables the composer and shows
+  the remaining time rather than letting the send fail opaquely.
+
+## AI reply drafting
+
+- `lib/whatsapp-ai.ts` (server-only) drafts a suggested reply per inbound
+  message with `claude-opus-5`. **Nothing is ever sent automatically** — a
+  draft is a suggestion the owner edits or approves in the panel's واتساب tab.
+- **Grounding is the design.** The model is never asked to recall anything
+  about the shop: `buildShopFacts()` assembles the catalog (via `priceFmt()` /
+  `benefits()`, so prices still flow through the shared helpers — invariant 6)
+  and the per-wilaya fee grid (via `baseFeeForCarrier()` over synced
+  `delivery_data`) into a facts block placed in front of the model on every
+  call. A price it has not been handed is a price it cannot quote. There is
+  deliberately no tool loop: at this catalog's size the facts fit in the
+  prompt, and inlining removes both a round trip and the chance of the model
+  answering from its own head when a lookup fails. `buildShopFacts()` is the
+  seam where a `lookup_products` tool would go if the catalog grew to
+  hundreds of products.
+- Facts are memoised ~60s so a burst of messages does not re-read the catalog
+  per message, and a price edit in the panel reaches the next minute's drafts.
+- Prompt caching: one `cache_control` breakpoint after the facts block, so
+  persona + catalog is a stable reused prefix and only the conversation varies
+  below it.
+- **Scope boundary: the AI path never reads `orders`.** Order-status lookups
+  and order-taking are deliberately out of scope, which keeps customer order
+  data out of the model context entirely. A question about a specific order, a
+  complaint, or a refund is answered with a short handoff instead, flagged for
+  the owner via `lib/wa-draft-text.ts` — whose marker is stripped from the
+  text wherever it appears, so an internal signal can never reach a customer.
+  Preserve this boundary if the feature grows.
+- Every failure is non-fatal: no `ANTHROPIC_API_KEY`, a rate limit, a refusal,
+  or an empty response leaves the message in the inbox with no draft, to be
+  answered by hand. Same degrade-gracefully contract as `getAdminDb()`.
+- Env: `WHATSAPP_VERIFY_TOKEN`, `WHATSAPP_APP_SECRET`,
+  `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_ACCESS_TOKEN`, optional
+  `WHATSAPP_GRAPH_VERSION` (default `v23.0`), plus `ANTHROPIC_API_KEY` and the
+  existing `FIREBASE_SERVICE_ACCOUNT_KEY`. None of them may appear in a
+  browser bundle (invariant 1) — verified by grepping `.next/static`.
+
 ## Auth Model
 
 - Customers browse and order anonymously — no customer accounts.

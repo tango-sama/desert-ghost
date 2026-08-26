@@ -3083,3 +3083,79 @@ not the intended state (see `development-workflow.md`).
   and `FIREBASE_SERVICE_ACCOUNT_KEY` are set (Purchase CAPI now depends on
   the latter too — without Admin credentials the order can't be verified
   and nothing is sent).
+
+
+- 2026-08-26: **AI-drafted WhatsApp replies (Meta Cloud API).** The shop's
+  only WhatsApp integration until now was a `wa.me` deep link
+  (`lib/whatsapp.ts`) plus the "رد" button in the الرسائل tab — every customer
+  conversation was answered by hand on a phone. This adds a real two-way
+  channel and an AI draft on top of it. Owner decisions recorded during
+  planning: **Meta WhatsApp Cloud API** as the channel (the only officially
+  supported programmatic route, and it reuses the Meta Business Manager
+  account already running the Pixel/CAPI); **AI drafts, owner approves** —
+  nothing reaches a customer without a tap; scope limited to **product/price
+  questions and delivery fees/FAQ**, with order-status lookups and in-chat
+  order-taking explicitly out of scope for now.
+  New server-only modules: `lib/whatsapp-cloud.ts` (Graph transport,
+  signature verification, 24h-window check), `lib/wa-store.ts` (Admin SDK
+  persistence for `wa_threads`), `lib/whatsapp-ai.ts` (the draft), and the
+  pure `lib/wa-draft-text.ts`. New routes: `app/api/whatsapp` (webhook) and
+  `app/api/whatsapp/send` (admin-authenticated outbound). New admin tab
+  واتساب (`components/admin/views/inbox-view.tsx`) with a live thread list,
+  the AI draft preloaded into an editable composer, and a 24h-window badge.
+  `lib/firebase-admin.ts` gained `getAdminAuth()` / `isAdminRequest()` —
+  the send route is the first in this repo that must not be open, since an
+  unauthenticated one would let anyone message customers from the shop's
+  number.
+  Three things worth remembering about the design: the webhook verifies the
+  HMAC against the RAW body before parsing (re-serialized JSON never
+  matches); it returns 200 before drafting, doing the model call in
+  `after()`, because Meta disables slow webhooks; and message docs are keyed
+  by Meta's `wamid`, so a webhook retry is idempotent by construction rather
+  than by a flag. The model is grounded on a Firestore-built facts block
+  rather than a tool loop, so it cannot quote a price it wasn't handed, and
+  the AI path never touches `orders`.
+  Verified: `npx tsc --noEmit` clean; `npm run lint` clean apart from the
+  same three pre-existing unrelated findings (`cart-drawer.tsx`,
+  `carnitine/product-section.tsx`, `sunguard/product-section.tsx`);
+  `npm run build` clean with both routes registered; the built client bundles
+  contain none of `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_APP_SECRET`,
+  `WHATSAPP_VERIFY_TOKEN`, `ANTHROPIC_API_KEY`, `graph.facebook.com`,
+  `api.anthropic.com`, nor the Anthropic SDK itself (server/client boundary
+  holds). Live `next start` + curl: 9/9 webhook checks (handshake echoes the
+  challenge, wrong token/mode/no-params → 403; valid signature → 200, bad and
+  missing signature → 403; a body tampered under a previously-valid signature
+  → 403; a malformed-but-signed body → 200 so Meta stops retrying) and 5/5
+  send-route auth checks (no header, junk bearer, non-bearer scheme, empty
+  bearer, and a well-formed **forged JWT claiming the admin email** all → 401,
+  with zero Graph calls attempted). 40 isolated assertions over the pure
+  logic: 23 on `parseInbound` (batched entries/changes, status callbacks with
+  no messages array, non-text types, blank bodies, seconds→ms timestamps,
+  per-`wa_id` profile-name matching rather than positional, garbage payloads)
+  and the window/signature edge cases including the exact 24h boundary; 17 on
+  `wa-draft-text` (the handoff marker stripped wherever it lands — last line,
+  mid-text, start, repeated, inline — and `toTurns` dropping leading outbound
+  messages so the first turn is always `user`). One real defect was caught
+  and fixed by those: stripping a whole-line marker left a stray blank line
+  mid-reply.
+  NOT verifiable from this sandbox: a real Graph API round-trip
+  (`graph.facebook.com` is outside the egress allowlist, same caveat as the
+  Meta CAPI entry above) and any live model call (no `ANTHROPIC_API_KEY` in
+  the sandbox) — so draft *quality* in Arabic has not been read yet, only the
+  code paths around it, which were confirmed to degrade to "no draft" rather
+  than to an error. Both need confirming after deploy.
+  **Open questions for the owner, blocking go-live:**
+  1. **Which phone number.** A number active in the WhatsApp Business *mobile
+     app* cannot also be on the Cloud API. Putting `213662705830` (the default
+     in `lib/whatsapp.ts`) on the API means it stops working on the phone —
+     accept that, or register a second number for the API.
+  2. **`firestore.rules` must gain `wa_threads` as `allow read, write: if
+     isAdmin()`** before the panel can read the inbox. Those rules live with
+     the Cloud Functions project, not this repo, and per
+     `context/ai-workflow-rules.md` a rules change is its own step, verified
+     with anonymous REST checks before and after deploy. Until it lands the
+     inbox will log a permissions error and stay empty.
+  3. Meta setup itself: add the WhatsApp product to the app, register the
+     number, mint a System User permanent token with
+     `whatsapp_business_messaging` + `whatsapp_business_management`, and point
+     the webhook at `https://<domain>/api/whatsapp` subscribed to `messages`.

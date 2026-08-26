@@ -18,11 +18,13 @@
 // even when Firestore is unreachable" invariant.
 import { getApps, initializeApp, cert, applicationDefault, type App } from "firebase-admin/app";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
+import { getAuth, type Auth } from "firebase-admin/auth";
 import { statsByProduct, type OrderLike, type Stats } from "@/lib/storage-counter";
 
 const PROJECT_ID = "desert-shop-24af9";
 
 let cached: Firestore | null | undefined;
+let cachedAuth: Auth | null | undefined;
 
 function initAdminApp(): App {
   const key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
@@ -65,5 +67,49 @@ export async function getOrderStats(): Promise<Record<string, Stats> | null> {
   } catch (e) {
     console.error("[DS] getOrderStats", e);
     return null;
+  }
+}
+
+// The single admin identity — the same account firestore.rules' isAdmin()
+// recognizes. Kept in lock step with that rule: widening one without the
+// other silently opens a hole.
+export const ADMIN_EMAIL = "tango0es@gmail.com";
+
+export function getAdminAuth(): Auth | null {
+  if (cachedAuth !== undefined) return cachedAuth;
+  try {
+    const app = getApps().length ? getApps()[0] : initAdminApp();
+    cachedAuth = getAuth(app);
+  } catch (e) {
+    console.error("[DS] firebase-admin auth init failed", e);
+    cachedAuth = null;
+  }
+  return cachedAuth;
+}
+
+/**
+ * Verify an `Authorization: Bearer <Firebase ID token>` header and confirm
+ * it belongs to the admin account.
+ *
+ * Route handlers in this repo were all safely anonymous until the WhatsApp
+ * send endpoint, which is not: an unauthenticated one would let anyone send
+ * messages from the shop's own WhatsApp number. Returns true ONLY on a
+ * verified token whose email matches ADMIN_EMAIL — every other outcome
+ * (missing header, malformed token, revoked session, unverifiable because
+ * Admin credentials aren't configured) is false, so a misconfiguration
+ * fails closed rather than open.
+ */
+export async function isAdminRequest(authHeader: string | null): Promise<boolean> {
+  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
+  if (!token) return false;
+  const auth = getAdminAuth();
+  if (!auth) return false;
+  try {
+    const decoded = await auth.verifyIdToken(token, true);
+    return decoded.email === ADMIN_EMAIL;
+  } catch {
+    // Expired, forged, or revoked — all the same answer, and deliberately
+    // not logged in detail: the token itself must never reach a log.
+    return false;
   }
 }

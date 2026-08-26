@@ -21,6 +21,8 @@ import {
   updateDoc as fsUpdateDoc,
   deleteDoc as fsDeleteDoc,
   onSnapshot,
+  orderBy,
+  query,
   type QuerySnapshot,
   type DocumentData,
 } from "firebase/firestore";
@@ -249,6 +251,98 @@ export function watchExpenses(cb: (expenses: Expense[]) => void): () => void {
       cb(mapDocs<Expense>(snap).sort((a, b) => (b.createdAt ?? 0) - (a.createdAt ?? 0))),
     (e) => console.error("[DS] watchExpenses", e)
   );
+}
+
+// ───────── WhatsApp conversations ─────────
+//
+// `wa_threads` is written server-side by the Cloud API webhook and the send
+// route (Admin SDK, see lib/wa-store.ts). The panel only ever READS it, with
+// the signed-in admin's own credentials — the collection carries customer
+// phone numbers and message bodies, so firestore.rules must keep it
+// admin-only, in the same class as `orders` and `messages`.
+
+export type WaDraft = {
+  text: string;
+  status: "pending" | "dismissed";
+  createdAt?: number;
+  model?: string;
+  handoff?: boolean;
+};
+
+export type WaThread = {
+  id: string;
+  waId?: string;
+  profileName?: string;
+  lastInboundAt?: number;
+  lastMessageAt?: number;
+  preview?: string;
+  unread?: boolean;
+  draft?: WaDraft | null;
+};
+
+export type WaMessage = {
+  id: string;
+  direction?: "in" | "out";
+  text?: string;
+  ts?: number;
+};
+
+export function watchWaThreads(cb: (threads: WaThread[]) => void): () => void {
+  return onSnapshot(
+    collection(db, "wa_threads"),
+    (snap) =>
+      cb(
+        mapDocs<WaThread>(snap).sort(
+          (a, b) => (b.lastMessageAt ?? 0) - (a.lastMessageAt ?? 0)
+        )
+      ),
+    // Reading this collection requires admin rules; a permission error here
+    // means the rules were not deployed, so it must be visible in the log
+    // rather than silently leaving the inbox empty.
+    (e) => console.error("[DS] watchWaThreads", e)
+  );
+}
+
+/** Live messages of one conversation, oldest first. */
+export function watchWaMessages(
+  waId: string,
+  cb: (messages: WaMessage[]) => void
+): () => void {
+  return onSnapshot(
+    query(collection(db, "wa_threads", waId, "messages"), orderBy("ts", "asc")),
+    (snap) => cb(mapDocs<WaMessage>(snap)),
+    (e) => console.error("[DS] watchWaMessages", e)
+  );
+}
+
+/** Clear a draft the owner dismissed, or the unread flag on open. */
+export function updateWaThread(waId: string, patch: Record<string, unknown>) {
+  return fsUpdateDoc(doc(db, "wa_threads", waId), patch);
+}
+
+/**
+ * Send a WhatsApp reply. Goes through the server route rather than the
+ * Graph API directly — the access token must never reach a browser bundle
+ * (architecture invariant 1) — and carries the admin's Firebase ID token so
+ * the route can verify the caller really is the admin.
+ */
+export async function sendWaReply(waId: string, text: string): Promise<{ ok: boolean; error?: string }> {
+  const user = auth.currentUser;
+  if (!user) return { ok: false, error: "signed_out" };
+  try {
+    const token = await user.getIdToken();
+    const res = await fetch("/api/whatsapp/send", {
+      method: "POST",
+      headers: { "Content-Type": "application/json", Authorization: `Bearer ${token}` },
+      body: JSON.stringify({ waId, text }),
+    });
+    const json = (await res.json().catch(() => null)) as { error?: string } | null;
+    if (!res.ok) return { ok: false, error: json?.error ?? `http_${res.status}` };
+    return { ok: true };
+  } catch (e) {
+    console.error("[DS] sendWaReply", e);
+    return { ok: false, error: "network" };
+  }
 }
 
 // ───────── admin writes (generic, same numeric-string ids as the old admin) ─────────
