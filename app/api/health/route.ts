@@ -12,7 +12,6 @@
 // where only someone with deployment access can read them. Presence booleans
 // for configuration are the most it reveals, which is what makes it safe to
 // leave in place rather than a temporary hack to be ripped out later.
-import type { NextRequest } from "next/server";
 
 export const dynamic = "force-dynamic";
 
@@ -32,7 +31,7 @@ async function probe(step: string, fn: () => Promise<string | null>): Promise<St
   }
 }
 
-export async function GET(_req: NextRequest) {
+export async function GET() {
   const steps: Step[] = [];
 
   // 1. Which credentials the runtime believes it has. Presence only.
