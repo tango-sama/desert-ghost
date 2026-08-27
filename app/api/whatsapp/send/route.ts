@@ -10,7 +10,7 @@
 // `isAdminRequest` fails closed — a missing, expired, forged or unverifiable
 // token is a 401, including when Admin credentials are not configured at all.
 import type { NextRequest } from "next/server";
-import { isAdminRequest } from "@/lib/firebase-admin";
+import { isAdminRequest } from "@/lib/firebase-admin-auth";
 import { sendText, waWindowOpen } from "@/lib/whatsapp-cloud";
 import { getThreadMeta, saveOutbound } from "@/lib/wa-store";
 

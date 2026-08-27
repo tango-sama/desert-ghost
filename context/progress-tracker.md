@@ -3263,3 +3263,38 @@ not the intended state (see `development-workflow.md`).
   confirmed to be the owner's production 500 — their log line was truncated
   ("Error: Failed t…"), which does not match this fault's message. Full text
   still needed.
+
+- 2026-08-27: **Split `lib/firebase-admin-auth.ts` out of
+  `lib/firebase-admin.ts` — a coupling introduced in `3f558b2` that put
+  `firebase-admin/auth` on the storefront's hottest path.**
+  Context: production was returning `FUNCTION_INVOCATION_FAILED` (500) on
+  `GET /`, and only on `/`. Two details from the owner's Vercel trace ruled
+  out the earlier ADC/unhandled-rejection theory: the function died in 1.25s
+  with **"External APIs: No outgoing requests"** — so it never reached the
+  metadata server or Firestore at all — which points at a module-load
+  failure rather than a runtime one. And `/` is the only *page* route that
+  imports `lib/firebase-admin` (via
+  `components/storefront/product-grid.tsx` → `getOrderStats`), which is
+  exactly the blast radius observed.
+  The WhatsApp work had added `import { getAuth } from "firebase-admin/auth"`
+  to `lib/firebase-admin.ts` for the send route's `isAdminRequest()`. Because
+  the storefront homepage imports `getOrderStats` from that same module,
+  every visitor's homepage render began pulling in Firebase Auth — a
+  dependency the storefront has no use for, on the most-hit route in the app.
+  The auth half now lives in `lib/firebase-admin-auth.ts`, which reuses the
+  shared app through a new exported `getAdminApp()` so the base module never
+  imports auth. Only `app/api/whatsapp/send/route.ts` imports it.
+  Verified via Next's own file traces (`.nft.json`), which is what actually
+  ships: the homepage trace went from carrying `firebase-admin/lib/auth` to
+  **0** references while keeping its 3 `firebase-admin/lib/firestore` ones,
+  and a sweep of every route confirms the send route is now the ONLY one
+  pulling auth (16 refs). Runtime: `/`, `/products`, `/categories`,
+  `/checkout`, `/amelhadj`, `/collagen` all 200, send route still 401,
+  zero unhandled rejections. tsc/lint/build clean.
+  HONEST CAVEAT: this is the leading suspect, not a proven diagnosis — the
+  crash could not be reproduced locally (it 200s here both before and after),
+  and Vercel's bundling differs from `next start`. What IS certain is that
+  the coupling was real, was mine, was unnecessary, and sat on the one route
+  that was failing. If `/` still 500s after this deploy, the next thing to
+  examine is the full stack trace from a fresh invocation, since the ADC
+  path is now unreachable on Vercel and this import is gone.

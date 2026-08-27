@@ -18,13 +18,11 @@
 // even when Firestore is unreachable" invariant.
 import { getApps, initializeApp, cert, applicationDefault, type App } from "firebase-admin/app";
 import { getFirestore, type Firestore } from "firebase-admin/firestore";
-import { getAuth, type Auth } from "firebase-admin/auth";
 import { statsByProduct, type OrderLike, type Stats } from "@/lib/storage-counter";
 
 const PROJECT_ID = "desert-shop-24af9";
 
 let cached: Firestore | null | undefined;
-let cachedAuth: Auth | null | undefined;
 
 /**
  * Whether the runtime actually provides Application Default Credentials.
@@ -53,6 +51,15 @@ function hasAmbientGoogleCredentials(): boolean {
   );
 }
 
+/**
+ * The shared Admin app. Exported so lib/firebase-admin-auth.ts can reuse it
+ * WITHOUT this module importing firebase-admin/auth — see that file's header
+ * for why that separation matters.
+ */
+export function getAdminApp(): App | null {
+  return getApps().length ? getApps()[0] : initAdminApp();
+}
+
 function initAdminApp(): App | null {
   const key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
   if (key) {
@@ -67,7 +74,7 @@ function initAdminApp(): App | null {
 export function getAdminDb(): Firestore | null {
   if (cached !== undefined) return cached;
   try {
-    const app = getApps().length ? getApps()[0] : initAdminApp();
+    const app = getAdminApp();
     cached = app ? getFirestore(app) : null;
     if (!app) {
       console.error(
@@ -104,60 +111,5 @@ export async function getOrderStats(): Promise<Record<string, Stats> | null> {
   } catch (e) {
     console.error("[DS] getOrderStats", e);
     return null;
-  }
-}
-
-// The admin identities — the SAME set firestore.rules' isAdmin() allows.
-// The deployed rule reads:
-//
-//   request.auth.token.email in ['tango0es@gmail.com',
-//                                'hadjajamel1988@gmail.com']
-//
-// These two lists must stay in lock step. They fail in opposite and equally
-// bad ways: a name here that the rules omit grants API access to someone
-// Firestore will not serve; a name in the rules omitted here lets that
-// person see the inbox and its drafts but silently 401 when they try to
-// send — which is how the second account was missed the first time.
-export const ADMIN_EMAILS: readonly string[] = [
-  "tango0es@gmail.com",
-  "hadjajamel1988@gmail.com",
-];
-
-export function getAdminAuth(): Auth | null {
-  if (cachedAuth !== undefined) return cachedAuth;
-  try {
-    const app = getApps().length ? getApps()[0] : initAdminApp();
-    cachedAuth = app ? getAuth(app) : null;
-  } catch (e) {
-    console.error("[DS] firebase-admin auth init failed", e);
-    cachedAuth = null;
-  }
-  return cachedAuth;
-}
-
-/**
- * Verify an `Authorization: Bearer <Firebase ID token>` header and confirm
- * it belongs to the admin account.
- *
- * Route handlers in this repo were all safely anonymous until the WhatsApp
- * send endpoint, which is not: an unauthenticated one would let anyone send
- * messages from the shop's own WhatsApp number. Returns true ONLY on a
- * verified token whose email is one of ADMIN_EMAILS — every other outcome
- * (missing header, malformed token, revoked session, unverifiable because
- * Admin credentials aren't configured) is false, so a misconfiguration
- * fails closed rather than open.
- */
-export async function isAdminRequest(authHeader: string | null): Promise<boolean> {
-  const token = authHeader?.startsWith("Bearer ") ? authHeader.slice(7).trim() : "";
-  if (!token) return false;
-  const auth = getAdminAuth();
-  if (!auth) return false;
-  try {
-    const decoded = await auth.verifyIdToken(token, true);
-    return !!decoded.email && ADMIN_EMAILS.includes(decoded.email);
-  } catch {
-    // Expired, forged, or revoked — all the same answer, and deliberately
-    // not logged in detail: the token itself must never reach a log.
-    return false;
   }
 }
