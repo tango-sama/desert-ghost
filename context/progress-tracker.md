@@ -3159,3 +3159,44 @@ not the intended state (see `development-workflow.md`).
      number, mint a System User permanent token with
      `whatsapp_business_messaging` + `whatsapp_business_management`, and point
      the webhook at `https://<domain>/api/whatsapp` subscribed to `messages`.
+
+- 2026-08-27: WhatsApp inbox — pre-launch pass, then merged to `main` for
+  deployment. Three things.
+  **(1) The reply persona is now written for the shop's actual customers:**
+  Algerian women, in Algerian darja, addressed in the feminine. The first
+  version defaulted to "darja or MSA" and referred to the customer in the
+  masculine third person, which is the register a model reaches for by
+  default and the wrong one for this shop — "شحال" not "كم", "وين" not "أين",
+  "راكِ/تحبي/عندكِ" not the masculine forms. Darja↔French mixing is now
+  explicitly allowed since that is how customers actually write, and a
+  masculine fallback is stated outright so a man who messages is not
+  addressed as a woman. Added one rule the previous persona lacked: no
+  medical advice — on a skin/health question the reply points to a doctor,
+  which matters for a store selling glutathione and collagen.
+  **(2) The 24-hour window badge never ticked.** `windowLeft()` was computed
+  during render with nothing to re-render it, so a panel left open — the
+  normal way it will be used — kept showing a stale "يمكن الرد: 3 سا" and
+  left the composer enabled after the window had actually shut. The send was
+  still refused server-side (409), so this misled rather than broke, but it
+  undermined the one piece of UI whose entire job is telling the truth about
+  time. Now re-renders once a minute, which is the finest granularity the
+  badge displays.
+  **(3) Removed dead `isConfigured()`** from `lib/whatsapp-cloud.ts` — never
+  called; `sendText()` does its own credential check.
+  Verified: tsc/lint/build clean (same three pre-existing findings); all 40
+  isolated assertions still pass, which matters here because `waWindowOpen`
+  is shared by the badge and the send route; client bundles still carry none
+  of the WhatsApp/Anthropic secrets, hosts, the SDK, or the persona text;
+  live smoke test — Meta's handshake echoes the challenge, wrong verify token
+  403, signed inbound 200, unsigned 403, send without an admin token 401.
+  **Merged to `main`:** the feature branch was 2 commits ahead and unmerged,
+  so `/api/whatsapp` was a 404 in production and Meta's webhook could never
+  have verified against it — the owner had already added the access token to
+  Vercel against a route that did not exist. Note a Vercel *preview* URL is
+  not a workaround: Deployment Protection answers Meta with 401.
+  Still owner-side before it can work: `WHATSAPP_PHONE_NUMBER_ID`
+  (= 1389895586445932), `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN` and
+  `ANTHROPIC_API_KEY` in Vercel + a fresh build; the `wa_threads` rules
+  block; and the webhook subscription. Draft quality in darja still has NOT
+  been observed against the live model — no `ANTHROPIC_API_KEY` in the dev
+  sandbox and `graph.facebook.com` remains outside its egress (HTTP 000).

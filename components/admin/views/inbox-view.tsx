@@ -108,6 +108,12 @@ function Thread({ thread, toast }: { thread: WaThread; toast: (m: string) => voi
   const [messages, setMessages] = useState<WaMessage[]>([]);
   const [text, setText] = useState("");
   const [sending, setSending] = useState(false);
+  // The window badge and the composer's enabled state are both derived from
+  // the clock, so a thread left open on screen would otherwise keep claiming
+  // the window is open long after it shut. Re-render once a minute — the
+  // badge is rendered in hours and minutes, so that is the finest granularity
+  // that shows.
+  const [, setTick] = useState(0);
   const scroller = useRef<HTMLDivElement>(null);
   const waId = thread.waId || thread.id;
 
@@ -130,6 +136,11 @@ function Thread({ thread, toast }: { thread: WaThread; toast: (m: string) => voi
   useEffect(() => {
     scroller.current?.scrollTo({ top: scroller.current.scrollHeight });
   }, [messages]);
+
+  useEffect(() => {
+    const id = setInterval(() => setTick((n) => n + 1), 60_000);
+    return () => clearInterval(id);
+  }, []);
 
   const left = windowLeft(thread.lastInboundAt);
   const open = left > 0;
