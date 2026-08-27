@@ -121,6 +121,37 @@ export function parseInbound(payload: unknown): InboundMessage[] {
   return out;
 }
 
+/**
+ * A one-line, PII-free description of what a webhook payload contained.
+ *
+ * "Nothing appeared in the inbox" has several causes that look identical from
+ * the panel: Meta never called at all, Meta called with a delivery-status
+ * callback rather than a message, or it sent a message type this feature
+ * skips. Logging the shape — never the content — separates them without
+ * putting a customer's words or number in a log line.
+ */
+export function describePayload(payload: unknown): string {
+  const entries = (payload as { entry?: unknown[] })?.entry;
+  if (!Array.isArray(entries)) return "no entry[]";
+
+  const parts: string[] = [];
+  for (const entry of entries) {
+    const changes = (entry as { changes?: unknown[] })?.changes;
+    if (!Array.isArray(changes)) continue;
+    for (const change of changes) {
+      const c = change as { field?: string; value?: WebhookValue & { statuses?: unknown[] } };
+      const bits: string[] = [c.field ?? "?"];
+      if (Array.isArray(c.value?.statuses)) bits.push(`statuses:${c.value.statuses.length}`);
+      if (Array.isArray(c.value?.messages)) {
+        // Types only — never the body.
+        bits.push(`messages:[${c.value.messages.map((m) => m?.type ?? "?").join(",")}]`);
+      }
+      parts.push(bits.join(" "));
+    }
+  }
+  return parts.length ? parts.join(" | ") : "no changes[]";
+}
+
 // --- Outbound -------------------------------------------------------------
 
 export type SendResult = { sent: boolean; wamid?: string; reason?: string };

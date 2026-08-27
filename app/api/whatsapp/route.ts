@@ -12,7 +12,7 @@
 //      disables a webhook that is slow or failing, so drafting — a
 //      multi-second model call — happens in after(), never inline.
 import { after, type NextRequest } from "next/server";
-import { parseInbound, verifyChallenge, verifySignature } from "@/lib/whatsapp-cloud";
+import { describePayload, parseInbound, verifyChallenge, verifySignature } from "@/lib/whatsapp-cloud";
 import { recentMessages, saveDraft, saveInbound } from "@/lib/wa-store";
 import { draftReply } from "@/lib/whatsapp-ai";
 
@@ -21,7 +21,14 @@ export const dynamic = "force-dynamic";
 export async function GET(req: NextRequest) {
   const challenge = verifyChallenge(req.nextUrl.searchParams);
   // Plain text, not JSON — Meta compares the body byte for byte.
-  if (challenge) return new Response(challenge, { status: 200 });
+  if (challenge) {
+    console.log("[DS] whatsapp webhook verified");
+    return new Response(challenge, { status: 200 });
+  }
+  console.error(
+    "[DS] whatsapp webhook verify failed",
+    process.env.WHATSAPP_VERIFY_TOKEN ? "token mismatch" : "WHATSAPP_VERIFY_TOKEN unset"
+  );
   return new Response("forbidden", { status: 403 });
 }
 
@@ -31,7 +38,12 @@ export async function POST(req: NextRequest) {
   const raw = await req.text();
 
   if (!verifySignature(raw, req.headers.get("x-hub-signature-256"))) {
-    console.error("[DS] whatsapp webhook bad signature");
+    // Distinguish the two causes: an unset secret rejects everything, which
+    // otherwise looks exactly like a wrong one.
+    console.error(
+      "[DS] whatsapp webhook bad signature",
+      process.env.WHATSAPP_APP_SECRET ? "(check WHATSAPP_APP_SECRET matches the app)" : "(WHATSAPP_APP_SECRET unset)"
+    );
     return new Response("forbidden", { status: 403 });
   }
 
@@ -53,6 +65,16 @@ export async function POST(req: NextRequest) {
   for (const m of messages) {
     if (await saveInbound(m)) fresh.push(m.waId);
   }
+
+  // One line per delivery, shape only — no message text, no phone numbers.
+  // "Nothing showed up in the inbox" has several indistinguishable causes,
+  // and this is what tells them apart: absent entirely means Meta never
+  // called; `parsed:0` means it called with something this feature skips;
+  // `parsed:1 stored:0` means the write failed (usually Firebase Admin
+  // credentials) rather than the delivery.
+  console.log(
+    `[DS] whatsapp webhook parsed:${messages.length} stored:${fresh.length} — ${describePayload(payload)}`
+  );
 
   // One draft per conversation even when Meta batches several messages from
   // the same customer — the model sees the whole thread anyway.
