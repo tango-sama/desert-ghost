@@ -26,23 +26,60 @@ const PROJECT_ID = "desert-shop-24af9";
 let cached: Firestore | null | undefined;
 let cachedAuth: Auth | null | undefined;
 
-function initAdminApp(): App {
+/**
+ * Whether the runtime actually provides Application Default Credentials.
+ *
+ * This matters more than it looks. `applicationDefault()` does not fail
+ * fast — it defers the credential lookup, and where none exists (Vercel)
+ * the Admin SDK reaches for the GCE metadata server and the failure
+ * surfaces as an **unhandled promise rejection**, outside any try/catch
+ * around the call. In a serverless runtime an unhandled rejection can take
+ * the whole invocation down, turning "no Firestore credentials" — which
+ * every caller here is written to survive — into a 500 on a page that
+ * should have rendered fine without it.
+ *
+ * So ADC is only attempted where it can genuinely work: Cloud Run / Firebase
+ * App Hosting (`K_SERVICE`), Cloud Functions (`FUNCTION_TARGET`), App Engine
+ * (`GAE_ENV`), or an explicit key file. Anywhere else, a missing
+ * `FIREBASE_SERVICE_ACCOUNT_KEY` degrades to `null` immediately, which is
+ * what the callers already expect.
+ */
+function hasAmbientGoogleCredentials(): boolean {
+  return !!(
+    process.env.GOOGLE_APPLICATION_CREDENTIALS ||
+    process.env.K_SERVICE ||
+    process.env.FUNCTION_TARGET ||
+    process.env.GAE_ENV
+  );
+}
+
+function initAdminApp(): App | null {
   const key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
   if (key) {
     return initializeApp({ credential: cert(JSON.parse(key)), projectId: PROJECT_ID });
   }
-  return initializeApp({ credential: applicationDefault(), projectId: PROJECT_ID });
+  if (hasAmbientGoogleCredentials()) {
+    return initializeApp({ credential: applicationDefault(), projectId: PROJECT_ID });
+  }
+  return null;
 }
 
 export function getAdminDb(): Firestore | null {
   if (cached !== undefined) return cached;
   try {
     const app = getApps().length ? getApps()[0] : initAdminApp();
-    cached = getFirestore(app);
+    cached = app ? getFirestore(app) : null;
+    if (!app) {
+      console.error(
+        "[DS] firebase-admin: no credentials — set FIREBASE_SERVICE_ACCOUNT_KEY (a service-account JSON string) in the deployment env. Continuing without privileged reads."
+      );
+    }
   } catch (e) {
+    // Reached when FIREBASE_SERVICE_ACCOUNT_KEY is set but unusable — most
+    // often malformed JSON from a paste that lost its newlines or quoting.
     console.error(
-      "[DS] firebase-admin init failed — set FIREBASE_SERVICE_ACCOUNT_KEY (a service-account JSON string) in the deployment env",
-      e
+      "[DS] firebase-admin init failed — FIREBASE_SERVICE_ACCOUNT_KEY is set but could not be used (malformed service-account JSON?)",
+      e instanceof Error ? e.message : e
     );
     cached = null;
   }
@@ -90,7 +127,7 @@ export function getAdminAuth(): Auth | null {
   if (cachedAuth !== undefined) return cachedAuth;
   try {
     const app = getApps().length ? getApps()[0] : initAdminApp();
-    cachedAuth = getAuth(app);
+    cachedAuth = app ? getAuth(app) : null;
   } catch (e) {
     console.error("[DS] firebase-admin auth init failed", e);
     cachedAuth = null;

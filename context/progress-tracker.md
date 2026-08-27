@@ -3229,3 +3229,37 @@ not the intended state (see `development-workflow.md`).
   whether it claims `tango0es@`, `hadjajamel1988@`, or `attacker@evil.com`,
   because the signature is verified before the email is ever read. Webhook
   handshake unaffected.
+
+- 2026-08-27: **Hardened `lib/firebase-admin.ts` against an unhandled
+  rejection that could 500 the storefront.** Found while investigating
+  `GET / 500` errors in the owner's Vercel logs. First established the cause
+  was NOT the WhatsApp work: the same fault reproduces on `ef8c13c` (main as
+  it was before any of it), 5 unhandled rejections either way, with `/`
+  returning 200 locally on both — so this predates the feature and was
+  introduced with the Meta CAPI work's Admin SDK usage.
+  The fault: `initAdminApp()` fell back to `applicationDefault()` whenever
+  `FIREBASE_SERVICE_ACCOUNT_KEY` was absent. That call does not fail fast —
+  it defers the credential lookup, and where no ADC exists (Vercel) the
+  Admin SDK reaches for the GCE metadata server and the failure surfaces as
+  an **unhandled promise rejection**, outside the try/catch wrapping the
+  call. In a serverless runtime an unhandled rejection can take the whole
+  invocation down, turning "no Firestore credentials" — a condition every
+  caller here is explicitly written to survive — into a 500 on a page that
+  would otherwise have rendered fine.
+  Fix: ADC is now attempted only where it can actually work
+  (`GOOGLE_APPLICATION_CREDENTIALS`, or `K_SERVICE` / `FUNCTION_TARGET` /
+  `GAE_ENV` for Cloud Run / Firebase App Hosting / Cloud Functions / App
+  Engine — so the `ghost-staging` App Hosting backend is unaffected).
+  Anywhere else a missing key degrades to `null` immediately, which is what
+  every caller already expects. `initAdminApp()` returns `App | null`, and
+  the two failure modes now log distinguishable messages: "no credentials"
+  versus "set but could not be used (malformed service-account JSON?)" —
+  the latter being the likelier one after a hand-pasted key.
+  Verified with no credentials: unhandled rejections 5 → 0, metadata lookups
+  1 → 0, `/`, `/products` and `/amelhadj` all still 200. With a deliberately
+  malformed key: still 200, still zero unhandled rejections, and the log
+  names the malformed JSON with its parse position.
+  NOTE: this is a real robustness bug fixed on its merits, but it is NOT
+  confirmed to be the owner's production 500 — their log line was truncated
+  ("Error: Failed t…"), which does not match this fault's message. Full text
+  still needed.
