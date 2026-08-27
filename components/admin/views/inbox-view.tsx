@@ -206,7 +206,14 @@ function Thread({ thread, toast }: { thread: WaThread; toast: (m: string) => voi
                 : "me-auto bg-[var(--card-2)] text-foreground"
             )}
           >
-            {m.text}
+            {/* dir="auto" per bubble: the panel is RTL, but customers write
+                in French and English too, and an LTR sentence rendered in an
+                RTL container puts its punctuation on the wrong side. Letting
+                each message pick its own direction from its first strong
+                character keeps both readable in the same thread. */}
+            <span dir="auto" className="block">
+              {m.text}
+            </span>
             <div className="mt-1 text-[.65rem] opacity-70">
               {m.ts ? fmtDate(m.ts) : ""}
             </div>
@@ -233,6 +240,9 @@ function Thread({ thread, toast }: { thread: WaThread; toast: (m: string) => voi
           </div>
         )}
         <textarea
+          // Same reason as the message bubbles: a French or English draft
+          // must not be laid out right-to-left while it is being edited.
+          dir="auto"
           value={text}
           onChange={(e) => setText(e.target.value)}
           disabled={!open}

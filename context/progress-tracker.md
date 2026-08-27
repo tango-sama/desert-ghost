@@ -3383,3 +3383,32 @@ not the intended state (see `development-workflow.md`).
   shows a single `WHATSAPP_*` row). Nothing about the feature can work until
   they are added AND a redeploy runs; this, not the code, is why no message
   ever reached the inbox.
+
+- 2026-08-27: **WhatsApp pipeline confirmed working end to end in
+  production.** Meta's own "Test" button on the `messages` webhook field
+  delivered a signed sample payload, and every stage held: signature
+  verified (so `WHATSAPP_APP_SECRET` matches the app holding the number),
+  message parsed, thread written to `wa_threads`, the admin panel READ it
+  (so the `wa_threads` rules block is published), and Claude produced a
+  draft (so `ANTHROPIC_API_KEY` is live). The 24-hour badge correctly showed
+  `انتهت مهلة 24 سا` for Meta's 2017-dated sample and the composer was
+  disabled accordingly — the window logic behaving exactly as intended on
+  real data.
+  Two useful observations from that first real draft. The model replied in
+  ENGLISH to Meta's English sample ("this is a text message"), which is the
+  persona working as written — it matches the customer's language rather
+  than forcing Arabic. And it did not invent a product or price for
+  meaningless input; it asked what she needs, which is the grounding rule
+  holding under the worst possible prompt.
+  Fixed a real rendering bug the screenshot exposed: Latin-script text was
+  being laid out right-to-left inside the RTL panel, putting punctuation on
+  the wrong side ("?Could you let me know what you need"). Message bubbles
+  and the composer now carry `dir="auto"` so each picks its direction from
+  its own first strong character — Algerian customers write in French and
+  English as well as darja, so mixed-direction threads are the normal case
+  here, not an edge case.
+  Remaining before real customer messages arrive: the WhatsApp Business
+  Account still needs subscribing to the app. Subscribing the `messages`
+  FIELD (done) tells Meta what to send; subscribing the WABA tells it which
+  account's events to send. That is why Meta's test arrives but messages
+  from a real phone do not.
