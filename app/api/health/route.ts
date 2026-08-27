@@ -91,6 +91,32 @@ export async function GET(_req: NextRequest) {
     })
   );
 
+  // 6. The home page's OWN data path — the four client-SDK reads
+  //    app/(storefront)/page.tsx makes before rendering. These run the
+  //    browser Firebase SDK on the server, a different stack from the Admin
+  //    SDK above, and nothing else probed here would catch a failure in it.
+  //    Each is timed and reported separately so a single slow or hanging
+  //    collection is visible rather than averaged away.
+  steps.push(
+    await probe("storefront-reads", async () => {
+      const { getProducts, getCategories, getFeatured, getSettings } = await import("@/lib/firebase");
+      const timed = async (name: string, fn: () => Promise<unknown>) => {
+        const t = Date.now();
+        const v = await fn();
+        const n = Array.isArray(v) ? v.length : v && typeof v === "object" ? Object.keys(v).length : 0;
+        return `${name}:${n}/${Date.now() - t}ms`;
+      };
+      return (
+        await Promise.all([
+          timed("products", getProducts),
+          timed("categories", getCategories),
+          timed("featured", getFeatured),
+          timed("settings", getSettings),
+        ])
+      ).join(" ");
+    })
+  );
+
   const ok = steps.every((s) => s.ok);
   return Response.json({ ok, steps }, { status: 200 });
 }
