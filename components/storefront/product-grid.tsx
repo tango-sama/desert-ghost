@@ -2,11 +2,40 @@ import Link from "next/link";
 import type { Category, Product } from "@/lib/firebase";
 import { ProductCard } from "@/components/storefront/product-card";
 import { SectionHead } from "@/components/storefront/section-head";
-import { getOrderStats } from "@/lib/firebase-admin";
-import { closetFor, EMPTY_STATS } from "@/lib/storage-counter";
+import { closetFor, EMPTY_STATS, type Stats } from "@/lib/storage-counter";
 
 function byRecency(a: Product, b: Product): number {
   return (Number(b.lastModified ?? b.id) || 0) - (Number(a.lastModified ?? a.id) || 0);
+}
+
+/**
+ * Closet counts for the sort, or null if they cannot be obtained.
+ *
+ * The import is dynamic and the call is wrapped, deliberately. This is the
+ * home page — the most-hit route on the site — and all it wants from the
+ * privileged layer is a nicer sort ORDER. A static import means a failure
+ * while merely *loading* `lib/firebase-admin` (a bad service-account key, a
+ * bundling problem, anything in the Admin SDK's own module graph) takes the
+ * entire page down with a 500 before a single product can render, and no
+ * try/catch around the call site can help because the failure happens at
+ * import time. Deferring it makes that failure catchable and turns the worst
+ * case into "products sorted by recency instead of stock" — which is exactly
+ * what happens already when credentials are absent.
+ *
+ * Storefront-safe by construction: only derived integers cross back, never
+ * order documents (see architecture-context.md).
+ */
+async function closetStatsOrNull(): Promise<Record<string, Stats> | null> {
+  try {
+    const { getOrderStats } = await import("@/lib/firebase-admin");
+    return await getOrderStats();
+  } catch (e) {
+    console.error(
+      "[DS] product-grid: closet stats unavailable, falling back to recency sort",
+      e instanceof Error ? e.message : e
+    );
+    return null;
+  }
 }
 
 export async function ProductGrid({
@@ -26,7 +55,7 @@ export async function ProductGrid({
   // read itself fails (e.g. FIREBASE_SERVICE_ACCOUNT_KEY not configured
   // yet), `stats` is null and this falls back to the original
   // recency-only sort rather than guessing.
-  const stats = await getOrderStats();
+  const stats = await closetStatsOrNull();
   const closetOf = (p: Product): number | null =>
     stats && p.stock != null ? closetFor(Number(p.stock), stats[p.id] ?? EMPTY_STATS) : null;
 

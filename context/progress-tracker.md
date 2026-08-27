@@ -3298,3 +3298,42 @@ not the intended state (see `development-workflow.md`).
   that was failing. If `/` still 500s after this deploy, the next thing to
   examine is the full stack trace from a fresh invocation, since the ADC
   path is now unreachable on Vercel and this import is gone.
+
+- 2026-08-27: **Home page can no longer be 500'd by the privileged layer, and
+  added `/api/health` to stop diagnosing blind.** Production was still
+  returning `FUNCTION_INVOCATION_FAILED` on `GET /` after two attempted
+  fixes, and both earlier theories are now retracted:
+  - The ADC/unhandled-rejection theory was wrong for this deployment: the
+    owner confirmed `FIREBASE_SERVICE_ACCOUNT_KEY` is present and correct, so
+    `cert()` is used and the metadata path is never reached.
+  - The "no outgoing requests therefore module-load failure" inference was
+    also unsound: the Firebase Admin SDK speaks **gRPC**, which Vercel's
+    fetch-based "External APIs" panel does not count, so that panel never
+    evidenced an absence of network activity. Noting it here because it is an
+    easy trap to fall into twice.
+  What remains solid is the blast radius: `/` is the only *page* route that
+  reaches `lib/firebase-admin` (via `product-grid.tsx` → `getOrderStats`),
+  and `/` is the only route failing.
+  `components/storefront/product-grid.tsx` now loads that module through a
+  **dynamic import inside a try/catch** (`closetStatsOrNull()`). The home
+  page is the most-hit route on the site and all it wants from the privileged
+  layer is a nicer sort ORDER; under a static import, a failure while merely
+  *loading* the module takes the whole page down before a product renders,
+  and no try/catch at the call site can help because the failure happens at
+  import time. Worst case is now "sorted by recency instead of stock" — the
+  same degradation that already happens when credentials are absent.
+  `/api/health` probes each layer separately — env presence, service-account
+  JSON parse/shape, module load, Admin init, and a real `getOrderStats()`
+  read — with every step independently guarded so the route itself cannot
+  500. Response body is booleans and short step names only; stack traces and
+  Firebase's own error text go to the server log, readable only with
+  deployment access. That disclosure boundary is what makes it safe to keep
+  rather than rip out after the incident.
+  Verified across three credential states (absent; present-but-mangled JSON;
+  valid JSON of the wrong type): `/` returns 200 in ALL of them, and the
+  probe names the exact failing step each time, including the JSON parse
+  position. tsc/lint/build clean.
+  This is a genuine robustness fix on its own merits AND a decisive
+  experiment: if `/` recovers on this deploy, the fault was in the
+  firebase-admin path; if it still 500s, that path is eliminated and
+  `/api/health` will say which layer, if any, is unhealthy.
