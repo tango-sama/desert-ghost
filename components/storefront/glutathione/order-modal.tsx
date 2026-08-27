@@ -1,10 +1,11 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { cn } from "@/lib/utils";
 import type { SiteSettings } from "@/lib/firebase";
 import { saveOrder } from "@/lib/firebase";
 import { generateOrderNumber } from "@/lib/order";
+import { trackPixelEvent, trackPurchase } from "@/lib/meta-pixel";
 import {
   carrierDataReady,
   communesForCarrier,
@@ -56,6 +57,7 @@ export function OrderModal({
   const [errors, setErrors] = useState<Partial<Record<keyof Pending, boolean>>>({});
   const [submitting, setSubmitting] = useState(false);
   const [success, setSuccess] = useState<SuccessInfo | null>(null);
+  const [submitError, setSubmitError] = useState(false);
 
   useEffect(() => {
     if (!open) return;
@@ -69,6 +71,29 @@ export function OrderModal({
       document.body.style.overflow = "";
     };
   }, [open, onClose]);
+
+  // Fires once per real modal open (not once per page mount, since this
+  // modal stays mounted the whole time and just toggles `display`) — the
+  // ref resets on close so a customer who closes and reopens the modal
+  // later in the same visit produces a fresh "started checkout" signal
+  // instead of being silently suppressed. Real retargeting value: this was
+  // previously the only funnel-start point with zero pixel signal at all —
+  // every other landing page and the main /checkout both already had it.
+  const initiateCheckoutFired = useRef(false);
+  useEffect(() => {
+    if (!open) {
+      initiateCheckoutFired.current = false;
+      return;
+    }
+    if (initiateCheckoutFired.current) return;
+    initiateCheckoutFired.current = true;
+    trackPixelEvent("InitiateCheckout", {
+      content_ids: [product.id],
+      content_type: "product",
+      value: product.price,
+      currency: "DZD",
+    });
+  }, [open, product.id, product.price]);
 
   const carrierReady = carrierDataReady(company, cache);
   const wilayaList = carrierReady ? wilayasFor(company, cache) : [];
@@ -94,10 +119,17 @@ export function OrderModal({
     setPending(EMPTY_PENDING);
     setErrors({});
     setSuccess(null);
+    setSubmitError(false);
     onClose();
   }
 
   async function submit() {
+    // Belt-and-suspenders alongside disabled={submitting} on the button
+    // below: that prop only takes effect on the next render/commit, so a
+    // second click landing in the gap before the DOM actually disables
+    // could otherwise start a second saveOrder() for the same order.
+    if (submitting) return;
+
     const bad: Partial<Record<keyof Pending, boolean>> = {
       name: !pending.name.trim(),
       phone: !pending.phone.trim() || !isValidPhone(pending.phone),
@@ -115,6 +147,7 @@ export function OrderModal({
     }
 
     setSubmitting(true);
+    setSubmitError(false);
     const num = generateOrderNumber();
     const order = {
       num,
@@ -138,13 +171,36 @@ export function OrderModal({
       total: subtotal + fee,
       source: "landing_glutathione",
     };
+    // Purchase must only ever fire from this success path — never from the
+    // click above, never from validation, never from the success UI
+    // rendering. `orderRef.id` (the real Firestore order id) doubles as the
+    // Pixel eventID so a future server-side CAPI Purchase for this same
+    // order can dedupe against this one instead of counting twice.
     try {
-      await saveOrder(order);
+      const orderRef = await saveOrder(order);
+      // Fires BOTH the browser Pixel and the server-side CAPI copy with one
+      // shared event id (`purchase_<firestoreOrderId>`), built inside
+      // trackPurchase() so the two can never drift apart. Deliberately NOT
+      // wrapped in a try/catch: trackPurchase never throws — the Pixel call
+      // and the fire-and-forget CAPI post are each isolated internally — so
+      // a blocked fbq or an unreachable network can't read as an order
+      // failure to the customer. The server copy re-reads this order from
+      // Firestore and sends nothing that isn't in the saved document.
+      trackPurchase({
+        orderId: orderRef.id,
+        orderNumber: order.num,
+        items: order.items,
+        value: order.total,
+        phone: order.phone,
+        firstName: order.customer.split(" ")[0],
+      });
+      setSuccess({ firstName: order.customer.split(" ")[0] ?? order.customer, phone: order.phone, qty });
     } catch (err) {
       console.error("[DS] saveOrder", err);
+      setSubmitError(true);
+    } finally {
+      setSubmitting(false);
     }
-    setSubmitting(false);
-    setSuccess({ firstName: order.customer.split(" ")[0] ?? order.customer, phone: order.phone, qty });
   }
 
   return (
@@ -310,6 +366,11 @@ export function OrderModal({
                   </div>
                 </div>
 
+                {submitError && (
+                  <p className={styles.glNote} style={{ color: "var(--destructive)" }}>
+                    تعذّر إرسال الطلب، يرجى المحاولة مجدداً.
+                  </p>
+                )}
                 <button type="button" className={styles.glSubmit} disabled={submitting} onClick={submit}>
                   {submitting ? "⏳ جاري الإرسال..." : "✅ تأكيد الطلب"}
                 </button>

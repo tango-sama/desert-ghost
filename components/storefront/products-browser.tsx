@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Search } from "lucide-react";
 import type { Category, Product } from "@/lib/firebase";
 import { priceNum } from "@/lib/firebase";
 import { catColor, hexToRgba } from "@/lib/colors";
+import { trackPixelEvent } from "@/lib/meta-pixel";
 import { ProductCard } from "@/components/storefront/product-card";
 
 type Sort = "new" | "price-asc" | "price-desc" | "name";
@@ -53,6 +54,24 @@ export function ProductsBrowser({
       );
     return items;
   }, [products, activeCat, search, sort, catMap]);
+
+  // Fires a `Search` event ~600ms after the customer stops typing, not per
+  // keystroke — and only once per distinct settled query (a query typed,
+  // cleared, then retyped identically fires again; one that just keeps
+  // matching the same debounce window doesn't). Skips the empty string
+  // (clearing the box, or the initial `initialQuery=""` default, isn't a
+  // search). Any pending timer is cleared on the next keystroke/unmount.
+  const lastSearchTracked = useRef("");
+  useEffect(() => {
+    const q = search.trim();
+    if (!q) return;
+    const timer = setTimeout(() => {
+      if (q === lastSearchTracked.current) return;
+      lastSearchTracked.current = q;
+      trackPixelEvent("Search", { search_string: q });
+    }, 600);
+    return () => clearTimeout(timer);
+  }, [search]);
 
   const title = activeCat === "all" ? "كل المنتجات" : catMap[activeCat] || "المنتجات";
 

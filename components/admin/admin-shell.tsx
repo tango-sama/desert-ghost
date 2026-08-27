@@ -12,6 +12,7 @@ import { FeaturedView } from "@/components/admin/views/featured-view";
 import { OrdersView } from "@/components/admin/views/orders-view";
 import { StorageCounterView } from "@/components/admin/views/storage-counter-view";
 import { MessagesView } from "@/components/admin/views/messages-view";
+import { InboxView } from "@/components/admin/views/inbox-view";
 import { IncomeView } from "@/components/admin/views/income-view";
 import { SettingsView } from "@/components/admin/views/settings-view";
 import { LandingPagesView } from "@/components/admin/views/landing-pages-view";
@@ -23,6 +24,7 @@ type ViewKey =
   | "storage"
   | "orders"
   | "messages"
+  | "inbox"
   | "income"
   | "landing"
   | "settings";
@@ -34,6 +36,7 @@ const NAV: { key: ViewKey; icon: string; label: string }[] = [
   { key: "featured", icon: "⭐", label: "المميزة" },
   { key: "storage", icon: "🧮", label: "عداد المخزون" },
   { key: "messages", icon: "💬", label: "الرسائل" },
+  { key: "inbox", icon: "🤖", label: "واتساب" },
   { key: "income", icon: "💰", label: "الأرباح" },
   { key: "landing", icon: "🖼️", label: "صفحات الهبوط" },
   { key: "settings", icon: "⚙️", label: "الإعدادات" },
@@ -46,6 +49,7 @@ const TITLES: Record<ViewKey, string> = {
   storage: "عداد المخزون",
   orders: "الطلبات",
   messages: "رسائل الزبائن",
+  inbox: "محادثات واتساب",
   income: "الأرباح والمصاريف",
   landing: "صفحات الهبوط",
   settings: "إعدادات الموقع",
@@ -58,6 +62,7 @@ const VIEWS: Record<ViewKey, React.ComponentType> = {
   storage: StorageCounterView,
   orders: OrdersView,
   messages: MessagesView,
+  inbox: InboxView,
   income: IncomeView,
   landing: LandingPagesView,
   settings: SettingsView,
@@ -76,6 +81,11 @@ export function AdminShell() {
     (s) => s.orders.filter((o) => !o.fulfilled).length
   );
   const nMsgs = useAdminStore((s) => s.messages.length);
+  // Badge the conversations needing attention — unread or holding a draft —
+  // not the total, which would never go down.
+  const nInbox = useAdminStore(
+    (s) => s.waThreads.filter((t) => t.unread || t.draft?.status === "pending").length
+  );
 
   useEffect(() => {
     void useAdminStore.getState().loadAll();
@@ -88,6 +98,7 @@ export function AdminShell() {
     featured: nFeat,
     orders: nNewOrders,
     messages: nMsgs,
+    inbox: nInbox,
   };
 
   const ActiveView = VIEWS[view];

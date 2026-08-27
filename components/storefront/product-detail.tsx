@@ -1,11 +1,12 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Check, CreditCard, Minus, Package, Plus, ShieldCheck, Truck } from "lucide-react";
 import type { Product } from "@/lib/firebase";
-import { benefits, priceFmt, productImages } from "@/lib/firebase";
+import { benefits, priceFmt, priceNum, productImages } from "@/lib/firebase";
 import { waLink } from "@/lib/whatsapp";
 import type { SiteSettings } from "@/lib/firebase";
+import { trackPixelEvent, trackViewContent } from "@/lib/meta-pixel";
 import { useCartStore } from "@/stores/cart-store";
 import { SellerOrderBadge, SellerOrderModal, SellerOrderTrigger } from "@/components/storefront/seller-order-modal";
 
@@ -34,12 +35,48 @@ export function ProductDetail({
   const title = product.title || product.name || "";
   const benefitList = benefits(product.description);
 
+  // Fires once per real product-page view. Same ref-guard pattern as
+  // glutathione-page.tsx's ViewContent (survives Strict Mode's dev-only
+  // double-invoke of mount effects) and keyed off `product.id` alone so an
+  // admin edit loaded async after mount can't cause a second fire. This was
+  // the missing half of the main /product/[id] funnel: AddToCart below,
+  // InitiateCheckout (checkout-form.tsx) and Purchase (checkout-form.tsx)
+  // were already wired, but no ViewContent ever fired from an individual
+  // product page itself — every product's view signal was going untracked
+  // instead of carrying that product's own id/name/price and page URL,
+  // which is exactly what Dynamic Ads/retargeting key off per product.
+  const viewContentFired = useRef(false);
+  useEffect(() => {
+    if (viewContentFired.current) return;
+    viewContentFired.current = true;
+    trackViewContent({
+      contentIds: [product.id],
+      contentName: title,
+      value: priceNum(product.price),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]);
+
   function handleAdd() {
     for (let i = 0; i < qty; i++) add(product, { silent: i < qty - 1 });
+    // Same shape as ViewContent/Purchase (glutathione-page.tsx,
+    // order-modal.tsx) so this event lines up with what's already working
+    // there: content_ids/content_type/value/currency.
+    trackPixelEvent("AddToCart", {
+      content_ids: [product.id],
+      content_type: "product",
+      content_name: title,
+      value: priceNum(product.price) * qty,
+      currency: "DZD",
+    });
   }
 
   function handleWhatsApp() {
     const text = `مرحباً، أريد طلب هذا المنتج:\n${title}\nالسعر: ${priceFmt(product.price)}\nالكمية: ${qty}`;
+    // Meta's "Contact" standard event: a direct message-the-business intent,
+    // distinct from AddToCart/InitiateCheckout — this button skips the cart
+    // entirely, so without this the intent was invisible to the Pixel.
+    trackPixelEvent("Contact", { content_ids: [product.id], content_name: title });
     window.open(waLink(settings, text), "_blank");
   }
 

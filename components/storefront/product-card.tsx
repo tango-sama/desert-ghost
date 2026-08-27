@@ -3,7 +3,8 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import type { Product } from "@/lib/firebase";
-import { priceFmt, productImages } from "@/lib/firebase";
+import { priceFmt, priceNum, productImages } from "@/lib/firebase";
+import { trackPixelEvent } from "@/lib/meta-pixel";
 import { useCartStore } from "@/stores/cart-store";
 
 export function ProductCard({ product, categoryName }: { product: Product; categoryName?: string }) {
@@ -41,7 +42,16 @@ export function ProductCard({ product, categoryName }: { product: Product; categ
           <button
             type="button"
             aria-label="أضيفي للسلة"
-            onClick={() => add(product)}
+            onClick={() => {
+              add(product);
+              trackPixelEvent("AddToCart", {
+                content_ids: [product.id],
+                content_type: "product",
+                content_name: title,
+                value: priceNum(product.price),
+                currency: "DZD",
+              });
+            }}
             className="flex size-10.5 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--rose)] to-[var(--rose-deep)] text-white transition-all hover:scale-108 hover:-rotate-6 hover:shadow-[0_8px_18px_rgba(224,114,140,.45)]"
           >
             <Plus className="size-5" />

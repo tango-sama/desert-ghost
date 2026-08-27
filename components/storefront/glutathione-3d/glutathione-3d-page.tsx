@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { SiteSettings } from "@/lib/firebase";
 import { useDeliveryData } from "@/hooks/use-delivery-data";
+import { trackViewContent } from "@/lib/meta-pixel";
 import { TikTokLiveButton } from "@/components/storefront/tiktok-live-button";
 import { Topbar } from "@/components/storefront/glutathione/topbar";
 import { Benefits } from "@/components/storefront/glutathione/benefits";
@@ -55,6 +56,23 @@ export function Glutathione3DPage({
 
   const [modalOpen, setModalOpen] = useState(false);
   const product = GLUTATHIONE_PRODUCT;
+
+  // Fires once per real page view — this A/B variant reuses /glutathione's
+  // OrderModal directly (so it already inherited that component's
+  // InitiateCheckout/Purchase), but never fired its own ViewContent since
+  // it's a separate page component. Same ref-guarded once-per-mount
+  // pattern as glutathione-page.tsx.
+  const viewContentFired = useRef(false);
+  useEffect(() => {
+    if (viewContentFired.current) return;
+    viewContentFired.current = true;
+    trackViewContent({
+      contentIds: [product.id],
+      contentName: product.title,
+      value: product.price,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   return (
     <div className={styles.glutathione} dir="rtl">

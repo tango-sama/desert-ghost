@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { SiteSettings } from "@/lib/firebase";
 import { useDeliveryData } from "@/hooks/use-delivery-data";
+import { trackViewContent } from "@/lib/meta-pixel";
 import { TikTokLiveButton } from "@/components/storefront/tiktok-live-button";
 import { Topbar } from "./topbar";
 import { Hero } from "./hero";
@@ -57,6 +58,24 @@ export function CollagenPage({
       price: o?.price && o.price > 0 ? o.price : p.price,
     };
   });
+
+  // Fires once per real page view. Ref guard (not just an empty dep array)
+  // so this survives Strict Mode's dev-only double-invoke of mount effects —
+  // same pattern as glutathione-page.tsx. Unlike the single-SKU landing
+  // pages, this page shows multiple products at once, so ViewContent
+  // reports all of them (this page's `products` array is rebuilt fresh on
+  // every render from the same fixed COLLAGEN_PRODUCTS ids, so firing once
+  // on mount rather than keying off it is deliberate, not a missed dep).
+  const viewContentFired = useRef(false);
+  useEffect(() => {
+    if (viewContentFired.current) return;
+    viewContentFired.current = true;
+    trackViewContent({
+      contentIds: products.map((p) => p.id),
+      value: products.reduce((sum, p) => sum + p.price, 0),
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, []);
 
   function openOrder(productId?: string) {
     if (productId) setSelected((s) => (s.includes(productId) ? s : [...s, productId]));

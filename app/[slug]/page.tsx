@@ -5,6 +5,7 @@ import { isBefore } from "@/lib/time";
 import { SunguardPage } from "@/components/storefront/sunguard/sunguard-page";
 import { CollagenPage } from "@/components/storefront/collagen/collagen-page";
 import { GlutathionePage } from "@/components/storefront/glutathione/glutathione-page";
+import { CarnitinePage } from "@/components/storefront/carnitine/carnitine-page";
 
 // Serves the self-contained landing funnels at an admin-chosen custom path
 // (settings.landingPages.<page>.slug, edited from the "صفحات الهبوط" admin
@@ -32,6 +33,11 @@ const META: Record<LandingPageKey, Metadata> = {
     description:
       "مكمل Glutathione, Cysteine & C من Life Extension لتفتيح البشرة وتوحيد لونها، دعم وظائف الكبد، وتعزيز المناعة. الدفع عند الاستلام وتوصيل لكل الولايات.",
   },
+  carnitine: {
+    title: "كبسولات تنحيف الجسم HHS A1 L-Carnitine | Desert Shop",
+    description:
+      "مكمل عشبي تركي طبيعي HHS A1 L-Carnitine Lepidium يدعم فقدان الوزن، يعزز الطاقة، ويساعد على الشعور بالامتلاء. الدفع عند الاستلام وتوصيل لكل الولايات.",
+  },
 };
 
 function safeDecode(s: string): string {
@@ -49,7 +55,7 @@ async function matchPage(
   // Non-ASCII slugs (Arabic) aren't consistently decoded by the time this
   // route sees `params.slug` — decode defensively; a no-op for plain text.
   const slug = safeDecode(rawSlug);
-  const keys: LandingPageKey[] = ["sunguard", "collagen", "glutathione"];
+  const keys: LandingPageKey[] = ["sunguard", "collagen", "glutathione", "carnitine"];
   for (const key of keys) {
     const saved = settings.landingPages?.[key]?.slug?.trim();
     if (saved && saved === slug) return { key, settings };
@@ -75,5 +81,6 @@ export default async function CustomSlugPage({ params }: { params: Promise<Param
   const isTikTokLive = isBefore(settings.tiktokLiveUntil as number | undefined);
   if (key === "sunguard") return <SunguardPage settings={settings} isTikTokLive={isTikTokLive} />;
   if (key === "collagen") return <CollagenPage settings={settings} isTikTokLive={isTikTokLive} />;
-  return <GlutathionePage settings={settings} isTikTokLive={isTikTokLive} />;
+  if (key === "glutathione") return <GlutathionePage settings={settings} isTikTokLive={isTikTokLive} />;
+  return <CarnitinePage settings={settings} isTikTokLive={isTikTokLive} />;
 }

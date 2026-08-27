@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Check, ShieldCheck, Store, X } from "lucide-react";
 import type { Product, SiteSettings } from "@/lib/firebase";
 import { priceFmt, priceNum, productImages, saveOrder } from "@/lib/firebase";
+import { trackPurchase } from "@/lib/meta-pixel";
 import { useIsStaff } from "@/hooks/use-staff";
 import { useDeliveryData } from "@/hooks/use-delivery-data";
 import { useStorageCloset } from "@/hooks/use-storage-closet";
@@ -167,8 +168,30 @@ export function SellerOrderModal({
       total,
       source: "seller_direct",
     };
+    // Purchase must only ever fire from this success path — never from the
+    // click above, never from validation. `orderRef.id` doubles as the
+    // Pixel eventID so a future server-side CAPI Purchase for this same
+    // order can dedupe against this one. Same pattern as
+    // checkout-form.tsx/order-modal.tsx — this "leave order with seller"
+    // flow saves a real order too and previously fired no Purchase at all.
     try {
-      await saveOrder(order);
+      const orderRef = await saveOrder(order);
+      // Fires BOTH the browser Pixel and the server-side CAPI copy with one
+      // shared event id (`purchase_<firestoreOrderId>`), built inside
+      // trackPurchase() so the two can never drift apart. Deliberately NOT
+      // wrapped in a try/catch: trackPurchase never throws — the Pixel call
+      // and the fire-and-forget CAPI post are each isolated internally — so
+      // a blocked fbq or an unreachable network can't read as an order
+      // failure to the customer. The server copy re-reads this order from
+      // Firestore and sends nothing that isn't in the saved document.
+      trackPurchase({
+        orderId: orderRef.id,
+        orderNumber: order.num,
+        items: order.items.map((i) => ({ id: i.id, price: priceNum(i.price), qty: i.qty })),
+        value: order.total,
+        phone: order.phone,
+        firstName: order.customer.split(" ")[0],
+      });
       onSuccess(num);
     } catch (err) {
       console.error("[DS] saveOrder", err);

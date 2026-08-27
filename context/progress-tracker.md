@@ -74,6 +74,74 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- New single-product landing page `/carnitine` for the real catalog item
+  "HHS A1 L-Carnitine Lepidium — كبسولات تنحيف الجسم" (Firestore
+  `products/1768873325495`, 14,500 د.ج, weight-loss/slimming category)
+  (2026-08-22, ghost-only, not yet committed to a PR). Requested as a
+  premium marketing landing page for this specific product; built as a
+  fully self-contained funnel following the exact architecture already
+  established by `/sunguard` and `/glutathione` (architecture-context.md:
+  own top bar/footer, no shared storefront Nav/Footer/CartDrawer,
+  `force-dynamic`, hardcoded product data separate from the live
+  Firestore `products` collection except that this page deliberately
+  keeps `id: "1768873325495"` equal to the real catalog doc id instead of
+  a made-up slug, so admin-side traceability isn't lost).
+  New `components/storefront/carnitine/` (own "flame" amber/terracotta
+  CSS Module palette — `carnitine.module.css` — distinct from sunguard's
+  pink, glutathione's gold, and collagen's teal; energy/fat-burn visual
+  metaphor): `product.ts` (hardcoded SKU, real product photo downloaded
+  from the live Firestore Storage URL into
+  `public/assets/carnitine/product-shot.webp`), `topbar.tsx`, `hero.tsx`
+  (flame-icon hero with a real-photo spotlight card, no illustrated
+  cutout), `problems.tsx` (why weight-loss attempts stall — appetite,
+  energy, metabolism), `ingredients.tsx` (the two real actives from the
+  Firestore description — L-Carnitine and Lepidium — no invented third
+  ingredient), `benefits.tsx`, `product-section.tsx`, `usage-section.tsx`
+  (deliberately no invented dosage schedule — the source description only
+  states 30 capsules per box, so copy stays generic and points to the
+  box's own label instead of fabricating a regimen), `trust-strip.tsx`,
+  `faq.tsx`, `cta-banner.tsx`, `footer.tsx`, `sticky-bar.tsx`,
+  `order-modal.tsx` (byte-for-byte the same Noest/Yalidine-only carrier
+  logic, validation, and totals math as sunguard/order-modal.tsx, just
+  restyled and `source: "landing_carnitine"`), `carnitine-page.tsx`
+  (assembler). Deliberately has NO before/after slider section (unlike
+  sunguard/collagen) — there are no real customer transformation photos
+  for this product, and inventing illustrative "before/after" weight-loss
+  imagery for a slimming supplement was judged misleading rather than
+  just cosmetic, so that section is skipped rather than faked.
+  Wired into the existing multi-landing-page infrastructure exactly like
+  the other three pages: `app/carnitine/page.tsx` (redirects to an
+  admin-set custom slug when one exists, same as
+  `app/sunguard/page.tsx`), `lib/firebase.ts` (`LandingPageKey` and
+  `LANDING_RESERVED_SLUGS` both gained `"carnitine"`), `app/[slug]/page.tsx`
+  (new `META.carnitine` entry + routing branch), and
+  `components/admin/views/landing-pages-view.tsx` (new `"carnitine"` tab —
+  🔥 التنحيف — added to `PAGES`/`HERO_PLACEHOLDER`/`PRODUCT_DEFAULTS`/
+  `SINGLE_PRODUCT_PAGES`, with an empty `BA_SLOTS.carnitine` array since
+  this page has no before/after section to edit) so an admin can edit the
+  hero copy, product name/price/image, and custom URL slug for this page
+  the same way they already do for the other three.
+  Verified: `npx tsc --noEmit`, `npx eslint` (only the same pre-existing
+  `no-img-element` warning `product-section.tsx` already carries on
+  sunguard's identical file), and `npm run build` (`/carnitine` compiles
+  as a dynamic route) all clean. Also verified live in a real headless
+  Chromium session against `npm run dev`: hero/problems/ingredients/
+  benefits/product-card/usage-steps/trust-strip/FAQ/CTA-banner/footer all
+  render correctly end-to-end with the real product photo and real price,
+  and the order modal opens with correct qty stepper, field validation,
+  delivery-type toggle, and live totals math. The sandboxed test
+  environment's headless browser could not reach the Firestore
+  websocket/streaming backend (network egress restriction specific to
+  this session, not the app), so the wilaya/commune selects correctly
+  showed their existing "⏳ جاري التحميل..." loading-state fallback
+  instead of live carrier data — expected behavior per
+  `carrierDataReady()`, the same fallback every other landing page relies
+  on, not something this change could exercise further in this sandbox.
+  NOT yet verified: a real submitted order against production Firestore,
+  and the live wilaya/commune dropdowns populating with real carrier data
+  on an unrestricted network (both blocked by this session's own network
+  sandbox, not by the code). NOT yet committed/pushed — pending review.
+
 - Empty "📝 اسم المنتج على وصل التوصيل" no longer leaks the real product
   name onto the carrier's label (2026-08-21, both repos DEPLOYED). This
   admin field exists precisely so a real product name never has to appear
@@ -2464,7 +2532,171 @@ not the intended state (see `development-workflow.md`).
   featured section's order matches `/amelhadj`'s Storage Counter "في
   المحل" column, highest first.
 
+- 2026-08-21: Admin "المنتجات" (Products) tab list now sorts by quantity
+  too, matching the Storage Counter tab and the storefront featured grid
+  instead of being the one place left on plain recency. Previously
+  `components/admin/views/products-view.tsx` sorted purely by
+  `lastModified ?? id` descending, with no quantity signal at all. Now
+  pulls `orders` from the admin store (same slice `StorageCounterView`
+  already reads) and computes each product's `closetFor(stock,
+  statsByProduct(orders)[id])` — the same "في المحل" (in-closet) number
+  shown in the Storage Counter tab, not the raw `stock` total-ever-stocked
+  field (that one's documented as NOT a live quantity) — sorts most-in-
+  closet first, and ties (equal closet count, including untracked
+  products both landing at 0) fall back to the pre-existing recency sort.
+  Verified: `npx tsc --noEmit`, `npm run lint`, `npm run build` all clean
+  (same two pre-existing, unrelated findings noted in the prior entries —
+  `cart-drawer.tsx`/`sunguard/product-section.tsx`). NOT exercised: the
+  actual reordering against real stock/order data in a live `/amelhadj`
+  session (same standing sandbox constraint as the other entries above).
+
+## Completed (this session, 2026-08-22)
+
+- Meta Pixel `AddToCart`/`InitiateCheckout` wired into the main
+  `/product/[id]` → `/checkout` funnel (per architecture-context.md's
+  Analytics section, Pixel infra had only ever been wired for
+  `/glutathione`'s `ViewContent`/`Purchase` — the standard product-grid +
+  cart flow fired nothing). All three call sites use the shared
+  `trackPixelEvent()` helper with the same `content_ids`/`content_type`/
+  `value`/`currency: "DZD"` shape as the working `Purchase` call in
+  `order-modal.tsx`:
+  - `AddToCart` in `components/storefront/product-detail.tsx`'s
+    `handleAdd()` (the PDP's "أضيفي إلى السلة" button) — `value` is
+    `priceNum(product.price) * qty`.
+  - `AddToCart` in `components/storefront/product-card.tsx`'s quick-add
+    button too (product grid / related-products tiles) — same event
+    shape, `value` for one unit, since it's the same add-to-cart action
+    just from a different surface.
+  - `InitiateCheckout` in `components/storefront/checkout-form.tsx`, fired
+    once on mount once the cart has items (ref-guarded against Strict
+    Mode's double-invoke, same pattern as `ViewContent` in
+    `glutathione-page.tsx`) — covers both a direct `/checkout` load and
+    navigating there via the cart drawer's "إتمام الطلب" link, without
+    double-firing on the pre-hydration empty-cart flash.
+  Verified: `npx tsc --noEmit` and `npx eslint` on the three touched files
+  both clean. NOT exercised: an actual `fbq` call captured in a real
+  browser session (same standing sandbox constraint as other entries).
+
+- Follow-up (same day): added the missing `Purchase` event to
+  `checkout-form.tsx`'s `placeOrder()`, same `order-modal.tsx` shape/
+  `eventID: orderRef.id` convention as the other funnels. This also fixed
+  a real pre-existing bug in `placeOrder()`, not just a Pixel gap: it used
+  to `try { await saveOrder(data) } catch (e) { console.error(e) }` and
+  then fall through UNCONDITIONALLY to the success UI, cart clear, and
+  WhatsApp message — so a failed `saveOrder()` (offline, Firestore rules,
+  etc.) still told the customer "order received" while nothing was
+  actually saved. `placeOrder()` now `return`s early on a `saveOrder()`
+  failure, shows a real inline error (`submitError` state, mirrors
+  `order-modal.tsx`'s pattern) instead of the false-success screen, and
+  only fires `Purchase` after a genuine `saveOrder()` resolution — so the
+  Pixel can no longer log a conversion for an order that was never saved.
+  `architecture-context.md`'s Analytics section updated to match.
+  Verified: `npx tsc --noEmit` and `npx eslint` on `checkout-form.tsx`
+  clean. NOT exercised: a real failed-`saveOrder()` path or a captured
+  `fbq('track','Purchase', ...)` call in a live browser session.
+
+## Completed (this session, 2026-08-23)
+
+- Fixed the main `/product/[id]` funnel's missing `ViewContent`: reported
+  as ViewContent/AddToCart/InitiateCheckout/Purchase all appearing to fire
+  on the homepage URL instead of each individual product page, breaking
+  Dynamic Ads/retargeting. Root cause was narrower than the report:
+  AddToCart, InitiateCheckout, and Purchase were already wired correctly
+  (2026-08-22 entry above) with the right `content_ids` and, via `fbq`'s
+  own automatic `event_source_url`, the right page URL — but
+  `components/storefront/product-detail.tsx` never fired `ViewContent` at
+  all. Pixel infra had only ever wired `ViewContent` for the `/glutathione`
+  landing funnel (`glutathione-page.tsx`); the standard catalog product
+  page every other product actually uses had zero view-content signal, so
+  Meta had no per-product ViewContent to key Dynamic Ads/retargeting off
+  for any of the catalog's real products — only the four special landing
+  pages ever produced one.
+  - Added the same ref-guarded once-per-mount `ViewContent` (survives
+    Strict Mode's dev-only double-invoke, keyed off `product.id` alone so
+    an admin price override loading async after mount can't cause a
+    second fire) to `product-detail.tsx`, right next to its existing
+    `AddToCart`. Same event shape as everywhere else: `content_ids`,
+    `content_type: "product"`, `content_name`, `value`, `currency: "DZD"`.
+  - No `event_source_url` override needed/added — `fbq` reads
+    `window.location.href` fresh at call time, so a `ViewContent` fired
+    from `product-detail.tsx` on `/product/{id}` already reports that
+    product's own URL, not the homepage's, once it fires at all.
+  - `architecture-context.md`'s Analytics section updated to document
+    `ViewContent` as part of the `/product/[id]` → `/checkout` funnel.
+  Verified: `npx tsc --noEmit`, `npx eslint`, and `npm run build` all
+  clean. NOT exercised: a captured `fbq('track','ViewContent', ...)` call
+  in a live browser session or a real Meta Events Manager check (same
+  standing sandbox constraint as the other Pixel entries above).
+
+- Follow-up (same day): full Pixel signal-quality pass across every
+  remaining funnel, prompted by an owner ask for the max useful signal Meta
+  can get out of this site. An audit turned up `/sunguard`, `/collagen`,
+  and `/carnitine` firing ZERO pixel events despite being structurally
+  identical to `/glutathione` (which had `ViewContent`/`Purchase` already);
+  `seller-order-modal.tsx` (a real order-saving path) firing nothing;
+  every WhatsApp/contact-form inquiry going untracked; no Advanced
+  Matching; no server-side Conversions API. See
+  `architecture-context.md`'s Analytics section for the full, current
+  picture — summary of what changed:
+  - `/sunguard`, `/collagen`, `/carnitine`, and the `/glutathione-3d` A/B
+    variant now all fire `ViewContent` (page mount) and `InitiateCheckout`
+    (order-modal open, ref resets on close so a reopen fires again) —
+    `/glutathione` itself was retrofitted with `InitiateCheckout` too,
+    since it had never had it either. `/sunguard`/`/collagen`/`/carnitine`'s
+    `order-modal.tsx`s now also fire `Purchase` after a confirmed
+    `saveOrder()` — this required fixing the same swallowed-`saveOrder()`-
+    error bug `checkout-form.tsx` had before its 2026-08-22 fix (`submit()`
+    used to log the error and fall through to the success UI regardless);
+    added `submitError` state/UI to match `/glutathione`'s already-correct
+    modal.
+  - `seller-order-modal.tsx` (PDP "leave order with seller" flow) now fires
+    `Purchase` on a confirmed order — it saves a real order via the same
+    `saveOrder()` `checkout-form.tsx` uses and previously fired nothing.
+  - New non-order signals: `contact-form.tsx` fires `Lead` (and got the
+    same swallowed-error fix as above — success/WhatsApp-handoff/`Lead` now
+    gate on a real `saveMessage()` resolution); `product-detail.tsx`'s
+    direct-WhatsApp button and the site-wide `whatsapp-float.tsx` button
+    (converted to a client component for this) both fire `Contact`;
+    `products-browser.tsx` fires `Search` with `search_string`, debounced
+    ~600ms after typing stops and deduped per distinct settled query.
+  - Advanced Matching: new `setAdvancedMatching()` in `lib/meta-pixel.ts`
+    re-issues `fbq('init', pixelId, { ph, fn })` with the customer's
+    validated phone/name right before every `Purchase` call (checkout,
+    every landing order-modal, seller-order-modal) — previously `fbq('init',
+    ...)` never passed any matching data, so Meta could only match events
+    to a browser cookie, never a real identity. Phone normalized to E.164
+    via the new exported `normalizeDzPhone()`.
+  - Server-side Conversions API: new `app/api/meta-capi/route.ts` (Next.js
+    Route Handler, same convention as `app/api/storage-closet` — not the
+    separate `trinkl` Firebase Functions) double-sends `Purchase` to the
+    Graph API via a new `sendCapiPurchase()` helper, fire-and-forget,
+    called alongside every client-side `Purchase` call above with the same
+    `eventID` for dedup. **NOT YET ACTIVE** — needs `META_CAPI_ACCESS_TOKEN`
+    (Business Manager → System Users → generate a token with
+    pixel/ads_management access), which nothing in this repo has yet (same
+    "owner must generate + set the env var on whichever platform serves
+    production" situation as `FIREBASE_SERVICE_ACCOUNT_KEY` above). Until
+    it's set, the route is a documented no-op (`{ skipped: true }`) — every
+    call site already fires-and-forgets it, so this can't break checkout
+    either way.
+  Verified: `npx tsc --noEmit`, `npx eslint` on every touched file, and
+  `npm run build` all clean. NOT exercised: any of this against real Meta
+  infrastructure (same standing sandbox constraint as every prior Pixel
+  entry) — once deployed, verify via Meta Events Manager's Test Events tool
+  + the Meta Pixel Helper browser extension, and check the "Event Match
+  Quality" score after Advanced Matching lands. CAPI additionally can't be
+  exercised at all until `META_CAPI_ACCESS_TOKEN` is set.
+
 ## Next Up
+
+- **Owner action required**: generate a Meta CAPI access token (Business
+  Manager → System Users → a token with pixel/ads_management access) and
+  set it as `META_CAPI_ACCESS_TOKEN` on whichever platform serves
+  production traffic, to activate the server-side `Purchase` double-send
+  in `app/api/meta-capi/route.ts` (see the entry above and
+  `architecture-context.md`'s Analytics section) — until then it's a
+  no-op, same fail-safe pattern as the Storage Counter endpoint's missing
+  `FIREBASE_SERVICE_ACCOUNT_KEY` above.
 
 - Extend the `syncCarriers` Cloud Function (in `tango-sama/trinkl/functions`)
   to also sync each carrier's stop-desk/agency list into
@@ -2804,4 +3036,167 @@ not the intended state (see `development-workflow.md`).
   clean, and a real `npm run dev` + `curl` check confirmed the search
   icon renders in the nav (`aria-label="بحث"`) and that
   `/products?q=عطر` server-renders the search input pre-filled with
-  `value="عطر"`.
+  `value="عطر"`.- 2026-08-24: Meta Conversions API (CAPI) reworked from a client-relayed
+  Purchase-only stub into a real server-side implementation, and
+  `ViewContent` added as a second dual-sent event. New `lib/meta-capi.ts`
+  holds the SERVER-ONLY transport (`sendMetaEvent()` + `buildUserData()`);
+  `app/api/meta-capi/route.ts` was rewritten around it. Three real defects
+  in the previous version are fixed: (1) the endpoint accepted a
+  client-supplied `value`, so anyone with curl could inject fake
+  conversions — Purchase now sends nothing but `orderId` and the route
+  re-reads the order from Firestore with the Admin SDK, deriving value/
+  `contents`/`num_items`/`order_id`/matching from the stored document, so a
+  Purchase can only exist for an order that genuinely does; (2) the
+  server-side phone hash was computed over the `+213…` form, which Meta can
+  never match — it now hashes digits-only per Meta's spec (this silently
+  destroyed all server-side phone matching); (3) there was no idempotency —
+  a Firestore transaction now claims the send via `meta.purchaseInFlight`
+  (5-minute stale-claim escape) and records `meta.{purchaseEventId,
+  purchaseSent,purchaseSentAt,purchaseError}`, so a retry can never produce
+  a second Purchase while a genuine failure can still be retried. Event ids
+  are built in exactly one place each (`purchaseEventId()` /
+  `trackViewContent()`) so the browser and server copies cannot drift;
+  Purchase's is derived from the Firestore order id and is therefore stable
+  across retries. Match quality raised well beyond the previous `ph`+`fn`:
+  `ln`, `ct` (Latin `communeFr`/`baladiya`), `st` (Latin `wilayaFr`),
+  `country`, and `external_id` — a random per-browser `ds_vid` written by
+  the base pixel script BEFORE `fbq('init')` so every browser event carries
+  it, including the ones with no server twin. `_fbc` is now reconstructed
+  from a `fbclid` URL param when the cookie is absent, so ad-click
+  attribution survives a blocked pixel. Call sites collapsed onto two
+  helpers (`trackPurchase()` × 6 order flows, `trackViewContent()` × 6
+  product/landing pages); no checkout logic, order schema, or UI changed.
+  Verified: `npx tsc --noEmit` clean; `npm run lint` clean apart from the
+  same two pre-existing unrelated findings (`cart-drawer.tsx`,
+  `*/product-section.tsx`); `npm run build` clean; the built client bundles
+  contain neither `META_CAPI_ACCESS_TOKEN` nor `graph.facebook.com`
+  (server/client boundary holds); a 19-assertion runtime check of the
+  hashing/normalization and event-id construction passed (including proof
+  the digits-only phone hash differs from the old `+`-form); and a live
+  `next start` + curl run confirmed every failure path returns HTTP 200
+  (garbage body, unknown event, forged Purchase for a nonexistent order,
+  Graph API error) with the access token never appearing in any log line.
+  NOT verifiable from the dev sandbox: a successful Graph API round-trip —
+  `graph.facebook.com` is outside this environment's egress allowlist, so
+  the send path was exercised only through its error branch. Needs
+  confirming in Events Manager → Test Events after `META_CAPI_ACCESS_TOKEN`
+  and `FIREBASE_SERVICE_ACCOUNT_KEY` are set (Purchase CAPI now depends on
+  the latter too — without Admin credentials the order can't be verified
+  and nothing is sent).
+
+
+- 2026-08-26: **AI-drafted WhatsApp replies (Meta Cloud API).** The shop's
+  only WhatsApp integration until now was a `wa.me` deep link
+  (`lib/whatsapp.ts`) plus the "رد" button in the الرسائل tab — every customer
+  conversation was answered by hand on a phone. This adds a real two-way
+  channel and an AI draft on top of it. Owner decisions recorded during
+  planning: **Meta WhatsApp Cloud API** as the channel (the only officially
+  supported programmatic route, and it reuses the Meta Business Manager
+  account already running the Pixel/CAPI); **AI drafts, owner approves** —
+  nothing reaches a customer without a tap; scope limited to **product/price
+  questions and delivery fees/FAQ**, with order-status lookups and in-chat
+  order-taking explicitly out of scope for now.
+  New server-only modules: `lib/whatsapp-cloud.ts` (Graph transport,
+  signature verification, 24h-window check), `lib/wa-store.ts` (Admin SDK
+  persistence for `wa_threads`), `lib/whatsapp-ai.ts` (the draft), and the
+  pure `lib/wa-draft-text.ts`. New routes: `app/api/whatsapp` (webhook) and
+  `app/api/whatsapp/send` (admin-authenticated outbound). New admin tab
+  واتساب (`components/admin/views/inbox-view.tsx`) with a live thread list,
+  the AI draft preloaded into an editable composer, and a 24h-window badge.
+  `lib/firebase-admin.ts` gained `getAdminAuth()` / `isAdminRequest()` —
+  the send route is the first in this repo that must not be open, since an
+  unauthenticated one would let anyone message customers from the shop's
+  number.
+  Three things worth remembering about the design: the webhook verifies the
+  HMAC against the RAW body before parsing (re-serialized JSON never
+  matches); it returns 200 before drafting, doing the model call in
+  `after()`, because Meta disables slow webhooks; and message docs are keyed
+  by Meta's `wamid`, so a webhook retry is idempotent by construction rather
+  than by a flag. The model is grounded on a Firestore-built facts block
+  rather than a tool loop, so it cannot quote a price it wasn't handed, and
+  the AI path never touches `orders`.
+  Verified: `npx tsc --noEmit` clean; `npm run lint` clean apart from the
+  same three pre-existing unrelated findings (`cart-drawer.tsx`,
+  `carnitine/product-section.tsx`, `sunguard/product-section.tsx`);
+  `npm run build` clean with both routes registered; the built client bundles
+  contain none of `WHATSAPP_ACCESS_TOKEN`, `WHATSAPP_APP_SECRET`,
+  `WHATSAPP_VERIFY_TOKEN`, `ANTHROPIC_API_KEY`, `graph.facebook.com`,
+  `api.anthropic.com`, nor the Anthropic SDK itself (server/client boundary
+  holds). Live `next start` + curl: 9/9 webhook checks (handshake echoes the
+  challenge, wrong token/mode/no-params → 403; valid signature → 200, bad and
+  missing signature → 403; a body tampered under a previously-valid signature
+  → 403; a malformed-but-signed body → 200 so Meta stops retrying) and 5/5
+  send-route auth checks (no header, junk bearer, non-bearer scheme, empty
+  bearer, and a well-formed **forged JWT claiming the admin email** all → 401,
+  with zero Graph calls attempted). 40 isolated assertions over the pure
+  logic: 23 on `parseInbound` (batched entries/changes, status callbacks with
+  no messages array, non-text types, blank bodies, seconds→ms timestamps,
+  per-`wa_id` profile-name matching rather than positional, garbage payloads)
+  and the window/signature edge cases including the exact 24h boundary; 17 on
+  `wa-draft-text` (the handoff marker stripped wherever it lands — last line,
+  mid-text, start, repeated, inline — and `toTurns` dropping leading outbound
+  messages so the first turn is always `user`). One real defect was caught
+  and fixed by those: stripping a whole-line marker left a stray blank line
+  mid-reply.
+  NOT verifiable from this sandbox: a real Graph API round-trip
+  (`graph.facebook.com` is outside the egress allowlist, same caveat as the
+  Meta CAPI entry above) and any live model call (no `ANTHROPIC_API_KEY` in
+  the sandbox) — so draft *quality* in Arabic has not been read yet, only the
+  code paths around it, which were confirmed to degrade to "no draft" rather
+  than to an error. Both need confirming after deploy.
+  **Open questions for the owner, blocking go-live:**
+  1. **Which phone number.** A number active in the WhatsApp Business *mobile
+     app* cannot also be on the Cloud API. Putting `213662705830` (the default
+     in `lib/whatsapp.ts`) on the API means it stops working on the phone —
+     accept that, or register a second number for the API.
+  2. **`firestore.rules` must gain `wa_threads` as `allow read, write: if
+     isAdmin()`** before the panel can read the inbox. Those rules live with
+     the Cloud Functions project, not this repo, and per
+     `context/ai-workflow-rules.md` a rules change is its own step, verified
+     with anonymous REST checks before and after deploy. Until it lands the
+     inbox will log a permissions error and stay empty.
+  3. Meta setup itself: add the WhatsApp product to the app, register the
+     number, mint a System User permanent token with
+     `whatsapp_business_messaging` + `whatsapp_business_management`, and point
+     the webhook at `https://<domain>/api/whatsapp` subscribed to `messages`.
+
+- 2026-08-27: WhatsApp inbox — pre-launch pass, then merged to `main` for
+  deployment. Three things.
+  **(1) The reply persona is now written for the shop's actual customers:**
+  Algerian women, in Algerian darja, addressed in the feminine. The first
+  version defaulted to "darja or MSA" and referred to the customer in the
+  masculine third person, which is the register a model reaches for by
+  default and the wrong one for this shop — "شحال" not "كم", "وين" not "أين",
+  "راكِ/تحبي/عندكِ" not the masculine forms. Darja↔French mixing is now
+  explicitly allowed since that is how customers actually write, and a
+  masculine fallback is stated outright so a man who messages is not
+  addressed as a woman. Added one rule the previous persona lacked: no
+  medical advice — on a skin/health question the reply points to a doctor,
+  which matters for a store selling glutathione and collagen.
+  **(2) The 24-hour window badge never ticked.** `windowLeft()` was computed
+  during render with nothing to re-render it, so a panel left open — the
+  normal way it will be used — kept showing a stale "يمكن الرد: 3 سا" and
+  left the composer enabled after the window had actually shut. The send was
+  still refused server-side (409), so this misled rather than broke, but it
+  undermined the one piece of UI whose entire job is telling the truth about
+  time. Now re-renders once a minute, which is the finest granularity the
+  badge displays.
+  **(3) Removed dead `isConfigured()`** from `lib/whatsapp-cloud.ts` — never
+  called; `sendText()` does its own credential check.
+  Verified: tsc/lint/build clean (same three pre-existing findings); all 40
+  isolated assertions still pass, which matters here because `waWindowOpen`
+  is shared by the badge and the send route; client bundles still carry none
+  of the WhatsApp/Anthropic secrets, hosts, the SDK, or the persona text;
+  live smoke test — Meta's handshake echoes the challenge, wrong verify token
+  403, signed inbound 200, unsigned 403, send without an admin token 401.
+  **Merged to `main`:** the feature branch was 2 commits ahead and unmerged,
+  so `/api/whatsapp` was a 404 in production and Meta's webhook could never
+  have verified against it — the owner had already added the access token to
+  Vercel against a route that did not exist. Note a Vercel *preview* URL is
+  not a workaround: Deployment Protection answers Meta with 401.
+  Still owner-side before it can work: `WHATSAPP_PHONE_NUMBER_ID`
+  (= 1389895586445932), `WHATSAPP_APP_SECRET`, `WHATSAPP_VERIFY_TOKEN` and
+  `ANTHROPIC_API_KEY` in Vercel + a fresh build; the `wa_threads` rules
+  block; and the webhook subscription. Draft quality in darja still has NOT
+  been observed against the live model — no `ANTHROPIC_API_KEY` in the dev
+  sandbox and `graph.facebook.com` remains outside its egress (HTTP 000).

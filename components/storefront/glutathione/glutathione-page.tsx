@@ -3,6 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import type { SiteSettings } from "@/lib/firebase";
 import { useDeliveryData } from "@/hooks/use-delivery-data";
+import { trackViewContent } from "@/lib/meta-pixel";
 import { TikTokLiveButton } from "@/components/storefront/tiktok-live-button";
 import { Topbar } from "./topbar";
 import { Hero } from "./hero";
@@ -77,6 +78,24 @@ export function GlutathionePage({
     image: override?.image?.trim() || GLUTATHIONE_PRODUCT.image,
     price: override?.price && override.price > 0 ? override.price : GLUTATHIONE_PRODUCT.price,
   };
+
+  // Fires once per real page view. The ref guard (not just an empty dep
+  // array) is what makes this survive Strict Mode's dev-only double-invoke
+  // of mount effects — see meta-pixel-route-tracker.tsx for the same
+  // pattern applied to PageView. Deliberately keyed off `product.id` alone,
+  // not `product`: an admin price override loaded async after this mount
+  // must not cause a second ViewContent for the same view.
+  const viewContentFired = useRef(false);
+  useEffect(() => {
+    if (viewContentFired.current) return;
+    viewContentFired.current = true;
+    trackViewContent({
+      contentIds: [product.id],
+      contentName: product.title,
+      value: product.price,
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [product.id]);
 
   return (
     <div className={styles.glutathione} dir="rtl">

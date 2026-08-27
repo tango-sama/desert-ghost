@@ -17,9 +17,11 @@ import {
   getExpenses,
   watchOrders,
   watchExpenses,
+  watchWaThreads,
   type Order,
   type MessageDoc,
   type Expense,
+  type WaThread,
 } from "@/lib/admin";
 
 // One shared store per panel session, mirroring the old amelhadj.html
@@ -35,6 +37,7 @@ type AdminStore = {
   orders: Order[];
   messages: MessageDoc[];
   expenses: Expense[];
+  waThreads: WaThread[];
   settings: SiteSettings;
   toastMsg: string;
   toastKey: number;
@@ -48,6 +51,7 @@ type AdminStore = {
 
 let unsubOrders: (() => void) | null = null;
 let unsubExpenses: (() => void) | null = null;
+let unsubWa: (() => void) | null = null;
 
 export const useAdminStore = create<AdminStore>()((set) => ({
   loaded: false,
@@ -57,6 +61,7 @@ export const useAdminStore = create<AdminStore>()((set) => ({
   orders: [],
   messages: [],
   expenses: [],
+  waThreads: [],
   settings: {},
   toastMsg: "",
   toastKey: 0,
@@ -80,12 +85,17 @@ export const useAdminStore = create<AdminStore>()((set) => ({
     set({ loaded: true, products, categories, featured, orders, messages, settings, expenses });
     if (!unsubOrders) unsubOrders = watchOrders((o) => set({ orders: o }));
     if (!unsubExpenses) unsubExpenses = watchExpenses((e) => set({ expenses: e }));
+    // Watch-only: wa_threads is written entirely server-side by the Cloud
+    // API webhook, so the snapshot listener is the only read it needs.
+    if (!unsubWa) unsubWa = watchWaThreads((t) => set({ waThreads: t }));
   },
 
   stopWatchers: () => {
     unsubOrders?.();
     unsubExpenses?.();
+    unsubWa?.();
     unsubOrders = null;
     unsubExpenses = null;
+    unsubWa = null;
   },
 }));

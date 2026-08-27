@@ -4,6 +4,7 @@ import { useMemo, useState } from "react";
 import { priceFmt, productImages, type Product } from "@/lib/firebase";
 import { setDocIn, updateDocIn, deleteDocIn } from "@/lib/admin";
 import { useAdminStore } from "@/stores/admin-store";
+import { closetFor, statsByProduct, EMPTY_STATS } from "@/lib/storage-counter";
 import {
   inp,
   sel,
@@ -53,6 +54,7 @@ const PER_PAGE = 20;
 export function ProductsView() {
   const products = useAdminStore((s) => s.products);
   const categories = useAdminStore((s) => s.categories);
+  const orders = useAdminStore((s) => s.orders);
   const toast = useAdminStore((s) => s.toast);
 
   const [form, setForm] = useState<PForm>(EMPTY_FORM);
@@ -67,6 +69,11 @@ export function ProductsView() {
     return m;
   }, [categories]);
 
+  // Same "في المحل" (in-closet) quantity signal as the Storage Counter tab
+  // and the storefront's featured grid (lib/storage-counter.ts), so a
+  // product's rank here matches what those views call its stock.
+  const statsById = useMemo(() => statsByProduct(orders), [orders]);
+
   const list = useMemo(() => {
     let l = products.slice();
     if (filter !== "all") l = l.filter((p) => p.category === filter);
@@ -74,11 +81,17 @@ export function ProductsView() {
       const q = search.toLowerCase();
       l = l.filter((p) => String(p.title ?? "").toLowerCase().includes(q));
     }
-    return l.sort(
-      (a, b) =>
+    // Most-in-closet first; ties (including products with no stock tracked)
+    // fall back to most recently added/edited.
+    return l.sort((a, b) => {
+      const aCloset = closetFor(Number(a.stock ?? 0), statsById[a.id] ?? EMPTY_STATS);
+      const bCloset = closetFor(Number(b.stock ?? 0), statsById[b.id] ?? EMPTY_STATS);
+      return (
+        bCloset - aCloset ||
         (Number(b.lastModified ?? b.id) || 0) - (Number(a.lastModified ?? a.id) || 0)
-    );
-  }, [products, filter, search]);
+      );
+    });
+  }, [products, filter, search, statsById]);
 
   const pages = Math.max(1, Math.ceil(list.length / PER_PAGE));
   const curPage = Math.min(page, pages);

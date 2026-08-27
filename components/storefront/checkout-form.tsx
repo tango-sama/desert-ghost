@@ -1,11 +1,12 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { Check, Minus, Plus, ShieldCheck, Trash2, Truck } from "lucide-react";
 import { priceFmt, saveOrder, type SiteSettings } from "@/lib/firebase";
 import { waLink } from "@/lib/whatsapp";
-import { useCartStore, cartTotal } from "@/stores/cart-store";
+import { trackPixelEvent, trackPurchase } from "@/lib/meta-pixel";
+import { useCartStore, cartCount, cartTotal } from "@/stores/cart-store";
 import { useDeliveryData } from "@/hooks/use-delivery-data";
 import { useIsStaff, setStaffFlag } from "@/hooks/use-staff";
 import { useStorageCloset } from "@/hooks/use-storage-closet";
@@ -68,6 +69,7 @@ export function CheckoutForm({ settings }: { settings: SiteSettings }) {
   const [errors, setErrors] = useState<Record<string, boolean>>({});
   const [submitting, setSubmitting] = useState(false);
   const [order, setOrder] = useState<{ num: string; message: string } | null>(null);
+  const [submitError, setSubmitError] = useState(false);
 
   // Never show wilaya/commune options from another carrier's shape (or the
   // generic static list) while this carrier's own live list is still
@@ -102,6 +104,26 @@ export function CheckoutForm({ settings }: { settings: SiteSettings }) {
 
   const subtotal = cartTotal(items);
   const total = subtotal + deliveryFee;
+
+  // Fires once per real checkout start (page load with a non-empty cart, or
+  // the cart hydrating from localStorage right after mount — whichever
+  // lands items here first). Ref guard, not just an empty dep array, so
+  // this survives Strict Mode's dev-only double-invoke of mount effects —
+  // same pattern as ViewContent in glutathione-page.tsx. Never fires on the
+  // empty-cart placeholder below since it bails out until items exist.
+  const initiateCheckoutFired = useRef(false);
+  useEffect(() => {
+    if (initiateCheckoutFired.current || items.length === 0) return;
+    initiateCheckoutFired.current = true;
+    trackPixelEvent("InitiateCheckout", {
+      content_ids: items.map((i) => i.id),
+      content_type: "product",
+      num_items: cartCount(items),
+      value: subtotal,
+      currency: "DZD",
+    });
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [items.length]);
 
   // Wilaya change reloads the commune/desk list (derived from selectedWilaya
   // above) and clears whatever was previously picked from the old wilaya.
@@ -176,6 +198,13 @@ export function CheckoutForm({ settings }: { settings: SiteSettings }) {
   }
 
   async function placeOrder(openWa: boolean) {
+    // Belt-and-suspenders alongside disabled={submitting} on both submit
+    // buttons below: that prop only takes effect on the next render/commit,
+    // so a second click landing in the gap before the DOM actually disables
+    // could otherwise start a second saveOrder() for the same order — same
+    // guard as order-modal.tsx.
+    if (submitting) return;
+
     const bad: Record<string, boolean> = {
       name: !name.trim(),
       phone: !phone.trim(),
@@ -193,6 +222,7 @@ export function CheckoutForm({ settings }: { settings: SiteSettings }) {
     }
 
     setSubmitting(true);
+    setSubmitError(false);
     const num = generateOrderNumber();
     const orderItems = items.map((i) => ({ id: i.id, title: i.title, price: i.price, qty: i.qty, image: i.image }));
     const data = {
@@ -214,11 +244,37 @@ export function CheckoutForm({ settings }: { settings: SiteSettings }) {
       ...(staff ? { source: "admin_phone" } : {}),
     };
 
+    // The success UI, cart clear, and Purchase pixel event must only ever
+    // follow a CONFIRMED saveOrder() — previously this swallowed the error
+    // and fell through to "success" regardless, which both lied to the
+    // customer and would have fired Purchase for orders that were never
+    // actually saved (fake conversions poisoning the Pixel's data).
+    let orderRef;
     try {
-      await saveOrder(data);
+      orderRef = await saveOrder(data);
     } catch (e) {
       console.error("[DS] saveOrder", e);
+      setSubmitError(true);
+      setSubmitting(false);
+      return;
     }
+
+    // Fires BOTH the browser Pixel and the server-side CAPI copy with one
+    // shared event id (`purchase_<firestoreOrderId>`), built inside
+    // trackPurchase() so the two can never drift apart. Deliberately NOT
+    // wrapped in a try/catch: trackPurchase never throws — the Pixel call
+    // and the fire-and-forget CAPI post are each isolated internally — so
+    // a blocked fbq or an unreachable network can't read as an order
+    // failure to the customer. The server copy re-reads this order from
+    // Firestore and sends nothing that isn't in the saved document.
+    trackPurchase({
+      orderId: orderRef.id,
+      orderNumber: num,
+      items: orderItems,
+      value: total,
+      phone: data.phone,
+      firstName: data.customer.split(" ")[0],
+    });
 
     const message = buildMessage({
       num,
@@ -457,6 +513,11 @@ export function CheckoutForm({ settings }: { settings: SiteSettings }) {
               </Field>
             )}
 
+            {submitError && (
+              <p className="mt-4 rounded-xl bg-[#FFF0F3] px-4 py-3 text-center text-sm font-bold text-[var(--rose-deep)]">
+                تعذّر إرسال الطلب، يرجى المحاولة مجدداً.
+              </p>
+            )}
             <button
               type="submit"
               disabled={submitting}
