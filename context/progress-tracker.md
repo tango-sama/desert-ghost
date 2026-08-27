@@ -3200,3 +3200,32 @@ not the intended state (see `development-workflow.md`).
   block; and the webhook subscription. Draft quality in darja still has NOT
   been observed against the live model — no `ANTHROPIC_API_KEY` in the dev
   sandbox and `graph.facebook.com` remains outside its egress (HTTP 000).
+
+- 2026-08-27: **Fixed: the WhatsApp send route locked out the second admin.**
+  Caught while reading the owner's actual deployed `firestore.rules` (screenshot
+  during setup), not from the codebase — the live `isAdmin()` allows
+  `['tango0es@gmail.com', 'hadjajamel1988@gmail.com']`, two accounts, while
+  `lib/firebase-admin.ts` hardcoded only the first. Consequence: Hadja Amel
+  could sign into the panel, see the واتساب inbox and its AI drafts (Firestore
+  rules let her read), tap إرسال, and get a silent 401 from
+  `/api/whatsapp/send`. `ADMIN_EMAIL` is now `ADMIN_EMAILS`, carrying both, with
+  a comment recording that the two lists fail in opposite directions and must
+  move together.
+  Root cause was a stale context file, so both were corrected in the same
+  step: `context/architecture-context.md` said "the admin is a single Firebase
+  Auth email/password account" and `context/code-standards.md` named only
+  `tango0es@gmail.com`. Both now state the two-account reality and point at
+  `ADMIN_EMAILS` as the thing to keep in lock step. Worth noting for future
+  work: the deployed rules are the source of truth on the auth boundary, not
+  these files.
+  Also settled during the same setup pass: the `wa_threads` rules block the
+  owner published uses this repo's existing recursive style —
+  `match /wa_threads/{document=**} { allow read, write: if isAdmin(); }` — a
+  single line that covers the `messages` subcollection too, rather than the
+  nested form originally written into `context/whatsapp-setup.md` §3.
+  Verified: tsc/lint/build clean (same three pre-existing findings); no secrets
+  or admin emails in any client bundle; live send-route checks confirm
+  widening the list did NOT weaken the boundary — a forged JWT is still 401
+  whether it claims `tango0es@`, `hadjajamel1988@`, or `attacker@evil.com`,
+  because the signature is verified before the email is ever read. Webhook
+  handshake unaffected.
