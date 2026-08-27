@@ -296,7 +296,15 @@
 ## Auth Model
 
 - Customers browse and order anonymously — no customer accounts.
-- The admin is a single Firebase Auth email/password account (`tango0es@gmail.com`).
+- Admin access is Firebase Auth email/password. **There are TWO admin accounts,
+  not one** — the deployed `firestore.rules` `isAdmin()` reads
+  `request.auth.token.email in ['tango0es@gmail.com', 'hadjajamel1988@gmail.com']`.
+  (This line previously said "a single account", which was wrong and caused a
+  real bug: the WhatsApp send route was built to accept only the first email,
+  so the second admin could read the inbox but silently got a 401 on send.)
+  Any server code that gates on admin identity must mirror the full list —
+  see `ADMIN_EMAILS` in `lib/firebase-admin.ts`, which must be kept in lock
+  step with the rule.
   `amelhadj.html` gates the panel behind `signInWithEmailAndPassword` (email
   hardcoded, password-only form), and `firestore.rules` defines `isAdmin()` as a
   signed-in user with that exact email.

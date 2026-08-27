@@ -38,7 +38,7 @@ Static women's beauty & wellness storefront for Algeria. Plain HTML/CSS/JS (no f
 - Collections: `products`, `categories`, `orders`, `messages`, `expenses`, `site_settings` (single doc), and server-only `private/*` docs.
 - Carrier API credentials (Yalidine, ZR Express, Noest) live ONLY in `private/*` docs that clients cannot read — enforced by `firestore.rules`. Never put an API token, secret, or credential in browser JS or HTML.
 - The Firebase web config in `js/firebase.js` is public by design; that is not a leak.
-- Admin access = Firebase Auth sign-in as `tango0es@gmail.com` (`isAdmin()` in `firestore.rules`); the admin panel signs in with email/password.
+- Admin access = Firebase Auth sign-in as `tango0es@gmail.com` **or** `hadjajamel1988@gmail.com` (both listed in `isAdmin()` in `firestore.rules`); the admin panel signs in with email/password. Server code gating on admin identity must accept both — see `ADMIN_EMAILS` in `lib/firebase-admin.ts`.
 - Any rules change must keep: public read on catalog data, create-only `orders`/`messages` from clients, admin-only reads on customer data, no client access to `private/*`.
 
 ## Cloud Functions (`functions/`)

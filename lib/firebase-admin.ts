@@ -70,10 +70,21 @@ export async function getOrderStats(): Promise<Record<string, Stats> | null> {
   }
 }
 
-// The single admin identity — the same account firestore.rules' isAdmin()
-// recognizes. Kept in lock step with that rule: widening one without the
-// other silently opens a hole.
-export const ADMIN_EMAIL = "tango0es@gmail.com";
+// The admin identities — the SAME set firestore.rules' isAdmin() allows.
+// The deployed rule reads:
+//
+//   request.auth.token.email in ['tango0es@gmail.com',
+//                                'hadjajamel1988@gmail.com']
+//
+// These two lists must stay in lock step. They fail in opposite and equally
+// bad ways: a name here that the rules omit grants API access to someone
+// Firestore will not serve; a name in the rules omitted here lets that
+// person see the inbox and its drafts but silently 401 when they try to
+// send — which is how the second account was missed the first time.
+export const ADMIN_EMAILS: readonly string[] = [
+  "tango0es@gmail.com",
+  "hadjajamel1988@gmail.com",
+];
 
 export function getAdminAuth(): Auth | null {
   if (cachedAuth !== undefined) return cachedAuth;
@@ -94,7 +105,7 @@ export function getAdminAuth(): Auth | null {
  * Route handlers in this repo were all safely anonymous until the WhatsApp
  * send endpoint, which is not: an unauthenticated one would let anyone send
  * messages from the shop's own WhatsApp number. Returns true ONLY on a
- * verified token whose email matches ADMIN_EMAIL — every other outcome
+ * verified token whose email is one of ADMIN_EMAILS — every other outcome
  * (missing header, malformed token, revoked session, unverifiable because
  * Admin credentials aren't configured) is false, so a misconfiguration
  * fails closed rather than open.
@@ -106,7 +117,7 @@ export async function isAdminRequest(authHeader: string | null): Promise<boolean
   if (!auth) return false;
   try {
     const decoded = await auth.verifyIdToken(token, true);
-    return decoded.email === ADMIN_EMAIL;
+    return !!decoded.email && ADMIN_EMAILS.includes(decoded.email);
   } catch {
     // Expired, forged, or revoked — all the same answer, and deliberately
     // not logged in detail: the token itself must never reach a log.

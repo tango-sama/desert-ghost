@@ -60,13 +60,15 @@ allow it. These rules live with the Cloud Functions project, **not** this
 repo. Add this block alongside the existing `orders` / `messages` rules:
 
 ```
-match /wa_threads/{waId} {
-  allow read, write: if isAdmin();
-  match /messages/{wamid} {
-    allow read, write: if isAdmin();
-  }
-}
+match /wa_threads/{document=**} { allow read, write: if isAdmin(); }
 ```
+
+Paste it beside the existing `match /expenses/...` line, inside
+`match /databases/{database}/documents`. The recursive `{document=**}` matches
+this repo's existing style and covers the `messages` subcollection in the same
+line — rules do not cascade, so a plain `match /wa_threads/{waId}` alone would
+leave the individual messages unreadable and the threads would render with
+empty chat bubbles.
 
 `wa_threads` holds customer phone numbers and message bodies, so it belongs
 in the same admin-only class as `orders` and `messages` — anonymous clients
