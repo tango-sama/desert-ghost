@@ -117,6 +117,31 @@ export async function GET(_req: NextRequest) {
     })
   );
 
+  // 7. Has ANY WhatsApp message actually been stored?
+  //
+  //    This reads with the Admin SDK, which bypasses firestore.rules — so it
+  //    separates the two causes of an empty inbox that look identical in the
+  //    panel:
+  //      threads:0  → nothing ever reached the webhook (Meta not subscribed
+  //                   to `messages`, or the signature was rejected)
+  //      threads:>0 → messages ARE stored and the panel simply cannot read
+  //                   them, i.e. the wa_threads rules block was never
+  //                   published
+  //    Counts and a timestamp only — no phone numbers, no message text.
+  steps.push(
+    await probe("wa-threads", async () => {
+      const { getAdminDb } = await import("@/lib/firebase-admin");
+      const adb = getAdminDb();
+      if (!adb) return "skipped (no admin db)";
+      const snap = await adb.collection("wa_threads").get();
+      if (snap.empty) return "threads:0 — no inbound message has ever been stored";
+      const latest = Math.max(
+        ...snap.docs.map((d) => Number((d.data() as { lastMessageAt?: unknown }).lastMessageAt) || 0)
+      );
+      return `threads:${snap.size} latest:${latest ? new Date(latest).toISOString() : "unknown"}`;
+    })
+  );
+
   const ok = steps.every((s) => s.ok);
   return Response.json({ ok, steps }, { status: 200 });
 }
