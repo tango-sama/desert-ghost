@@ -3337,3 +3337,49 @@ not the intended state (see `development-workflow.md`).
   experiment: if `/` recovers on this deploy, the fault was in the
   firebase-admin path; if it still 500s, that path is eliminated and
   `/api/health` will say which layer, if any, is unhealthy.
+
+- 2026-08-27: **RESOLVED — the `GET /` `FUNCTION_INVOCATION_FAILED` outage.**
+  Owner confirms the home page serves normally again. The fix that closed it
+  was making `components/storefront/product-grid.tsx` load
+  `lib/firebase-admin` through a **dynamic import inside a try/catch**
+  (`353a512`), together with splitting `firebase-admin/auth` out of that
+  module (`389f3a1`) so the storefront never pulls Firebase Auth at all.
+  Be precise about what is and is not known:
+  - **Known:** with a STATIC import, any failure while loading
+    `lib/firebase-admin` killed `/` before a single product rendered, and no
+    try/catch at the call site could help, because the failure happened at
+    import time. `/` was the only *page* route importing that module and the
+    only route failing — the blast radius matched exactly. Removing that
+    hard dependency fixed it.
+  - **NOT known:** precisely what inside that module graph failed on Vercel.
+    It never reproduced locally (`/` returned 200 here throughout), and
+    `/api/health` — added during the incident — shows every layer of that
+    same path passing in production: service-account JSON valid, Admin SDK
+    initialising, a real privileged read returning 23 products with order
+    history. So the fault was in *loading* the module under Vercel's
+    bundling, not in anything it does once loaded.
+  - Two theories were raised and both retracted: an ADC/unhandled-rejection
+    crash (ruled out — the service-account key is present and valid, so
+    `applicationDefault()` is never reached), and a module-load failure
+    inferred from Vercel's "External APIs: No outgoing requests" (unsound —
+    the Admin SDK speaks gRPC, which that fetch-based panel does not count).
+    Recorded because both are easy traps to fall into again.
+  **Standing lesson for this codebase:** never let a storefront route depend
+  on `lib/firebase-admin` loading successfully. It exists for privileged
+  reads that every caller is already written to survive the absence of, so
+  reach it through a guarded dynamic import on any page path. The static
+  import was load-bearing by accident, and turned an optional nicety (sorting
+  products by closet count) into a hard dependency of the home page.
+  Kept from the incident: `/api/health`, which probes env-var presence,
+  service-account JSON parse and shape, module load, Admin init, a real
+  `getOrderStats()` read, and the home page's own four storefront reads —
+  each step independently guarded so the route cannot itself 500, body
+  limited to booleans and step names with stack traces going to the server
+  log. It is what finally produced hard evidence after two wrong theories,
+  and it is what revealed the WhatsApp env vars were never set.
+  Still outstanding for WhatsApp: production reports `2/6 set` —
+  `ANTHROPIC_API_KEY`, `WHATSAPP_PHONE_NUMBER_ID`, `WHATSAPP_APP_SECRET` and
+  `WHATSAPP_VERIFY_TOKEN` do not exist in Vercel (the owner's env-var list
+  shows a single `WHATSAPP_*` row). Nothing about the feature can work until
+  they are added AND a redeploy runs; this, not the code, is why no message
+  ever reached the inbox.
