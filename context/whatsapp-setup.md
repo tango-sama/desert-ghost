@@ -53,6 +53,32 @@ Copy it once — Meta will not show it again.
 
 ---
 
+## 2b. PUBLISH THE APP — the step that silently costs you an evening
+
+**A Meta app in Development mode receives NOTHING but test webhooks.** Meta's
+own wording, on the Production setup screen:
+
+> Apps will only be able to receive test webhooks sent from the app dashboard
+> while the app is unpublished. No production data, **including from app
+> admins, developers or testers**, will be delivered unless the app has been
+> published.
+
+This is the cruellest failure mode in the whole setup, because everything
+*looks* right: the webhook verifies, the `messages` field shows Subscribed,
+and the dashboard's **Test** button delivers a payload end to end. Only real
+messages — including ones you send yourself from your own phone, as the app's
+own admin — are dropped, with no error anywhere. There is nothing to find in
+the logs, because Meta never calls.
+
+Flip **App Mode** from **Development** to **Live** using the toggle at the top
+of the app dashboard. If it refuses, it will name what it wants first —
+usually a privacy-policy URL under App settings → Basic, and sometimes
+business verification.
+
+**Confirm it:** message the number from a phone, then re-check `/api/health` —
+`wa-threads` must climb past the count Meta's test left behind. If the test
+payload got through but a real message does not, this step is why.
+
 ## 3. Firestore rules
 
 The panel reads `wa_threads` with your own admin login, so the rules must
@@ -148,6 +174,7 @@ like "وين وصل طلبي؟" — it should draft a handoff and badge it
 | Messages arrive, no draft ever | `ANTHROPIC_API_KEY` unset, or the model call failed — check server logs for `[DS] wa draftReply` |
 | "انتهت مهلة 24 سا", cannot type | Correct behaviour: WhatsApp only allows free-form replies within 24h of the customer's last message. Needs an approved template to reopen. |
 | Customer says they sent a photo, nothing in the panel | **Known gap** — the webhook currently handles text only; non-text messages are skipped silently. See below. |
+| Meta's **Test** button arrives, but real messages never do | The app is still in **Development** mode — see §2b. This is the single most misleading failure in the setup: every visible setting is correct and nothing is logged, because Meta never calls. |
 
 ---
 
