@@ -49,6 +49,7 @@ import {
   wilayasFor,
   type Carrier,
   type CarrierCache,
+  type CarrierCenter,
   type DeliveryType,
 } from "@/lib/delivery";
 
@@ -760,6 +761,53 @@ function resolveOrderWilayaId(
   return match ? match.id : null;
 }
 
+// The stop desk currently saved on the order (`o.baladiya`), matched against
+// the desks THIS carrier runs in the order's wilaya. Every carrier keeps its
+// own agency network, so a desk name that is valid for one company is
+// meaningless — and rejected at parcel creation ("مكتب الطرد غير مطابق") —
+// for another. Names carry irregular whitespace and slight wording
+// differences between carriers' own feeds (e.g. ZR hub names like
+// "Hub Menea 58  مكتب المنيعة"), so names are compared as collapsed lowercase
+// text — the same normalisation «ربط طلب» uses when it matches a parcel's desk.
+// `loose` also accepts a desk whose name merely contains (or is contained in)
+// the saved one — good enough to PRESELECT a likely desk for the admin to
+// confirm, never good enough to skip asking: the carrier matches the name it
+// is sent, so a near-miss is still a rejected parcel.
+function matchOrderDesk(
+  o: Order,
+  co: Carrier,
+  cache: CarrierCache,
+  loose = false
+): CarrierCenter | null {
+  const wid = resolveOrderWilayaId(o, co, cache);
+  if (wid == null) return null;
+  const saved = String(o.baladiya ?? "").trim();
+  if (!saved) return null;
+  const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
+  const want = norm(saved);
+  const desks = centersForCarrier(co, wid, cache);
+  const exact = desks.find((d) => norm(String(d.name)) === want);
+  if (exact || !loose) return exact ?? null;
+  return (
+    desks.find((d) => {
+      const a = norm(String(d.name));
+      return a.includes(want) || want.includes(a);
+    }) ?? null
+  );
+}
+
+// Whether the desk saved on a Stop Desk order can be used as-is for THIS
+// carrier. Unknown (no synced desk list for that wilaya) is deliberately NOT
+// treated as a mismatch: with no list to check against there is nothing to
+// pick from either, so blocking would dead-end the admin on a parcel that may
+// well create fine — see requestCreateParcel.
+function orderDeskUsableFor(o: Order, co: Carrier, cache: CarrierCache): boolean {
+  const wid = resolveOrderWilayaId(o, co, cache);
+  if (wid == null) return true;
+  if (centersForCarrier(co, wid, cache).length === 0) return true;
+  return matchOrderDesk(o, co, cache) != null;
+}
+
 export function OrdersView() {
   const orders = useAdminStore((s) => s.orders);
   const products = useAdminStore((s) => s.products);
@@ -1116,16 +1164,37 @@ export function OrdersView() {
     }
   }
 
-  // A carrier button was clicked to create a parcel. For a Stop Desk order
-  // where the admin is choosing a DIFFERENT company than the customer's
-  // original pick, the desk already saved on the order belongs to that
-  // original carrier's own agency list, not this one's — ask which of THIS
-  // carrier's desks (in the order's wilaya) to use before creating the parcel.
+  // A carrier button was clicked to create a parcel. A Stop Desk order carries
+  // ONE desk name (`o.baladiya`) picked from ONE carrier's own agency list, so
+  // the parcel can only be created against the company that actually runs that
+  // desk — otherwise the carrier rejects it ("مكتب الطرد غير مطابق"). Ask which
+  // of THIS carrier's desks (in the order's wilaya) to use whenever the saved
+  // one can't be trusted for it:
+  //   • the admin picked a different company than the one on the order — the
+  //     saved desk belongs to the other carrier's network, and the Stop Desk
+  //     fee changes with the company too (recomputed in the popup); and
+  //   • the saved desk doesn't match any desk this carrier runs in that wilaya
+  //     — which also covers the same-company cases the old switch-only check
+  //     let straight through into the error: an order whose desk was already
+  //     rewritten by an earlier switch (so `deliveryCompany` now agrees with
+  //     the clicked button while `baladiya` does not), one placed before this
+  //     carrier's desks were synced, and one carrying a commune name rather
+  //     than a real desk.
+  // Home delivery, and a desk that IS this carrier's own, still create the
+  // parcel immediately with no popup.
   function requestCreateParcel(co: CarrierKey, o: Order) {
     const isOffice = o.deliveryType === "office";
     const switchingCompany = !!o.deliveryCompany && o.deliveryCompany !== co;
-    if (isOffice && switchingCompany) {
-      setDeskPrompt({ orderId: String(o.id), co, deskId: "" });
+    if (isOffice && (switchingCompany || !orderDeskUsableFor(o, co, cache))) {
+      // Preselect the equivalent desk when this carrier does run one under the
+      // saved name, so a switch between carriers that share a desk name is one
+      // click to confirm rather than a hunt through the list.
+      const known = matchOrderDesk(o, co, cache, true);
+      setDeskPrompt({
+        orderId: String(o.id),
+        co,
+        deskId: known ? String(known.id) : "",
+      });
       return;
     }
     createParcel(co, String(o.id));
@@ -1355,6 +1424,10 @@ export function OrdersView() {
           const prevCoName = o.deliveryCompany
             ? (CO[o.deliveryCompany as CarrierKey]?.name ?? o.deliveryCompany)
             : "—";
+          // Two ways into this popup (see requestCreateParcel): a real company
+          // switch, or a desk this company doesn't run — they need different
+          // wording, since the second one isn't the admin changing anything.
+          const switching = !!o.deliveryCompany && o.deliveryCompany !== co;
           // Each carrier prices Stop Desk delivery differently for the same
           // wilaya — switching carrier can change what the customer owes,
           // so recompute it here instead of silently keeping the old fee.
@@ -1362,7 +1435,16 @@ export function OrdersView() {
             wid != null
               ? feeForCarrier(co, wid, (o.deliveryType as DeliveryType) || "office", cache)
               : null;
-          const feeChanged = newFee != null && o.deliveryFee != null && newFee !== o.deliveryFee;
+          // Only a real company switch re-prices the order: the Stop Desk rate
+          // is per-carrier, so keeping the old company's fee would be wrong.
+          // Picking a desk for the SAME company must never move the price the
+          // customer already agreed to, whatever the synced grid says today.
+          const feeChanged =
+            switching && newFee != null && o.deliveryFee != null && newFee !== o.deliveryFee;
+          // ...so the box shows what the order will actually be charged: the
+          // new carrier's rate on a switch, the order's own untouched fee when
+          // we're only correcting the desk.
+          const shownFee = switching ? newFee : (o.deliveryFee ?? newFee);
           return (
             <div
               className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 p-6"
@@ -1370,12 +1452,26 @@ export function OrdersView() {
             >
               <div className="w-full max-w-[440px] rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-lg)]">
                 <h3 className="mb-2 text-[1.05rem] font-extrabold">
-                  🏢 تغيير شركة التوصيل — اختيار المكتب
+                  {switching
+                    ? "🏢 تغيير شركة التوصيل — اختيار المكتب"
+                    : "🏢 اختيار المكتب لدى شركة التوصيل"}
                 </h3>
                 <p className="mb-4 text-[.82rem] leading-relaxed text-[var(--ink-3)]">
-                  هذا الطلب توصيل لمكتب (Stop Desk) واخترتِ {CO[co].name} بدلاً
-                  من {prevCoName}. اختاري المكتب المناسب في ولاية{" "}
-                  {o.wilaya || "—"} لدى {CO[co].name}:
+                  {switching ? (
+                    <>
+                      هذا الطلب توصيل لمكتب (Stop Desk) واخترتِ {CO[co].name}{" "}
+                      بدلاً من {prevCoName}. اختاري المكتب المناسب في ولاية{" "}
+                      {o.wilaya || "—"} لدى {CO[co].name}:
+                    </>
+                  ) : (
+                    <>
+                      هذا الطلب توصيل لمكتب (Stop Desk)، والمكتب المسجَّل عليه
+                      {o.baladiya ? ` «${o.baladiya}» ` : " "}غير موجود في قائمة
+                      مكاتب {CO[co].name} في ولاية {o.wilaya || "—"} — لو أنشأنا
+                      الطرد به سترفضه الشركة. اختاري المكتب الصحيح لدى{" "}
+                      {CO[co].name}:
+                    </>
+                  )}
                 </p>
                 <select
                   className={cn(inp, "px-3.5 py-[.55rem] text-[.85rem]")}
@@ -1398,7 +1494,7 @@ export function OrdersView() {
                 <div className="mt-3 rounded-lg bg-[var(--card-2)] px-3 py-2 text-[.8rem]">
                   💰 رسم التوصيل لدى {CO[co].name}:{" "}
                   <b className="text-foreground">
-                    {newFee != null ? priceFmt(newFee) : "—"}
+                    {shownFee != null ? priceFmt(shownFee) : "—"}
                   </b>
                   {feeChanged && (
                     <span className="text-[var(--ink-3)]">
@@ -1424,7 +1520,7 @@ export function OrdersView() {
                         (d) => String(d.id) === deskPrompt.deskId
                       );
                       if (!desk) return;
-                      confirmDeskAndCreateParcel(o, co, desk, newFee);
+                      confirmDeskAndCreateParcel(o, co, desk, switching ? newFee : null);
                     }}
                   >
                     {deskSaving ? "⏳ جاري الحفظ..." : "تأكيد وإنشاء الطرد"}

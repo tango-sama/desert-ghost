@@ -74,6 +74,45 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- Admin orders: the Stop Desk desk-picker popup now also catches a desk that
+  the clicked carrier doesn't run, not only a company switch (2026-09-01,
+  owner-reported "it asks nothing and the parcel errors out").
+  Checked first whether the 2026-08-03 carrier-switch popup had been lost in a
+  cross-device update, as reported: it had not — `deskPrompt`,
+  `requestCreateParcel`, `confirmDeskAndCreateParcel` and the popup itself are
+  all still on `origin/main` and still wired to the carrier buttons
+  (`components/admin/views/orders-view.tsx`). What was missing is the other
+  half of the same failure: the popup fired ONLY on
+  `o.deliveryCompany !== co`, so every other way a Stop Desk order can carry a
+  desk the clicked carrier doesn't have went straight into the carrier's
+  "مكتب الطرد غير مطابق" rejection with no prompt at all — an order whose
+  `baladiya` an earlier switch already rewrote to another carrier's desk (the
+  switch also rewrites `deliveryCompany`, so the two now agree and the check
+  passes), an order placed before that carrier's desks were synced, an order
+  carrying a commune name rather than a real desk, and an order with no
+  `deliveryCompany` recorded at all.
+  Fix: new `matchOrderDesk()` / `orderDeskUsableFor()` compare `o.baladiya`
+  against `centersForCarrier(co, wilayaId, cache)` — collapsed-lowercase, the
+  same normalisation «ربط طلب» uses — and `requestCreateParcel()` now opens the
+  popup on a switch OR on a desk that isn't this carrier's. Deliberately
+  exact-match only for the decision to ask (a near-miss name is still a
+  rejected parcel); the looser contains-match is used only to PRESELECT the
+  likely desk in the dropdown, so a switch between carriers sharing a desk name
+  is one click. An empty desk list for that wilaya (carrier not synced yet) is
+  NOT treated as a mismatch — there would be nothing to pick, so it keeps the
+  old behaviour rather than dead-ending the admin.
+  Popup copy branches on the two cases (company switch vs. "المكتب المسجَّل …
+  غير موجود في قائمة مكاتب X"), and the fee is now re-priced ONLY on a real
+  company switch: the Stop Desk rate is per-carrier, but merely correcting the
+  desk for the SAME company must never move the price the customer already
+  agreed to (previously the popup would have written today's synced fee over
+  it). The box shows the order's own fee in that case.
+  Verified: `npx tsc --noEmit`, `npx eslint`, and `npm run build` all clean.
+  NOT exercised against a real credentialed admin session (no live Firebase
+  Auth here) — owner should click a carrier on a Stop Desk order whose desk
+  belongs to another company and confirm the popup appears and the parcel is
+  created after picking a desk.
+
 - New single-product landing page `/carnitine` for the real catalog item
   "HHS A1 L-Carnitine Lepidium — كبسولات تنحيف الجسم" (Firestore
   `products/1768873325495`, 14,500 د.ج, weight-loss/slimming category)
