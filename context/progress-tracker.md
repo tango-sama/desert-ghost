@@ -74,6 +74,44 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- «ربط طلب»: picking the products fixed, and the parcel's own products now
+  come across automatically (2026-09-01, owner-requested "fix link products in
+  all delivery companies"; confirmed with the owner that this meant the
+  link-order flow's product picking, not the waybill product name).
+  Two problems, both carrier-independent (so all three companies alike):
+  (1) `ProductPicker`'s search box sits inside the modal's `<form onSubmit=
+  {handleSubmit}>`, and nothing handled Enter — so typing a product name and
+  pressing Enter hit the browser's implicit form submission and SAVED the
+  linked order mid-pick (or, with nothing picked yet, just flashed «المنتجات»
+  red) instead of adding the product. Now `onKeyDown` swallows Enter
+  (`preventDefault`) and adds the top match; Escape closes the suggestion
+  list. Fixes the same latent trap in the new-order and edit-items modals,
+  which share the widget.
+  (2) The linked parcel already names what it carries (`pkg.productLabel`,
+  shown as 📦 in the summary) but nothing used it — every product had to be
+  retyped by hand. New `cartFromParcelLabel()` (product-picker.tsx) parses
+  that list and preselects the matching catalog products, called from
+  `prefillFromPackage`. The format is the one every create*Parcel writes for
+  this store ("<title> x2, <title> x1") and all three carriers hand it back on
+  lookup (Yalidine `product_list`, Noest `produit`, ZR's product list), so one
+  parser serves all of them. Matching is accent/case/punctuation-blind, with
+  a whole-word containment fallback for labels a carrier truncated (Yalidine
+  caps `product_list` at 250 chars). Anything unrecognised — a hand-typed
+  label, the 'cosm' placeholder, a delisted product — is skipped rather than
+  guessed, leaving the picker empty exactly as before; the admin can always
+  add/remove/re-quantify afterwards, nothing is forced.
+  Verified: 11/11 unit checks of the parser (esbuild-bundled with the
+  firebase/ui modules stubbed, run in node) — the exact create*Parcel format,
+  missing quantity, accent/case folding, Arabic comma and × separators,
+  the same product twice accumulating, a truncated label, the 'cosm' and
+  'منتجات' placeholders matching nothing, an unknown product being skipped
+  while a known one is still added, and a short catalog name ("Kit") NOT
+  being swallowed by an unrelated label ("Kitchen towel"). `npx tsc
+  --noEmit`, `npx eslint` on both changed files, and `npm run build` clean.
+  NOT exercised against a real credentialed admin session — owner should link
+  one parcel per carrier and confirm the products arrive prefilled and that
+  Enter in the search box adds a product instead of saving the order.
+
 - Parcel creation: orders now carry a commune the CARRIER accepts, so
   «تعذّر إنشاء طرد …» stops happening across all three companies (2026-09-01,
   owner-reported "in all delivery company and in all situations"; the reported

@@ -29,6 +29,72 @@ export function cartFromOrderItems(items: OrderItem[], products: Product[]): Car
   });
 }
 
+// Comparison key for product names: accent-, case- and punctuation-blind, so
+// a parcel's own wording matches the catalog entry it came from.
+function nameKey(s: string): string {
+  return String(s ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\u0600-\u06ff]+/g, " ")
+    .trim();
+}
+
+// Whether `needle` occurs in `hay` on whole-word boundaries — both are
+// nameKey() output, so words are single-space separated.
+function wordContains(hay: string, needle: string): boolean {
+  return (
+    hay === needle ||
+    hay.startsWith(`${needle} `) ||
+    hay.endsWith(` ${needle}`) ||
+    hay.includes(` ${needle} `)
+  );
+}
+
+// The catalog products named by a parcel's own product list — used when an
+// existing parcel is linked to a new order («ربط طلب»), so the products the
+// courier is already carrying come across instead of being re-picked by hand.
+//
+// The format is the one every create*Parcel function writes for this store
+// ("<title> x2, <title> x1" — see trinkl's functions/index.js), and it is what
+// all three carriers hand back on lookup, so one parser serves Yalidine,
+// Noest and ZR alike. Anything unrecognised — a hand-typed label, the 'cosm'
+// placeholder, a product no longer in the catalog — is skipped rather than
+// guessed at, leaving the admin to pick it as before.
+export function cartFromParcelLabel(label: string, products: Product[]): CartItem[] {
+  const out: CartItem[] = [];
+  for (const part of String(label ?? "").split(/[,،+\n]/)) {
+    const chunk = part.trim();
+    if (!chunk) continue;
+    // Trailing "x2" / "×2" / "*2" is the quantity, not part of the name.
+    const m = chunk.match(/[x×*]\s*(\d{1,3})$/i);
+    const qty = m ? Math.max(1, parseInt(m[1], 10)) : 1;
+    const key = nameKey(m ? chunk.slice(0, m.index) : chunk);
+    if (!key) continue;
+    const hit =
+      products.find((p) => nameKey(p.title || p.name || "") === key) ??
+      // A carrier can truncate a long label (Yalidine caps product_list at
+      // 250 chars), so fall back to containment — but only across whole
+      // words, so a short catalog name can't be swallowed by an unrelated
+      // one ("Kit" must not match "Kitchen towel").
+      products.find((p) => {
+        const t = nameKey(p.title || p.name || "");
+        return t.length >= 3 && (wordContains(t, key) || wordContains(key, t));
+      });
+    if (!hit) continue;
+    const at = out.findIndex((it) => String(it.id) === String(hit.id));
+    if (at >= 0) out[at] = { ...out[at], qty: out[at].qty + qty };
+    else out.push({
+      id: hit.id,
+      title: hit.title || hit.name || "",
+      price: priceNum(hit.price),
+      qty,
+      image: productImages(hit)[0] || "",
+    });
+  }
+  return out;
+}
+
 export function addToCart(items: CartItem[], p: Product): CartItem[] {
   const title = p.title || p.name || "";
   const idx = items.findIndex((it) => String(it.id) === String(p.id));
@@ -85,6 +151,19 @@ export function ProductPicker({
             setShowSuggestions(true);
           }}
           onFocus={() => setShowSuggestions(true)}
+          onKeyDown={(e) => {
+            if (e.key === "Escape") {
+              setShowSuggestions(false);
+              return;
+            }
+            if (e.key !== "Enter") return;
+            // This box lives inside the order form. Enter here means "add
+            // the product I just typed" — left to the browser it would
+            // instead submit that form, saving the order mid-pick (or, with
+            // nothing picked yet, just flashing the field red).
+            e.preventDefault();
+            if (matches.length) add(matches[0]);
+          }}
           onBlur={() => setTimeout(() => setShowSuggestions(false), 120)}
           placeholder="اكتبي اسم المنتج لإضافته..."
           autoComplete="off"

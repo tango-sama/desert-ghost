@@ -19,7 +19,11 @@ import { lookupParcel, type ParcelLookupResult } from "@/lib/admin";
 import { generateOrderNumber } from "@/lib/order";
 import { cn } from "@/lib/utils";
 import { CO } from "@/components/admin/carriers";
-import { ProductPicker, type CartItem } from "@/components/admin/product-picker";
+import {
+  cartFromParcelLabel,
+  ProductPicker,
+  type CartItem,
+} from "@/components/admin/product-picker";
 import {
   CARRIER_ORDER,
   centersForCarrier,
@@ -179,6 +183,12 @@ export function LinkOrderModal({
   function prefillFromPackage(res: ParcelLookupResult) {
     const pkg = res.package;
     if (!pkg) return;
+    // The parcel already names what it is carrying — match those against the
+    // catalog so the order starts with the right products instead of the
+    // admin retyping them. Same list format from all three carriers (it is
+    // what create*Parcel wrote in the first place); an unrecognised label
+    // just leaves the picker empty, exactly as before.
+    setItems(cartFromParcelLabel(pkg.productLabel || "", products));
     setName(pkg.customer || "");
     setPhone(pkg.phone || "");
     setAddress(pkg.address || "");
