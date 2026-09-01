@@ -74,6 +74,48 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- The destination popup is now driven by the CARRIER's own wilaya list, not
+  the order's wilaya (2026-09-01, owner-requested: "when the admin changed the
+  delivery company in the order card the pop-up must show that specific
+  delivery company Wilayas… it must show its stop desks").
+  Why it matters: the carriers serve genuinely different wilaya sets (58
+  Yalidine / 56 Noest / 54 ZR), each with its own commune spellings and its own
+  agency network inside them. The popup previously locked the wilaya to
+  `resolveOrderWilayaId(o, co, cache)` — the order's own wilaya — and only
+  offered desks/communes under it. When the newly-picked company doesn't serve
+  that wilaya there was nothing pickable and no way to say so; worse,
+  `communesForCarrier` falls back to the STATIC commune grid for a wilaya the
+  carrier has no entry for, so `orderCommuneForCarrier` could match a static
+  name and let the parcel through to be rejected by the carrier.
+  `components/admin/views/orders-view.tsx`:
+  • The popup gained a wilaya `<select>` fed by `wilayasFor(co, cache)` — the
+    list `syncCarriers` pulls from that carrier's own API into
+    `delivery_data/{carrier}` — gated on `carrierDataReady(co, cache)` so it
+    shows "⏳ جاري تحميل قوائم الشركة" rather than the static fallback (same
+    convention the order forms already use). Desk and commune selects hang off
+    the CHOSEN wilaya, and both reset when it changes (they belong to the old
+    one). Counts are shown ("58 ولاية", "اختاري المكتب (7)").
+  • `requestCreateParcel` now also opens the popup when the carrier doesn't
+    serve the order's wilaya (`wilayaForCarrier(co, wid, cache) == null`) —
+    previously that case slipped through the static-fallback hole above. It
+    preselects the carrier's own row for the order's wilaya when it has one.
+  • An explicit warning names the problem when it happens: "⚠️ {الشركة} لا تخدم
+    ولاية «X» المسجَّلة على الطلب".
+  • Confirming writes `wilaya`/`wilayaId`/`wilayaFr` from the carrier's own row,
+    so the order records the destination exactly as the shipping company knows
+    it, and says so before you confirm ("ستُحفظ ولاية الطلب كـ … بدلاً من …").
+  • Re-pricing now triggers on a wilaya change as well as a company switch
+    (a different wilaya is a different price outright); correcting only a
+    commune/desk within the same company+wilaya still must NOT move the price
+    the customer agreed to. The Home fee lookup now passes the chosen commune,
+    matching how the order forms price it (Yalidine's per-commune supplement).
+  • When a wilaya has no desks, a line points at Settings → «تحديث قوائم
+    التوصيل», since these lists come from the carrier's API and may be stale.
+  Verified: `npx tsc --noEmit`, `npx eslint`, `npm run build` clean. NOT
+  exercised against a real admin session — owner should switch an order to a
+  company that does NOT serve its wilaya (e.g. a wilaya only Yalidine covers)
+  and confirm the popup lists that company's own wilayas and desks.
+
 - Orders now record the chosen stop desk's own ID, not just its name
   (2026-09-01, Phase A of the ZR fix — see the plan in the same session).
   Context: the owner pasted ZR's «Developpement» page, which documents an API
