@@ -74,6 +74,63 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- Parcel creation: orders now carry a commune the CARRIER accepts, so
+  «تعذّر إنشاء طرد …» stops happening across all three companies (2026-09-01,
+  owner-reported "in all delivery company and in all situations"; the reported
+  second line was "فشل إنشاء طلب Noest / رفضت Yalidine الطرد" — i.e. the
+  carrier's own API refusing the parcel, not our call failing).
+  Root cause, traced through `tango-sama/trinkl`'s `functions/index.js` (read-
+  only clone; ghost cannot deploy it): **every** create function addresses the
+  parcel by COMMUNE NAME read from `o.communeFr || o.baladiya` —
+  `createYalidineParcel` → `to_commune_name` (+ picks its stop desk by
+  `commune_name`), `createNoestParcel` → `commune` (+ matches its desk's
+  commune), `createZrParcel` → `zrResolveTerritory(wilayaId, commune)` for the
+  district territory. Ghost, however, wrote NO `communeFr` from checkout, the
+  admin new-order form, the seller quick-order or «ربط طلب», and its
+  `baladiya` is only a display label: on a Stop Desk order it holds the DESK's
+  own name ("مكتب المنيعة", "Agence Bir El Djir"), which is not a commune in
+  any carrier's list. So Noest rejected every Stop Desk parcel outright; ZR
+  silently fell back to `communeRows[0]` (wrong commune) and Yalidine to
+  `centers[0]` (wrong desk), and Yalidine rejected outright whenever the
+  centers lookup didn't fire. Home orders created with a company OTHER than
+  the customer's pick failed the same way, since a commune is spelled as the
+  carrier that listed it spells it. Only the four landing-page modals
+  (collagen/carnitine/sunguard/glutathione) escaped it — they already wrote
+  `communeFr` and use commune lists for both delivery types.
+  Note the synced desk records (`writeCarrierData`, trinkl) carry only
+  `{id, name, address}` — no commune field — so a desk's commune has to be
+  resolved from its own name/address against that carrier's commune list.
+  Fix, all client-side (the functions are unchanged and need no deploy):
+  (1) `lib/delivery.ts` gains `communeKey()` (accent/case/punctuation-
+  insensitive compare key), `communeForCarrier()` (this carrier's own spelling
+  of a commune, exact then normalised — never partial: a near-miss would ship
+  to the wrong place), `communeForCenter()` (the commune a desk sits in, read
+  out of its name/address, longest whole-word match wins so "Alger Centre"
+  beats the "Alger" inside it, null rather than a wrong guess) and
+  `orderCommuneFor()`. (2) All four order-writing forms now save `communeFr`
+  alongside `baladiya` — the picked commune for Home, the desk's own commune
+  for Stop Desk. (3) `orders-view.tsx` no longer creates a parcel unless the
+  order already names a destination THAT carrier recognises: the old
+  switch-only popup is now a destination popup that asks for the desk AND the
+  commune (commune auto-filled from the picked desk, correctable by hand),
+  and it opens on a company switch, on a commune this carrier doesn't serve
+  (covers every pre-existing order, which has no `communeFr` at all), or on a
+  desk this carrier doesn't run. `communeFr` is written on confirm. Orders
+  with no resolvable wilaya keep the old behaviour rather than dead-ending on
+  an empty popup. `Order.communeFr` added to `lib/admin.ts`.
+  Verified: 11/11 unit checks of the matching helpers against a
+  Firestore-shaped carrier cache (bundled with esbuild, run in node) —
+  accent/case folding, exact and normalised commune lookup, a desk name
+  correctly NOT matching as a commune, longest-match, commune read from a
+  desk's address, an Arabic hub name against an Arabic commune list, no-match
+  returning null, and "Algerie" not matching "Alger". `npx tsc --noEmit`,
+  `npx eslint` on every changed file, and `npm run build` all clean. (One
+  PRE-EXISTING, untouched lint error remains in `cart-drawer.tsx` — an `<a>`
+  to /checkout instead of `<Link>`.)
+  NOT exercised against a real credentialed admin session or a real carrier
+  API — owner should create one Stop Desk parcel on Noest (the company that
+  was rejecting outright) and confirm it succeeds and lands at the right desk.
+
 - Admin orders: the Stop Desk desk-picker popup now also catches a desk that
   the clicked carrier doesn't run, not only a company switch (2026-09-01,
   owner-reported "it asks nothing and the parcel errors out").

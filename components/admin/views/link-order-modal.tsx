@@ -23,6 +23,7 @@ import { ProductPicker, type CartItem } from "@/components/admin/product-picker"
 import {
   CARRIER_ORDER,
   centersForCarrier,
+  communeForCenter,
   communesForCarrier,
   feeForCarrier,
   wilayaForCarrier,
@@ -132,6 +133,18 @@ export function LinkOrderModal({
       ? commune
       : pkg?.commune || "";
   const communeLabel = isOffice ? selectedDesk?.name ?? pkg?.commune ?? "" : communeValue;
+  // What the CARRIER is given as the destination, as opposed to what the
+  // panel displays: every createXParcel function addresses the parcel by
+  // commune name and rejects one it doesn't recognise, and a Stop Desk
+  // order's `baladiya` is the DESK's own name, never a commune. See
+  // lib/delivery.ts's commune helpers.
+  const communeFr = selectedWilaya
+    ? (isOffice
+        ? selectedDesk
+          ? communeForCenter(carrier, selectedWilaya.id, selectedDesk, cache)
+          : null
+        : communeValue) ?? ""
+    : "";
   // Yalidine's Home fee varies by destination COMMUNE within the wilaya
   // (its own "Supplément commune") — Stop Desk has no commune of its own,
   // so only sharpen the lookup to a commune for Home.
@@ -286,6 +299,7 @@ export function LinkOrderModal({
       wilayaId: selectedWilaya?.id ?? null,
       wilayaFr: selectedWilaya?.fr || pkg?.wilayaFr || "",
       baladiya: communeLabel,
+      ...(communeFr ? { communeFr } : {}),
       address: deliveryType === "home" ? address.trim() : "",
       deliveryCompany: carrier,
       deliveryType,

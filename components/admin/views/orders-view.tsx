@@ -43,6 +43,8 @@ import { LinkOrderModal } from "@/components/admin/views/link-order-modal";
 import { EditItemsModal } from "@/components/admin/views/edit-items-modal";
 import {
   centersForCarrier,
+  communeForCarrier,
+  communeForCenter,
   communesForCarrier,
   feeForCarrier,
   isValidPhone,
@@ -808,6 +810,36 @@ function orderDeskUsableFor(o: Order, co: Carrier, cache: CarrierCache): boolean
   return matchOrderDesk(o, co, cache) != null;
 }
 
+function isStopDesk(o: Order): boolean {
+  return o.deliveryType === "office" || o.deliveryType === "desk";
+}
+
+// The commune THIS carrier would address the parcel to, if the order already
+// carries one it recognises — the single thing every createXParcel function
+// needs (Yalidine `to_commune_name`, Noest `commune`, ZR's district
+// territory), and the thing it rejects the parcel over when it's wrong.
+// `communeFr` is the field they read; `baladiya` is only a fallback, and only
+// meaningful for Home orders, where it IS the commune — on a Stop Desk order
+// it holds the desk's own name, which no carrier accepts as a commune.
+// Null = this order has nothing this carrier can deliver to yet, so the admin
+// must be asked before the parcel is created.
+function orderCommuneForCarrier(
+  o: Order,
+  co: Carrier,
+  cache: CarrierCache
+): string | null {
+  const wid = resolveOrderWilayaId(o, co, cache);
+  if (wid == null) return null;
+  const saved = String(o.communeFr ?? "").trim();
+  if (saved) {
+    const known = communeForCarrier(co, wid, saved, cache);
+    if (known) return known;
+  }
+  if (isStopDesk(o)) return null;
+  const b = String(o.baladiya ?? "").trim();
+  return b ? communeForCarrier(co, wid, b, cache) : null;
+}
+
 export function OrdersView() {
   const orders = useAdminStore((s) => s.orders);
   const products = useAdminStore((s) => s.products);
@@ -838,15 +870,15 @@ export function OrdersView() {
   }, []);
 
   const cache = useDeliveryData();
-  // When a Stop Desk order's delivery company is switched to one other than
-  // the customer's original pick, the desk already saved on the order
-  // belongs to the OLD carrier's own agency list and means nothing to the
-  // new one — this prompts the admin to pick a real desk from the new
-  // carrier's own list (in the order's wilaya) before a parcel is created.
+  // Asks where, in THIS carrier's own lists, the parcel is going — before it
+  // is created, instead of letting the carrier reject it. Carries the desk
+  // (Stop Desk orders only) and the commune the parcel will be addressed by;
+  // see requestCreateParcel for when it opens.
   const [deskPrompt, setDeskPrompt] = useState<{
     orderId: string;
     co: CarrierKey;
     deskId: string;
+    commune: string;
   } | null>(null);
   const [deskSaving, setDeskSaving] = useState(false);
 
@@ -1164,46 +1196,69 @@ export function OrdersView() {
     }
   }
 
-  // A carrier button was clicked to create a parcel. A Stop Desk order carries
-  // ONE desk name (`o.baladiya`) picked from ONE carrier's own agency list, so
-  // the parcel can only be created against the company that actually runs that
-  // desk — otherwise the carrier rejects it ("مكتب الطرد غير مطابق"). Ask which
-  // of THIS carrier's desks (in the order's wilaya) to use whenever the saved
-  // one can't be trusted for it:
-  //   • the admin picked a different company than the one on the order — the
-  //     saved desk belongs to the other carrier's network, and the Stop Desk
-  //     fee changes with the company too (recomputed in the popup); and
-  //   • the saved desk doesn't match any desk this carrier runs in that wilaya
-  //     — which also covers the same-company cases the old switch-only check
-  //     let straight through into the error: an order whose desk was already
-  //     rewritten by an earlier switch (so `deliveryCompany` now agrees with
-  //     the clicked button while `baladiya` does not), one placed before this
-  //     carrier's desks were synced, and one carrying a commune name rather
-  //     than a real desk.
-  // Home delivery, and a desk that IS this carrier's own, still create the
-  // parcel immediately with no popup.
+  // A carrier button was clicked to create a parcel. Every createXParcel
+  // Cloud Function addresses the parcel by COMMUNE NAME — Yalidine's
+  // `to_commune_name`, Noest's `commune`, ZR's district territory — read from
+  // the order's `communeFr`, and each carrier only accepts a commune from its
+  // OWN list. A Stop Desk order additionally has to name a desk that carrier
+  // actually runs. Send either one wrong and the carrier refuses the parcel
+  // outright ("فشل إنشاء طلب Noest…", "رفضت Yalidine الطرد…") — which is what
+  // an order carrying another company's commune spelling, or a `baladiya`
+  // holding a desk name rather than a commune, does every single time.
+  //
+  // So: create immediately only when this order already names a destination
+  // THIS carrier recognises. Otherwise ask — the popup is the only thing
+  // standing between a mismatched order and a rejected parcel:
+  //   • the admin picked a different company than the one on the order (its
+  //     commune spelling and its desk both belong to the other carrier, and
+  //     the Stop Desk fee changes with the company too);
+  //   • the order carries no commune this carrier serves — including every
+  //     Stop Desk order saved before `communeFr` was written, whose only
+  //     location is a desk name; and
+  //   • a Stop Desk order whose desk isn't one this carrier runs.
   function requestCreateParcel(co: CarrierKey, o: Order) {
-    const isOffice = o.deliveryType === "office";
+    const wid = resolveOrderWilayaId(o, co, cache);
+    const office = isStopDesk(o);
     const switchingCompany = !!o.deliveryCompany && o.deliveryCompany !== co;
-    if (isOffice && (switchingCompany || !orderDeskUsableFor(o, co, cache))) {
-      // Preselect the equivalent desk when this carrier does run one under the
-      // saved name, so a switch between carriers that share a desk name is one
-      // click to confirm rather than a hunt through the list.
-      const known = matchOrderDesk(o, co, cache, true);
-      setDeskPrompt({
-        orderId: String(o.id),
-        co,
-        deskId: known ? String(known.id) : "",
-      });
+    // With no resolvable wilaya there is no list to check against and none to
+    // offer either, so asking would only dead-end the admin: fall back to the
+    // company-switch check alone, exactly as before.
+    if (wid == null) {
+      if (office && switchingCompany) {
+        setDeskPrompt({ orderId: String(o.id), co, deskId: "", commune: "" });
+        return;
+      }
+      createParcel(co, String(o.id));
       return;
     }
-    createParcel(co, String(o.id));
+
+    const commune = orderCommuneForCarrier(o, co, cache);
+    const deskOk = !office || orderDeskUsableFor(o, co, cache);
+    if (!switchingCompany && commune && deskOk) {
+      createParcel(co, String(o.id));
+      return;
+    }
+
+    // Preselect whatever this carrier does recognise, so the common case is
+    // one click to confirm: the equivalent desk when it runs one under the
+    // saved name, and that desk's own commune (or the order's, for Home).
+    const desk = office ? matchOrderDesk(o, co, cache, true) : null;
+    setDeskPrompt({
+      orderId: String(o.id),
+      co,
+      deskId: desk ? String(desk.id) : "",
+      commune:
+        (desk ? communeForCenter(co, wid, desk, cache) : commune) ??
+        commune ??
+        "",
+    });
   }
 
   async function confirmDeskAndCreateParcel(
     o: Order,
     co: CarrierKey,
-    desk: { id: number | string; name: string },
+    desk: { id: number | string; name: string } | null,
+    commune: string,
     newFee: number | null
   ) {
     setDeskSaving(true);
@@ -1219,7 +1274,11 @@ export function OrdersView() {
             ? o.total - o.deliveryFee
             : (o.total ?? 0);
       const patch: Partial<Order> = {
-        baladiya: desk.name,
+        // `baladiya` is what the panel and the receipt show: the desk's own
+        // name for Stop Desk, the commune itself for Home. `communeFr` is
+        // what the carrier is actually given.
+        baladiya: desk ? desk.name : commune,
+        communeFr: commune,
         deliveryCompany: co,
         ...(newFee != null ? { deliveryFee: newFee, total: baseSubtotal + newFee } : {}),
       };
@@ -1229,7 +1288,7 @@ export function OrdersView() {
       createParcel(co, String(o.id));
     } catch (err) {
       console.error(err);
-      toast("تعذّر حفظ المكتب المختار");
+      toast("تعذّر حفظ الوجهة المختارة");
     } finally {
       setDeskSaving(false);
     }
@@ -1420,13 +1479,17 @@ export function OrdersView() {
           if (!o) return null;
           const co = deskPrompt.co;
           const wid = resolveOrderWilayaId(o, co, cache);
-          const desks = wid != null ? centersForCarrier(co, wid, cache) : [];
+          const office = isStopDesk(o);
+          const desks = wid != null && office ? centersForCarrier(co, wid, cache) : [];
+          const communeList = wid != null ? communesForCarrier(co, wid, cache) : [];
+          const desk = desks.find((d) => String(d.id) === deskPrompt.deskId) ?? null;
           const prevCoName = o.deliveryCompany
             ? (CO[o.deliveryCompany as CarrierKey]?.name ?? o.deliveryCompany)
             : "—";
           // Two ways into this popup (see requestCreateParcel): a real company
-          // switch, or a desk this company doesn't run — they need different
-          // wording, since the second one isn't the admin changing anything.
+          // switch, or a destination this company doesn't recognise — they
+          // need different wording, since the second one isn't the admin
+          // changing anything.
           const switching = !!o.deliveryCompany && o.deliveryCompany !== co;
           // Each carrier prices Stop Desk delivery differently for the same
           // wilaya — switching carrier can change what the customer owes,
@@ -1437,14 +1500,28 @@ export function OrdersView() {
               : null;
           // Only a real company switch re-prices the order: the Stop Desk rate
           // is per-carrier, so keeping the old company's fee would be wrong.
-          // Picking a desk for the SAME company must never move the price the
-          // customer already agreed to, whatever the synced grid says today.
+          // Correcting the destination for the SAME company must never move
+          // the price the customer already agreed to, whatever the synced grid
+          // says today.
           const feeChanged =
             switching && newFee != null && o.deliveryFee != null && newFee !== o.deliveryFee;
           // ...so the box shows what the order will actually be charged: the
           // new carrier's rate on a switch, the order's own untouched fee when
-          // we're only correcting the desk.
+          // we're only correcting the destination.
           const shownFee = switching ? newFee : (o.deliveryFee ?? newFee);
+          // A desk pick drives the commune: the parcel is addressed to the
+          // commune that desk sits in, not to wherever the order was pointing
+          // before. Only fall back to the admin's current pick when the desk's
+          // own commune can't be read out of its name/address.
+          const chooseDesk = (deskId: string) =>
+            setDeskPrompt((d) => {
+              if (!d) return d;
+              const picked = desks.find((x) => String(x.id) === deskId) ?? null;
+              const derived =
+                picked && wid != null ? communeForCenter(co, wid, picked, cache) : null;
+              return { ...d, deskId, commune: derived ?? d.commune };
+            });
+          const ready = (!office || !!desk) && !!deskPrompt.commune;
           return (
             <div
               className="fixed inset-0 z-[500] flex items-center justify-center bg-black/60 p-6"
@@ -1453,44 +1530,83 @@ export function OrdersView() {
               <div className="w-full max-w-[440px] rounded-2xl border border-border bg-card p-6 shadow-[var(--shadow-lg)]">
                 <h3 className="mb-2 text-[1.05rem] font-extrabold">
                   {switching
-                    ? "🏢 تغيير شركة التوصيل — اختيار المكتب"
-                    : "🏢 اختيار المكتب لدى شركة التوصيل"}
+                    ? `🚚 تغيير شركة التوصيل إلى ${CO[co].name}`
+                    : `📍 تحديد وجهة الطرد لدى ${CO[co].name}`}
                 </h3>
                 <p className="mb-4 text-[.82rem] leading-relaxed text-[var(--ink-3)]">
                   {switching ? (
                     <>
-                      هذا الطلب توصيل لمكتب (Stop Desk) واخترتِ {CO[co].name}{" "}
-                      بدلاً من {prevCoName}. اختاري المكتب المناسب في ولاية{" "}
-                      {o.wilaya || "—"} لدى {CO[co].name}:
+                      اخترتِ {CO[co].name} بدلاً من {prevCoName}. لكل شركة
+                      قائمة بلدياتها {office ? "ومكاتبها " : ""}الخاصة، وإن
+                      أرسلنا لها وجهة شركة أخرى سترفض الطرد — أكّدي الوجهة لدى{" "}
+                      {CO[co].name} في ولاية {o.wilaya || "—"}:
                     </>
                   ) : (
                     <>
-                      هذا الطلب توصيل لمكتب (Stop Desk)، والمكتب المسجَّل عليه
-                      {o.baladiya ? ` «${o.baladiya}» ` : " "}غير موجود في قائمة
-                      مكاتب {CO[co].name} في ولاية {o.wilaya || "—"} — لو أنشأنا
-                      الطرد به سترفضه الشركة. اختاري المكتب الصحيح لدى{" "}
-                      {CO[co].name}:
+                      الوجهة المسجَّلة على هذا الطلب
+                      {o.baladiya ? ` «${o.baladiya}» ` : " "}غير موجودة في
+                      قوائم {CO[co].name} في ولاية {o.wilaya || "—"}، ولو
+                      أنشأنا الطرد بها سترفضه الشركة. اختاري الوجهة الصحيحة
+                      لديها:
                     </>
                   )}
                 </p>
-                <select
-                  className={cn(inp, "px-3.5 py-[.55rem] text-[.85rem]")}
-                  value={deskPrompt.deskId}
-                  onChange={(e) =>
-                    setDeskPrompt((d) => (d ? { ...d, deskId: e.target.value } : d))
-                  }
-                >
-                  <option value="">
-                    {desks.length
-                      ? "اختاري المكتب"
-                      : "لا توجد مكاتب متاحة لهذه الولاية لدى هذه الشركة"}
-                  </option>
-                  {desks.map((d) => (
-                    <option key={d.id} value={String(d.id)}>
-                      {d.address ? `${d.name} — ${d.address}` : d.name}
+
+                {office && (
+                  <label className="mb-3 block">
+                    <span className="mb-1 block text-[.78rem] font-bold text-[var(--ink-3)]">
+                      🏢 المكتب (Stop Desk)
+                    </span>
+                    <select
+                      className={cn(inp, "px-3.5 py-[.55rem] text-[.85rem]")}
+                      value={deskPrompt.deskId}
+                      onChange={(e) => chooseDesk(e.target.value)}
+                    >
+                      <option value="">
+                        {desks.length
+                          ? "اختاري المكتب"
+                          : "لا توجد مكاتب متاحة لهذه الولاية لدى هذه الشركة"}
+                      </option>
+                      {desks.map((d) => (
+                        <option key={d.id} value={String(d.id)}>
+                          {d.address ? `${d.name} — ${d.address}` : d.name}
+                        </option>
+                      ))}
+                    </select>
+                  </label>
+                )}
+
+                <label className="block">
+                  <span className="mb-1 block text-[.78rem] font-bold text-[var(--ink-3)]">
+                    📍 البلدية التي يُرسَل إليها الطرد
+                  </span>
+                  <select
+                    className={cn(inp, "px-3.5 py-[.55rem] text-[.85rem]")}
+                    value={deskPrompt.commune}
+                    onChange={(e) =>
+                      setDeskPrompt((d) => (d ? { ...d, commune: e.target.value } : d))
+                    }
+                  >
+                    <option value="">
+                      {communeList.length
+                        ? "اختاري البلدية"
+                        : "لا توجد بلديات متاحة لهذه الولاية لدى هذه الشركة"}
                     </option>
-                  ))}
-                </select>
+                    {communeList.map((c) => (
+                      <option key={c} value={c}>
+                        {c}
+                      </option>
+                    ))}
+                  </select>
+                  {office && (
+                    <span className="mt-1 block text-[.72rem] leading-relaxed text-[var(--ink-3)]">
+                      هذه هي البلدية التي تُرسَل إليها الشركة الطرد (بلدية
+                      المكتب) — تُملأ تلقائياً عند اختيار المكتب، وتُصحَّح
+                      يدوياً إن لزم.
+                    </span>
+                  )}
+                </label>
+
                 <div className="mt-3 rounded-lg bg-[var(--card-2)] px-3 py-2 text-[.8rem]">
                   💰 رسم التوصيل لدى {CO[co].name}:{" "}
                   <b className="text-foreground">
@@ -1513,15 +1629,17 @@ export function OrdersView() {
                   </button>
                   <button
                     type="button"
-                    disabled={!deskPrompt.deskId || deskSaving}
+                    disabled={!ready || deskSaving}
                     className={btn("blue", true)}
-                    onClick={() => {
-                      const desk = desks.find(
-                        (d) => String(d.id) === deskPrompt.deskId
-                      );
-                      if (!desk) return;
-                      confirmDeskAndCreateParcel(o, co, desk, switching ? newFee : null);
-                    }}
+                    onClick={() =>
+                      confirmDeskAndCreateParcel(
+                        o,
+                        co,
+                        desk,
+                        deskPrompt.commune,
+                        switching ? newFee : null
+                      )
+                    }
                   >
                     {deskSaving ? "⏳ جاري الحفظ..." : "تأكيد وإنشاء الطرد"}
                   </button>

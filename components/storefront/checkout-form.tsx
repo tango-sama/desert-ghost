@@ -15,6 +15,7 @@ import {
   CARRIER_ORDER,
   carrierDataReady,
   centersForCarrier,
+  communeForCenter,
   communesForCarrier,
   companyInfo,
   feeForCarrier,
@@ -93,6 +94,19 @@ export function CheckoutForm({ settings }: { settings: SiteSettings }) {
   // What actually gets saved/displayed as the destination — the commune
   // name for Home, the desk's own name for Stop Desk (never its raw id).
   const communeLabel = isOffice ? selectedDesk?.name ?? "" : communeValue;
+  // What the CARRIER is given as the destination, as opposed to what the
+  // panel displays. Every createXParcel function addresses the parcel by
+  // commune name (Yalidine `to_commune_name`, Noest `commune`, ZR's district
+  // territory) and rejects one it doesn't recognise — and a Stop Desk order's
+  // `baladiya` is the DESK's own name, which is never a commune. See
+  // lib/delivery.ts's commune helpers.
+  const communeFr = selectedWilaya
+    ? (isOffice
+        ? selectedDesk
+          ? communeForCenter(company, selectedWilaya.id, selectedDesk, cache)
+          : null
+        : communeValue) ?? ""
+    : "";
   // Yalidine's Home fee varies by destination COMMUNE within the wilaya
   // (its own "Supplément commune") — Stop Desk has no commune of its own
   // (the customer picks a specific desk, not an address), so only the Home
@@ -233,6 +247,7 @@ export function CheckoutForm({ settings }: { settings: SiteSettings }) {
       wilayaId: selectedWilaya?.id ?? null,
       wilayaFr: selectedWilaya?.fr || "",
       baladiya: communeLabel,
+      ...(communeFr ? { communeFr } : {}),
       address: deliveryType === "home" ? address.trim() : "",
       deliveryCompany: company,
       deliveryType,

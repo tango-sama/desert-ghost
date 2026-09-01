@@ -142,6 +142,13 @@ export type Order = {
   wilayaId?: string | number | null;
   wilayaFr?: string;
   baladiya?: string;
+  // The destination commune AS THE CARRIER SPELLS IT — what the
+  // createXParcel functions actually address the parcel by (Yalidine
+  // `to_commune_name`, Noest `commune`, ZR's district territory), falling
+  // back to `baladiya` when absent. `baladiya` is only a display label: for
+  // a Stop Desk order it holds the desk's own name, which no carrier
+  // accepts as a commune. See lib/delivery.ts's commune helpers.
+  communeFr?: string;
   address?: string;
   deliveryType?: string;
   deliveryCompany?: string;

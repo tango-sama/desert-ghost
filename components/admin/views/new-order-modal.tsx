@@ -12,6 +12,7 @@ import {
   CARRIER_ORDER,
   carrierDataReady,
   centersForCarrier,
+  communeForCenter,
   communesForCarrier,
   feeForCarrier,
   isValidPhone,
@@ -150,6 +151,18 @@ export function NewOrderModal({
   const selectedDesk = isOffice ? deskOptions.find((d) => String(d.id) === commune) ?? null : null;
   const communeValue = isOffice ? (selectedDesk ? commune : "") : communeOptions.includes(commune) ? commune : "";
   const communeLabel = isOffice ? selectedDesk?.name ?? "" : communeValue;
+  // What the CARRIER is given as the destination, as opposed to what the
+  // panel displays: every createXParcel function addresses the parcel by
+  // commune name and rejects one it doesn't recognise, and a Stop Desk
+  // order's `baladiya` is the DESK's own name, never a commune. See
+  // lib/delivery.ts's commune helpers.
+  const communeFr = selectedWilaya
+    ? (isOffice
+        ? selectedDesk
+          ? communeForCenter(company, selectedWilaya.id, selectedDesk, cache)
+          : null
+        : communeValue) ?? ""
+    : "";
   // Yalidine's Home fee varies by destination COMMUNE within the wilaya
   // (its own "Supplément commune") — Stop Desk has no commune of its own
   // (the customer picks a specific desk, not an address), so only the Home
@@ -187,6 +200,7 @@ export function NewOrderModal({
       wilayaId: selectedWilaya?.id ?? null,
       wilayaFr: selectedWilaya?.fr || "",
       baladiya: communeLabel,
+      ...(communeFr ? { communeFr } : {}),
       address: deliveryType === "home" ? address.trim() : "",
       deliveryCompany: company,
       deliveryType,

@@ -102,6 +102,101 @@ export function centersForCarrier(company: Carrier, id: number | string, cache: 
   return d?.centers?.[String(id)] ?? [];
 }
 
+// ── Commune names the carrier itself will accept ─────────────────────────
+//
+// Every parcel the createXParcel Cloud Functions build is addressed by
+// COMMUNE NAME: Yalidine gets `to_commune_name` (and picks its stop desk by
+// `commune_name`), Noest gets `commune` (and matches its desk's commune),
+// ZR resolves its district territory from it. All three read that name from
+// the order's `communeFr`, falling back to `baladiya`.
+//
+// `baladiya` is only ever a DISPLAY label though: for a Stop Desk order it
+// holds the DESK's own name ("مكتب المنيعة", "Agence Bir El Djir"), which is
+// not a commune in anybody's list, and for a Home order it holds a commune
+// spelled the way the carrier the CUSTOMER picked spells it. Sent to the
+// wrong carrier — or, for a desk, to any carrier at all — the carrier
+// rejects the parcel outright ("فشل إنشاء طلب Noest"/"رفضت Yalidine الطرد")
+// or silently delivers to its own first guess.
+//
+// So every order must also carry `communeFr`: a commune name taken from the
+// list of the carrier that will actually ship it. These helpers resolve one.
+
+// Diacritic-insensitive, punctuation-insensitive comparison key. Carrier
+// feeds spell the same commune "Béni Abbès" / "beni abbes" / "BENI-ABBES",
+// so names are only ever compared through this.
+export function communeKey(s: string): string {
+  return String(s ?? "")
+    .normalize("NFD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .toLowerCase()
+    .replace(/[^a-z0-9\u0600-\u06ff]+/g, " ")
+    .trim();
+}
+
+// THIS carrier's own spelling of `name`, or null when it doesn't serve that
+// commune at all. Exact first, then the normalised key — never a partial
+// match: a commune the carrier doesn't list is a parcel it will reject, and
+// guessing a neighbour would silently ship to the wrong place.
+export function communeForCarrier(
+  company: Carrier,
+  wilayaId: number | string,
+  name: string,
+  cache: CarrierCache
+): string | null {
+  const want = String(name ?? "").trim();
+  if (!want) return null;
+  const list = communesForCarrier(company, wilayaId, cache);
+  if (list.includes(want)) return want;
+  const k = communeKey(want);
+  return k ? (list.find((c) => communeKey(c) === k) ?? null) : null;
+}
+
+// The commune a stop desk sits in, as THIS carrier spells it. Desk records
+// carry no commune field of their own (see writeCarrierData in trinkl's
+// syncCarriers — only {id, name, address}), so it is read out of the desk's
+// own name/address, which is where every carrier puts it: "Hub Menea 58
+// مكتب المنيعة", "Agence Yalidine Touggourt, Route de Ghardaia".
+//
+// The LONGEST commune that occurs wins, so "Alger Centre" is preferred over
+// the "Alger" also contained in it. Null when nothing in the carrier's own
+// commune list occurs in either field — better to leave `communeFr` unset
+// (the functions then fall back to their own per-wilaya default) than to
+// address the parcel to a commune this desk isn't in.
+export function communeForCenter(
+  company: Carrier,
+  wilayaId: number | string,
+  center: Pick<CarrierCenter, "name" | "address">,
+  cache: CarrierCache
+): string | null {
+  const hay = communeKey(`${center.name ?? ""} ${center.address ?? ""}`);
+  if (!hay) return null;
+  let best: string | null = null;
+  let bestLen = 0;
+  for (const c of communesForCarrier(company, wilayaId, cache)) {
+    const k = communeKey(c);
+    if (!k || k.length <= bestLen) continue;
+    if (hay === k || hay.includes(` ${k} `) || hay.startsWith(`${k} `) || hay.endsWith(` ${k}`)) {
+      best = c;
+      bestLen = k.length;
+    }
+  }
+  return best;
+}
+
+// The commune name to write on an order for `company` — the one its parcel
+// will be addressed by. Home: the commune picked from this carrier's list.
+// Stop Desk: the commune the picked desk sits in. Null when neither
+// resolves, in which case the caller must not write `communeFr` at all.
+export function orderCommuneFor(
+  company: Carrier,
+  wilayaId: number | string,
+  cache: CarrierCache,
+  opts: { desk?: Pick<CarrierCenter, "name" | "address"> | null; commune?: string }
+): string | null {
+  if (opts.desk) return communeForCenter(company, wilayaId, opts.desk, cache);
+  return opts.commune ? communeForCarrier(company, wilayaId, opts.commune, cache) : null;
+}
+
 // Owner-confirmed fee corrections that override the synced grid.
 //
 // The server-side `syncCarriers` fee sync (in tango-sama/trinkl) stored a
