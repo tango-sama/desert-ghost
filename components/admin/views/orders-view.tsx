@@ -763,8 +763,10 @@ function resolveOrderWilayaId(
   return match ? match.id : null;
 }
 
-// The stop desk currently saved on the order (`o.baladiya`), matched against
-// the desks THIS carrier runs in the order's wilaya. Every carrier keeps its
+// The stop desk currently saved on the order — by its own id when one was
+// recorded against THIS carrier, otherwise by name (`o.baladiya`) — matched
+// against the desks this carrier runs in the order's wilaya. Every carrier
+// keeps its
 // own agency network, so a desk name that is valid for one company is
 // meaningless — and rejected at parcel creation ("مكتب الطرد غير مطابق") —
 // for another. Names carry irregular whitespace and slight wording
@@ -783,11 +785,18 @@ function matchOrderDesk(
 ): CarrierCenter | null {
   const wid = resolveOrderWilayaId(o, co, cache);
   if (wid == null) return null;
+  const desks = centersForCarrier(co, wid, cache);
+  // An id recorded against THIS carrier is the desk itself — no name matching
+  // needed, and it still identifies the desk when `baladiya` was never set.
+  // An id from another carrier's list means nothing here and is ignored.
+  if (o.deskCarrier === co && o.deskId != null) {
+    const byId = desks.find((d) => String(d.id) === String(o.deskId));
+    if (byId) return byId;
+  }
   const saved = String(o.baladiya ?? "").trim();
   if (!saved) return null;
   const norm = (s: string) => s.toLowerCase().replace(/\s+/g, " ").trim();
   const want = norm(saved);
-  const desks = centersForCarrier(co, wid, cache);
   const exact = desks.find((d) => norm(String(d.name)) === want);
   if (exact || !loose) return exact ?? null;
   return (
@@ -1276,9 +1285,15 @@ export function OrdersView() {
       const patch: Partial<Order> = {
         // `baladiya` is what the panel and the receipt show: the desk's own
         // name for Stop Desk, the commune itself for Home. `communeFr` is
-        // what the carrier is actually given.
+        // what the carrier is actually given, and `deskId`/`deskCarrier` name
+        // the exact desk in THIS carrier's list — a desk id from the company
+        // that was switched away from would address the wrong office, so it
+        // is replaced, not left behind.
         baladiya: desk ? desk.name : commune,
         communeFr: commune,
+        ...(desk
+          ? { deskId: desk.id, deskCarrier: co }
+          : { deskId: null, deskCarrier: null }),
         deliveryCompany: co,
         ...(newFee != null ? { deliveryFee: newFee, total: baseSubtotal + newFee } : {}),
       };

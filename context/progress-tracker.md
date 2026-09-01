@@ -74,6 +74,46 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- Orders now record the chosen stop desk's own ID, not just its name
+  (2026-09-01, Phase A of the ZR fix — see the plan in the same session).
+  Context: the owner pasted ZR's «Developpement» page, which documents an API
+  this store has NEVER used (`https://procolis.com/api_v1`, `token`/`key`
+  headers, `POST /add_colis`) — the integration calls
+  `https://api.zrexpress.app/api/v1` with `X-Tenant`/`X-Api-Key` and
+  `POST /parcels`; grep for "procolis" across `tango-sama/trinkl` returns
+  ZERO hits. Owner chose to keep the current API and fix it, so the Procolis
+  page is NOT being implemented.
+  The defect that audit found (trinkl `functions/index.js`): `createZrParcel`
+  ignores the chosen desk entirely. `zrFindHub(headers, territory.
+  cityTerritoryId)` is passed `wRow.id` — the WILAYA — and `.find()`s the
+  first `isPickupPoint` hub in it, so every ZR Stop Desk parcel ships to
+  whichever hub ZR lists first in that wilaya. `zrCenters()` already stores
+  real `hub.id`s in `delivery_data/zr.centers` (so the dropdowns are keyed by
+  them), but nothing on the ORDER carried that id — the forms saved only the
+  desk's name — so no server-side fix was possible without this half first.
+  This change (desert-ghost only): `Order.deskId` + `Order.deskCarrier` added
+  to `lib/admin.ts` (both nullable — `updateDoc` rejects `undefined`, so
+  `null` is the only way to clear them, same as `deliveryLabel`/`parcelPrice`).
+  All four order forms (checkout, admin new-order, seller quick-order, «ربط
+  طلب») save `{deskId: selectedDesk.id, deskCarrier: <carrier>}` beside the
+  existing `baladiya`/`communeFr`. Desk ids are NOT portable between carriers,
+  hence always storing which carrier's list the id came from.
+  `orders-view.tsx`: `matchOrderDesk()` now resolves by id FIRST when
+  `deskCarrier` matches the carrier being used (exact, and works even when
+  `baladiya` was never set), falling back to the existing name matching
+  otherwise; an id belonging to another carrier is ignored, so the
+  destination popup still opens on a company switch. The popup's confirm
+  writes the new carrier's `deskId`/`deskCarrier` and explicitly NULLs both
+  for a Home destination, so a stale desk from the company that was switched
+  away from can never address the parcel.
+  Verified: `npx tsc --noEmit`, `npx eslint` on all six changed files, and
+  `npm run build` clean. NOT yet effective on its own — the actual ZR desk fix
+  is Phase B in `trinkl` (use `o.deskId` as `payload.hubId`; also drop
+  `zrResolveTerritory`'s silent `|| communeRows[0]` fallback, which addresses
+  a parcel to an arbitrary commune of the wilaya when no commune matches).
+  That repo is READ-ONLY to the web session and is a Firebase Functions
+  deploy, so it needs push access plus the owner running `firebase deploy`.
+
 - «ربط طلب»: picking the products fixed, and the parcel's own products now
   come across automatically (2026-09-01, owner-requested "fix link products in
   all delivery companies"; confirmed with the owner that this meant the

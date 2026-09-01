@@ -201,6 +201,11 @@ export function NewOrderModal({
       wilayaFr: selectedWilaya?.fr || "",
       baladiya: communeLabel,
       ...(communeFr ? { communeFr } : {}),
+      // The desk's own id in this carrier's list, so the parcel names the
+      // exact desk that was picked rather than being re-derived from the
+      // commune server-side. Paired with the carrier it belongs to — desk ids
+      // mean nothing to another company.
+      ...(selectedDesk ? { deskId: selectedDesk.id, deskCarrier: company } : {}),
       address: deliveryType === "home" ? address.trim() : "",
       deliveryCompany: company,
       deliveryType,

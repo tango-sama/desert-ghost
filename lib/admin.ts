@@ -149,6 +149,13 @@ export type Order = {
   // a Stop Desk order it holds the desk's own name, which no carrier
   // accepts as a commune. See lib/delivery.ts's commune helpers.
   communeFr?: string;
+  // The chosen stop desk's own id in the CARRIER's list (Yalidine `center_id`,
+  // Noest station `code`, ZR `hub.id`), so the parcel can name that exact desk
+  // instead of being re-derived from a commune name server-side. Ids are not
+  // portable between carriers, so `deskCarrier` records whose list this id
+  // came from — an id without a matching `deskCarrier` must never be used.
+  deskId?: string | number | null;
+  deskCarrier?: string | null;
   address?: string;
   deliveryType?: string;
   deliveryCompany?: string;
