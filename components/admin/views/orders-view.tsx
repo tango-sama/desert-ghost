@@ -25,6 +25,8 @@ import {
   EmptyState,
   fmtDate,
   waIntl,
+  TrackLabel,
+  TrackReason,
 } from "@/components/admin/ui";
 import {
   CANCEL_FN,
@@ -407,7 +409,7 @@ function TrackStepper({
       className={cn(btn("blue", true))}
       style={{ background: CO.zr.color }}
     >
-      🔄↔️ Swap ({swapCount}/{ZR_MAX_SWAPS})
+      🔄↔️ تبديل ({swapCount}/{ZR_MAX_SWAPS})
     </button>
   );
 
@@ -422,8 +424,10 @@ function TrackStepper({
   const lastDate = ts.lastDate ? fmtDate(ts.lastDate) : null;
   const updated = ts.updatedAt ? fmtDate(ts.updatedAt) : null;
   const carrierName = CO[carrier]?.name ?? carrier;
-  // Show BOTH our Arabic stage and the carrier's own status text, so it's
-  // clear what step we display AND exactly what the delivery API reported.
+  // Show all three layers: our Arabic stage badge, the carrier's state
+  // translated to Arabic, and — via TrackLabel — the carrier's exact original
+  // string beside it. So it stays clear what step we display, what the carrier
+  // called it, AND exactly what the delivery API literally reported.
   const evs = (ts.events ?? []).filter((e) => e && e.date);
   // How many times the parcel has gone out for delivery (same count the order
   // card's glow uses). A 1st run is amber/orange; a 2nd run or more is red and
@@ -443,15 +447,17 @@ function TrackStepper({
         ? `${labels[ts.stage]}${againSuffix}`
         : labels[ts.stage]
       : null;
-  // Append «مجددا»/«مجددا مجددا» to an out-for-delivery event that's part of
-  // a redelivery, unless the carrier already carried the situation name in
-  // the label.
-  const againFor = (e: TrackEvent) =>
+  // The «مجددا»/«مجددا مجددا» suffix for an out-for-delivery event that's part
+  // of a redelivery — empty unless it is one, or when the carrier already
+  // carried the situation name in the label. Both guards deliberately test the
+  // RAW label; TrackLabel then appends this to the ARABIC head only, so the
+  // raw echo it prints stays a faithful quote of the carrier payload.
+  const againSuffixFor = (e: TrackEvent) =>
     redelivery &&
     OUT_FOR_DELIVERY_RE.test(String(e.label ?? "")) &&
     !/مجددا|again/i.test(String(e.label ?? ""))
-      ? `${e.label}${againSuffix}`
-      : e.label || "—";
+      ? againSuffix
+      : "";
   // The single most recent activity event — the parcel's current "situation".
   // Picked by max date so it stays correct even if events ever arrive
   // unsorted, not by array position.
@@ -556,7 +562,7 @@ function TrackStepper({
           {ts.lastLabel && (
             <span className="text-[.74rem] text-[var(--ink-2)]">
               حالة {carrierName}:{" "}
-              <b className="font-extrabold text-foreground">{ts.lastLabel}</b>
+              <TrackLabel raw={ts.lastLabel} className="font-extrabold text-foreground" />
             </span>
           )}
         </div>
@@ -626,7 +632,7 @@ function TrackStepper({
                 {ts.lastLabel && (
                   <span className="text-[var(--ink-2)]">
                     حالة {carrierName}:{" "}
-                    <b className="font-extrabold text-foreground">{ts.lastLabel}</b>
+                    <TrackLabel raw={ts.lastLabel} className="font-extrabold text-foreground" />
                   </span>
                 )}
               </div>
@@ -634,16 +640,16 @@ function TrackStepper({
                 <span className="font-extrabold text-[var(--ink-2)]">وضعية الشحنة:</span>
                 {latest ? (
                   <>
-                    <b
+                    <TrackLabel
+                      raw={latest.label}
+                      suffix={againSuffixFor(latest)}
                       className={cn(
                         "font-extrabold",
                         isAgainEvent(latest)
                           ? AGAIN_TONE_INK[againTone]
                           : "text-foreground"
                       )}
-                    >
-                      {againFor(latest)}
-                    </b>
+                    />
                     {latest.driver && <span>🚚 المندوب: {latest.driver}</span>}
                     {latest.by && (
                       <span>
@@ -654,7 +660,11 @@ function TrackStepper({
                     {latest.location && (
                       <span className="text-[var(--teal-ink)]">📍 {latest.location}</span>
                     )}
-                    {latest.content && <span>📝 {latest.content}</span>}
+                    {latest.content && (
+                      <span>
+                        📝 <TrackReason raw={latest.content} />
+                      </span>
+                    )}
                     {latest.date && <span>🕒 {fmtDate(latest.date)}</span>}
                   </>
                 ) : (
@@ -678,17 +688,20 @@ function TrackStepper({
                       📍 {e.location}
                     </span>
                   );
-                if (e.causer) bits.push(`causer: ${e.causer}`);
+                if (e.causer) bits.push(`المصدر: ${e.causer}`);
                 if (e.content)
                   bits.push(
-                    <span
-                      key="c"
-                      className={cn(
-                        "font-bold",
-                        URGENT_REASON.test(e.content) ? CLR_INK.bad : CLR_INK[cls]
-                      )}
-                    >
-                      content: {e.content}
+                    <span key="c">
+                      📝 السبب:{" "}
+                      {/* URGENT_REASON still reads the RAW reason — the colour
+                          decision must not depend on whether we translated it. */}
+                      <TrackReason
+                        raw={e.content}
+                        className={cn(
+                          "font-bold",
+                          URGENT_REASON.test(e.content) ? CLR_INK.bad : CLR_INK[cls]
+                        )}
+                      />
                     </span>
                   );
                 if (d) bits.push(`🕒 ${d}`);
@@ -697,15 +710,17 @@ function TrackStepper({
                     key={i}
                     className="mb-1.5 rounded-lg border-r-2 border-border bg-card px-2.5 py-1.5"
                   >
-                    <div
-                      className={cn(
-                        "text-[.76rem] font-extrabold",
-                        isAgainEvent(e)
-                          ? AGAIN_TONE_INK[againTone]
-                          : cn("text-foreground", CLR_INK[cls])
-                      )}
-                    >
-                      {againFor(e)}
+                    <div className="text-[.76rem]">
+                      <TrackLabel
+                        raw={e.label}
+                        suffix={againSuffixFor(e)}
+                        className={cn(
+                          "font-extrabold",
+                          isAgainEvent(e)
+                            ? AGAIN_TONE_INK[againTone]
+                            : cn("text-foreground", CLR_INK[cls])
+                        )}
+                      />
                     </div>
                     {bits.length > 0 && (
                       <div className="mt-0.5 flex flex-wrap gap-0.5 text-[.68rem] text-[var(--ink-3)]">
@@ -2159,7 +2174,11 @@ export function OrdersView() {
                         ·{" "}
                         {o.noest.validated
                           ? "مُثبَّت ✓"
-                          : "جاهز في «prêt à expédier» — أكّديه في Noest للشحن"}
+                          : // The French is kept on purpose: «prêt à expédier»
+                            // is the literal label the admin must find in the
+                            // Noest dashboard, so dropping it would make the
+                            // instruction unfollowable.
+                            "جاهز للشحن «prêt à expédier» — أكّديه في Noest"}
                       </span>
                     </div>
                   )}

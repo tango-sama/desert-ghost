@@ -2861,6 +2861,78 @@ not the intended state (see `development-workflow.md`).
   Quality" score after Advanced Matching lands. CAPI additionally can't be
   exercised at all until `META_CAPI_ACCESS_TOKEN` is set.
 
+## Completed (this session, 2026-09-03)
+
+- Carrier tracking text on the order card now reads in Arabic (ghost-only,
+  client-side; no function/schema/rules change). The tracker's own chrome was
+  already Arabic — the step names, stage badge, «🔄 تتبع», «📋 تفاصيل الشحنة»,
+  «حالة الشحنة:», «وضعية الشحنة:», the traffic-light tooltips — but the text
+  the CARRIERS report was not, so an Arabic card switched to French exactly
+  when a delivery was failing: ZR snake_case French (`sortie_en_livraison`,
+  `confirme_au_bureau`, `vers_wilaya`), Noest accented French ("Enlevé par le
+  livreur"), Yalidine English ("Out for delivery"), plus `content:`/`causer:`
+  and a `Swap` button.
+
+  New `lib/tracking-labels.ts` (pure strings, no React/Firebase imports, same
+  convention as `lib/storage-counter.ts`): `trackKey()` normalises a carrier
+  string the way `communeKey()` (`lib/delivery.ts`) does — camelCase split,
+  NFD accent strip, lowercase, collapse `_`/`-`/punctuation — so
+  `pret_a_expedier`, `Prêt à expédier` and `readyToDispatch` all reach one
+  key; `STATE_AR` is the exact-key map, `STATE_RULES` an ordered regex tier
+  for suffixed states (ZR's whole `retour_*` family, numbered «No Answer 1»),
+  `REASON_RULES` an ordered tier for the free-text `content` reasons.
+  `trackStateAr()` / `trackReasonAr()` return **null**, never the input, so
+  the renderer can tell "translated" from "passed through".
+
+  Two shared renderers in `components/admin/ui.tsx` — `TrackLabel` (states)
+  and `TrackReason` (reasons) — put the Arabic first and keep the carrier's
+  exact original beside it, small and muted, in a `<bdi dir="ltr">` so a
+  Latin/snake_case run isn't reordered by the RTL page (separator outside the
+  bdi, so the «·» doesn't jump sides). Wired at all six render sites: both
+  «حالة {carrier}:» lines, the latest-event title, the event-log titles, both
+  reason lines (`orders-view.tsx`), and `link-order-modal.tsx`'s `✅ lastLabel`.
+  `causer:` → «المصدر:», `content:` → «📝 السبب:», `Swap` → «تبديل» (already
+  the vocabulary in the swap modal and its toast). The Noest hint now leads in
+  Arabic but KEEPS «prêt à expédier» — that is the literal label the admin has
+  to find in the Noest dashboard.
+
+  THREE INVARIANTS, deliberate and load-bearing:
+  1. **Display only.** Every matcher that drives behaviour still tests the RAW
+     string — `OUT_FOR_DELIVERY_RE`, `REDELIVERY_RE`, `NO_ANSWER_RE`,
+     `AT_DESK_RE`, `URGENT_REASON`, and `isPastCancelWindow`'s «prêt à
+     expédier» test in `carriers.ts`. Translating before any of those would
+     silently break stage detection, the traffic light and the cancel guard.
+     Nothing translated is ever written to Firestore.
+  2. **Unknown falls through raw.** ZR's state names are per-tenant
+     configurable, so the map will always have gaps; an unrecognised value
+     renders exactly as sent, never guessed at and never flattened into a
+     coarser `stageLabels` entry. A status the carrier already sends in Arabic
+     («مجددا») is guarded and rendered once, not twice.
+  3. **Proper nouns untouched.** `center` / `location` / `by` / `driver` stay
+     in the carrier's own spelling — per the owner, staff quote those back to
+     the carrier on the phone.
+  `againFor()` became `againSuffixFor()`: the «مجددا» suffix now attaches to
+  the Arabic head only, so the raw echo stays a faithful quote of the payload.
+
+  Arabic copy was owner-approved before implementation (state + reason tables
+  in the session plan), worded to match the vocabulary already in production
+  («خرج للتوصيل», «في مركز الفرز», «تم الاستلام», «تم التأكيد والشحن»).
+
+  Verified: `npx tsc --noEmit`, `npx eslint` (only the pre-existing
+  `cart-drawer.tsx` error remains) and `npm run build` all clean; plus a
+  pure-function sweep over every real state name recorded in this tracker for
+  all three carriers, the passthrough cases, the reason rules, and a
+  regression assertion that `OUT_FOR_DELIVERY_RE` and the cancel-window regex
+  still fire on the same raw inputs. NOT exercised: the live admin panel
+  against real carrier data (needs admin auth + a live parcel) — the owner
+  should open `/amelhadj`, hit 🔄 تتبع on a tracked order and confirm the
+  status line, the event log and a failing delivery all read Arabic with the
+  raw string beside them.
+
+  Found but NOT fixed (out of scope, carrier-behaviour change — see Open
+  Questions): `isPastCancelWindow`'s regex uses `\s*`, so it does not match
+  ZR's snake_case `pret_a_expedier`, only the accented «Prêt à expédier».
+
 ## Next Up
 
 - **Owner action required**: generate a Meta CAPI access token (Business
@@ -2882,6 +2954,19 @@ not the intended state (see `development-workflow.md`).
   has no real desks to show yet.
 
 ## Open Questions
+
+- `isPastCancelWindow` (`components/admin/carriers.ts`) matches «Prêt à
+  expédier» with `/pr[êe]t\s*[àa]\s*exp[ée]dier/`, but `\s` does not match an
+  underscore, so ZR's own snake_case spelling `pret_a_expedier` slips past it.
+  If ZR ever puts the snake_case form in `lastLabel` (its state-history uses
+  it — see the 2026-08-10 zrNormalize entry), the guard fails OPEN: «تعليم
+  كجديد» stays enabled on a parcel that can no longer be cancelled, so the
+  admin attempts a cancel the carrier will reject. Found 2026-09-03 while
+  adding the tracking translation layer; deliberately NOT fixed there, since
+  it changes carrier cancel behaviour and `ai-workflow-rules.md` keeps carrier
+  work in its own step. Fix is a normalised match (`trackKey()` in
+  `lib/tracking-labels.ts` already produces the right key) — needs verifying
+  against what ZR actually puts in `lastLabel` for a real ready-to-ship parcel.
 
 - Storage Counter's "المرتجعة" (return) column is a hardcoded 0 — the owner
   wants a future feature where an order card gets an explicit "mark as
