@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { getCategories, getProducts } from "@/lib/firebase";
+import { sortByCloset } from "@/lib/closet-sort";
 import { ProductsBrowser } from "@/components/storefront/products-browser";
 
 export const metadata: Metadata = {
@@ -19,9 +20,17 @@ export default async function ProductsPage({
     getCategories(),
   ]);
 
+  // The listing opens on «الأكثر توفراً» — most units in the closet first —
+  // so ordering it is this Server Component's job: the closet counts come
+  // from privileged `orders` data (lib/closet-sort.ts) that a client
+  // component must never see. `ProductsBrowser` keeps this order as-is for
+  // that sort option and only re-sorts for the price/name/recency ones, so
+  // no closet number is ever sent to the browser.
+  const ordered = await sortByCloset(products);
+
   return (
     <ProductsBrowser
-      products={products}
+      products={ordered}
       categories={categories}
       initialCat={cat || "all"}
       initialQuery={q || ""}

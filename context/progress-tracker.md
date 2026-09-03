@@ -2977,6 +2977,58 @@ not the intended state (see `development-workflow.md`).
   query string. Checked at 1280px and 390px — no horizontal overflow at
   either, RTL order correct. `tsc --noEmit` and `eslint` clean.
 
+- `/products` now opens on QUANTITY order — most units in the closet first —
+  instead of «الأحدث», so the storefront's main listing ranks the catalog the
+  same way the home page's «أبرز المنتجات» grid and the admin products list
+  already did. Owner's call: what is sitting in the closet should be what
+  customers see first.
+
+  The ordering rule and the guarded privileged read moved out of
+  `product-grid.tsx` into a new shared `lib/closet-sort.ts` —
+  `sortByCloset(products)` (dynamic `import("@/lib/firebase-admin")` in a
+  try/catch, verbatim rationale kept from the home-page incident) plus the
+  pure `orderByCloset(products, stats)` it delegates to. `product-grid.tsx`
+  and `products/page.tsx` both call it, so the two storefront listings can
+  no longer drift apart in how they rank the catalog. Rule, unchanged from
+  the home grid: most-in-closet first, ties by recency, products with no
+  admin-entered `stock` after every tracked product (keeping their own
+  recency order among themselves), and `stats === null` (no credentials, or
+  a failed read) falls back to recency-only rather than treating
+  un-decremented `stock` as a live count.
+
+  **The closet numbers stay on the server.** `products/page.tsx` is a Server
+  Component: it sorts, then passes the ordered array to the client
+  `ProductsBrowser`, whose new default `"quantity"` sort is literally "keep
+  the order I was given" (`list` filters, which is order-preserving, and
+  skips the sort). So the ORDER is all that crosses the boundary — no
+  per-product closet integer is in the RSC payload — while price/name/recency
+  still re-sort client-side with nothing privileged. New first option in the
+  sort dropdown: «الأكثر توفراً»; «الأحدث» stays, one place down, and the
+  other options are untouched.
+
+  Verified three ways, since local dev has no `FIREBASE_SERVICE_ACCOUNT_KEY`
+  and therefore always takes the recency fallback:
+  1. `orderByCloset` exercised directly on synthetic products + orders (via
+     the real `statsByProduct`): a product with 10 stock and 4 delivered
+     ranks below one with 6 stock and nothing sold only on the recency
+     tie-break, a product whose whole 30 is sold out (closet 0) ranks below
+     one with 3 left, untracked products come last, `stats: null` degrades to
+     pure recency, and the input array is not mutated.
+  2. End to end in the browser with `closetStatsOrNull` temporarily stubbed
+     to `{}` (no orders → closet == stock; patch reverted before commit):
+     the rendered card order on `/products` matched stock-descending computed
+     independently from the Firestore REST API for the whole head of the
+     list — 66 of the 149 live products carry a `stock` number, the other 83
+     followed by recency.
+  3. Unstubbed: `/products` and `/` both 200 with the documented
+     «no credentials» log line, the dropdown defaults to «الأكثر توفراً»,
+     and switching to «السعر: من الأعلى» and back restores the server order.
+
+  NOT changed: the 4-card «قد تعجبكِ» strip on a product page (a
+  same-category recommendation, not a ranked listing) and the «الأكثر طلباً»
+  label on the home section, which has always described a quantity sort
+  rather than an order count.
+
 ## Next Up
 
 - **Owner action required**: generate a Meta CAPI access token (Business

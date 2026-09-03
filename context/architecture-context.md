@@ -68,7 +68,10 @@
   entirely — NEVER imported by any "use client" file) exposing
   `getOrderStats()`, which reads `orders` and returns the same per-product
   sending/delivered/returned shape `lib/storage-counter.ts`'s
-  `statsByProduct` already produces for the admin panel. Two call sites:
+  `statsByProduct` already produces for the admin panel. Three call sites,
+  the latter two through the shared `sortByCloset()` in `lib/closet-sort.ts`
+  (which owns the guarded dynamic import and the ordering rule, so the two
+  storefront listings can never rank the catalog differently):
   - `app/api/storage-closet` (this repo's only API route) — `POST { ids }`
     → `{ closet: Record<productId, number> }`, fetched client-side by
     `hooks/use-storage-closet.ts`, only in seller mode
@@ -80,6 +83,14 @@
     closet count before picking the top 8. This one runs for every visitor,
     not just seller mode, since it only affects display order, not any
     data exposed to the page.
+  - `app/(storefront)/products/page.tsx` (the full `/products` listing) —
+    also a Server Component, sorting the whole catalog the same way before
+    handing it to the client `ProductsBrowser`, whose default
+    «الأكثر توفراً» sort is exactly "leave the order the server gave me".
+    The ORDER of the array is the only thing that crosses into the client
+    component — no closet count is passed, so the browser cannot read one
+    off the RSC payload. Its other sort options (price, name, recency)
+    re-sort that same array client-side and need nothing privileged.
 - **Invariant: nothing downstream of `getOrderStats()` may expose order
   fields** (customer name/phone/address, carrier data, etc.) to the
   browser — only derived integers. Any future change to either call site

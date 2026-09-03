@@ -9,7 +9,7 @@ import { catColor, hexToRgba } from "@/lib/colors";
 import { trackPixelEvent } from "@/lib/meta-pixel";
 import { ProductCard } from "@/components/storefront/product-card";
 
-type Sort = "new" | "price-asc" | "price-desc" | "name";
+type Sort = "quantity" | "new" | "price-asc" | "price-desc" | "name";
 
 const selectClass =
   "cursor-pointer rounded-full border-[1.5px] border-[var(--line)] bg-card px-5 py-3 text-[0.88rem] text-foreground outline-none transition-colors";
@@ -28,7 +28,7 @@ export function ProductsBrowser({
   const router = useRouter();
   const [activeCat, setActiveCat] = useState(initialCat);
   const [search, setSearch] = useState(initialQuery);
-  const [sort, setSort] = useState<Sort>("new");
+  const [sort, setSort] = useState<Sort>("quantity");
 
   const catMap = useMemo(
     () => Object.fromEntries(categories.map((c) => [c.id, c.name])),
@@ -64,10 +64,14 @@ export function ProductsBrowser({
     else if (sort === "price-desc") items.sort((a, b) => priceNum(b.price) - priceNum(a.price));
     else if (sort === "name")
       items.sort((a, b) => String(a.title || "").localeCompare(String(b.title || ""), "ar"));
-    else
+    else if (sort === "new")
       items.sort(
         (a, b) => (Number(b.lastModified ?? b.id) || 0) - (Number(a.lastModified ?? a.id) || 0)
       );
+    // "quantity" (the default) is the order `products` already arrives in:
+    // the page sorted it most-in-closet first server-side, where the closet
+    // counts stay (app/(storefront)/products/page.tsx, lib/closet-sort.ts).
+    // Filtering above preserves it, so there is nothing to sort here.
     return items;
   }, [products, activeCat, search, sort, catMap]);
 
@@ -151,6 +155,7 @@ export function ProductsBrowser({
             aria-label="الترتيب"
             className={`${selectClass} flex-1 md:flex-none`}
           >
+            <option value="quantity">الأكثر توفراً</option>
             <option value="new">الأحدث</option>
             <option value="price-asc">السعر: من الأقل</option>
             <option value="price-desc">السعر: من الأعلى</option>
