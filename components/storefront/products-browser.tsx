@@ -11,6 +11,9 @@ import { ProductCard } from "@/components/storefront/product-card";
 
 type Sort = "new" | "price-asc" | "price-desc" | "name";
 
+const selectClass =
+  "cursor-pointer rounded-full border-[1.5px] border-[var(--line)] bg-card px-5 py-3 text-[0.88rem] text-foreground outline-none transition-colors";
+
 export function ProductsBrowser({
   products,
   categories,
@@ -32,6 +35,19 @@ export function ProductsBrowser({
     [categories]
   );
   const visibleCats = categories.filter((c) => c.visible !== false);
+
+  // A `?cat=` aimed at a hidden (or deleted) category still filters the grid,
+  // so it needs an option of its own: without one the native select would show
+  // «كل التصنيفات» while the page is in fact filtered to that category.
+  const catOptions = visibleCats.map((c) => ({ id: c.id, name: c.name }));
+  if (activeCat !== "all" && !catOptions.some((o) => o.id === activeCat))
+    catOptions.push({ id: activeCat, name: catMap[activeCat] || activeCat });
+
+  // Carries the per-category accent the tiles/buttons used, tinting the closed
+  // select — option colours are not stylable across browsers, so the control
+  // itself is where the colour has to live.
+  const activeCatObj = categories.find((c) => c.id === activeCat);
+  const activeCatColor = activeCatObj ? catColor(activeCatObj) : null;
 
   const list = useMemo(() => {
     let items = products.slice();
@@ -104,12 +120,36 @@ export function ProductsBrowser({
           />
           <Search className="absolute right-4 top-1/2 size-4.5 -translate-y-1/2 text-[var(--ink-3)]" />
         </div>
-        <div className="flex items-center gap-4">
-          <span className="text-[0.82rem] font-semibold text-[var(--ink-3)]">{list.length} منتج</span>
+        <div className="flex w-full flex-wrap items-center gap-3 md:w-auto md:flex-nowrap md:gap-4">
+          <span className="w-full text-[0.82rem] font-semibold text-[var(--ink-3)] md:w-auto">
+            {list.length} منتج
+          </span>
+          <select
+            value={activeCat}
+            onChange={(e) => selectCat(e.target.value)}
+            aria-label="التصنيف"
+            style={
+              activeCatColor
+                ? {
+                    background: hexToRgba(activeCatColor, 0.14),
+                    borderColor: hexToRgba(activeCatColor, 0.5),
+                  }
+                : undefined
+            }
+            className={`${selectClass} flex-1 truncate md:max-w-60 md:flex-none`}
+          >
+            <option value="all">كل التصنيفات</option>
+            {catOptions.map((c) => (
+              <option key={c.id} value={c.id}>
+                {c.name}
+              </option>
+            ))}
+          </select>
           <select
             value={sort}
             onChange={(e) => setSort(e.target.value as Sort)}
-            className="cursor-pointer rounded-full border-[1.5px] border-[var(--line)] bg-card px-5 py-3 text-[0.88rem] text-foreground outline-none"
+            aria-label="الترتيب"
+            className={`${selectClass} flex-1 md:flex-none`}
           >
             <option value="new">الأحدث</option>
             <option value="price-asc">السعر: من الأقل</option>
@@ -117,37 +157,6 @@ export function ProductsBrowser({
             <option value="name">الاسم</option>
           </select>
         </div>
-      </div>
-
-      <div className="mx-auto grid max-w-[1320px] grid-cols-[repeat(auto-fill,minmax(150px,1fr))] gap-2.5 px-5 pb-6 md:px-12">
-        <button
-          type="button"
-          onClick={() => selectCat("all")}
-          className={`flex min-h-11 items-center justify-center rounded-[22px] border-[1.5px] border-transparent bg-gradient-to-br from-[var(--rose)] to-[var(--rose-deep)] px-4 py-2.5 text-center text-[0.84rem] font-bold text-white transition-all hover:-translate-y-px ${
-            activeCat === "all" ? "shadow-[0_6px_16px_rgba(224,114,140,.35)]" : ""
-          }`}
-        >
-          الكل
-        </button>
-        {visibleCats.map((c) => {
-          const color = catColor(c);
-          const active = activeCat === c.id;
-          return (
-            <button
-              key={c.id}
-              type="button"
-              onClick={() => selectCat(c.id)}
-              style={
-                active
-                  ? { background: color, borderColor: color, color: "var(--ink)" }
-                  : { background: hexToRgba(color, 0.14), borderColor: hexToRgba(color, 0.5), color: "var(--ink)" }
-              }
-              className={`flex min-h-11 items-center justify-center rounded-[22px] border-[1.5px] px-4 py-2.5 text-center text-[0.84rem] font-bold transition-all hover:-translate-y-px ${active ? "shadow-[0_6px_16px_rgba(0,0,0,.16)]" : ""}`}
-            >
-              {c.name}
-            </button>
-          );
-        })}
       </div>
 
       <div className="mx-auto max-w-[1320px] px-5 pt-2 pb-16 md:px-12">

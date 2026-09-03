@@ -2933,6 +2933,50 @@ not the intended state (see `development-workflow.md`).
   Questions): `isPastCancelWindow`'s regex uses `\s*`, so it does not match
   ZR's snake_case `pret_a_expedier`, only the accented «Prêt à expédier».
 
+- The products page filters by a category DROPDOWN instead of the button grid
+  (`components/storefront/products-browser.tsx`, storefront only; no schema,
+  rules or function change). The grid rendered one pill per visible category —
+  with the catalog now at 15 of them it was a four-row block of buttons
+  between the heading and the first product, pushing the grid below the fold
+  on a phone. It is now a native `<select>` sitting in the existing toolbar
+  row beside the sort control, matching how every other filter in this
+  codebase is built (`products-view.tsx`, `checkout-form.tsx`, the order
+  modals) and reusing the sort select's own styling through a shared
+  `selectClass`. Same Arabic vocabulary as the admin filter: «كل التصنيفات».
+
+  Behaviour is unchanged — `selectCat()` still sets state and `router.replace`s
+  to `/products?cat=<id>` (scroll: false), so deep links, the back button and
+  the `<h1>` category title all work exactly as before; the sort select, the
+  search box and its debounced `Search` pixel event were not touched.
+
+  Two things carried over deliberately:
+  - The per-category accent colour, which the pills used to carry, now tints
+    the closed select (`background` at .14, `borderColor` at .5, same alphas
+    the inactive pills used). Option elements are not reliably stylable across
+    browsers, so the control itself is the only place the colour can live.
+  - A `?cat=` pointing at a HIDDEN or deleted category still filters the grid
+    (`list` filters on `activeCat`, not on `visibleCats`) and the title still
+    names it. With buttons that state simply showed no pill highlighted; a
+    select with no matching option would have fallen back to displaying
+    «كل التصنيفات» while the page was in fact filtered — a lie about state.
+    So `catOptions` appends an option for any active category missing from
+    the visible list, labelled from `catMap` (or the raw id if even that is
+    gone).
+
+  Mobile layout: the toolbar's right-hand group goes full width below `md`, so
+  the count sits on its own line and the two pills stack full width rather
+  than crowding the search box; from `md` up it is the original inline row
+  (`md:w-auto md:flex-nowrap`), with the category select capped at `max-w-60`
+  and truncating so a long Arabic name cannot stretch the toolbar.
+
+  Verified in the browser against live Firestore data (`npm run dev`, real
+  catalog: 149 products, 15 categories): all 16 options render, selecting
+  «منتجات العناية بالشعر» filters to 9 products, sets `?cat=hair_care` and
+  retitles the page; loading `/products?cat=slimming` cold comes back with the
+  select already on that category; returning to «كل التصنيفات» clears the
+  query string. Checked at 1280px and 390px — no horizontal overflow at
+  either, RTL order correct. `tsc --noEmit` and `eslint` clean.
+
 ## Next Up
 
 - **Owner action required**: generate a Meta CAPI access token (Business
