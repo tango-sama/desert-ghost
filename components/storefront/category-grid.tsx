@@ -1,9 +1,22 @@
-import type { Category } from "@/lib/firebase";
+import type { Category, Product } from "@/lib/firebase";
 import { SectionHead } from "@/components/storefront/section-head";
-import { CategoryTileGrid } from "@/components/storefront/category-tile-grid";
+import { CategoryCarousel } from "@/components/storefront/category-carousel";
 
-export function CategoryGrid({ categories }: { categories: Category[] }) {
-  const visible = categories.filter((c) => c.visible !== false).slice(0, 8);
+export function CategoryGrid({
+  categories,
+  products,
+}: {
+  categories: Category[];
+  products: Product[];
+}) {
+  const visible = categories.filter((c) => c.visible !== false);
+
+  // Live per-category product counts. `Product.category` holds the category
+  // document id, the same key the tiles link with.
+  const counts: Record<string, number> = {};
+  for (const p of products) {
+    if (p.category) counts[p.category] = (counts[p.category] ?? 0) + 1;
+  }
 
   return (
     <section id="categories" className="reveal mx-auto max-w-[1320px] px-5 py-22 md:px-12">
@@ -12,7 +25,7 @@ export function CategoryGrid({ categories }: { categories: Category[] }) {
         title="تصنيفاتنا"
         sub="اختاري ما يناسب احتياجكِ من مجموعتنا المتنوّعة للعناية والجمال."
       />
-      <CategoryTileGrid categories={visible} />
+      <CategoryCarousel categories={visible} counts={counts} />
     </section>
   );
 }

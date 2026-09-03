@@ -20,7 +20,7 @@ export default async function HomePage() {
       <Hero heroImage={settings.heroImage} />
       <RevealRoot>
         <FeatureStrip />
-        <CategoryGrid categories={categories} />
+        <CategoryGrid categories={categories} products={products} />
       </RevealRoot>
       <RevealRoot>
         <FeaturedCarousel items={featured} />

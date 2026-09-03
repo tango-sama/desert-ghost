@@ -3767,3 +3767,85 @@ not the intended state (see `development-workflow.md`).
   FIELD (done) tells Meta what to send; subscribing the WABA tells it which
   account's events to send. That is why Meta's test arrives but messages
   from a real phone do not.
+
+## Completed (this session, 2026-09-03)
+
+- **Home page category tiles became a swipeable 3D coverflow carousel.**
+  The `#categories` section was a static `grid-cols-2 md:grid-cols-4` capped
+  at 8 tiles; it is now a snap-scrolling coverflow that shows all visible
+  categories — swipe on a phone, arrow buttons from `md`, tap a card to open
+  `/products?cat=<id>` exactly as before. The look was taken from a supplied
+  reference component ("ai-image-generator-hero"): tilted rounded image
+  cards with depth, a shine sweep on the focused card, and a soft rose/gold
+  glow behind the track.
+  What was deliberately NOT copied from that reference, because it is
+  wrong for this site: it orbits its cards on a `setInterval` every 50ms
+  driving React state, so every card re-renders ~20x/second and is always
+  moving. On a 360px phone its fixed 180px radius piles the cards on top of
+  each other and tapping one is a coin flip. Here the same depth effect is
+  driven by **scroll position** instead of a timer, so the cards are
+  stationary whenever nobody is swiping and every card is a reliable tap
+  target. Scrolling is the browser's own horizontal scroll — no pointer
+  handlers at all — which keeps fling/momentum native and means a vertical
+  drag always scrolls the page instead of being swallowed by the carousel.
+  The reference's `next/image` was also dropped, per the standing decision
+  recorded above: category images are admin-pasted URLs on arbitrary hosts
+  and `next.config.ts` has no `images.remotePatterns`.
+- New `components/storefront/category-tile.tsx` — the single category card,
+  lifted unchanged out of `category-tile-grid.tsx` so the `/categories` grid
+  and the new carousel keep sharing one tile instead of forking the markup
+  (the same reason the grid was extracted in the first place). It gained an
+  optional `count` line and a `className` override for the carousel's taller
+  cards. `category-tile-grid.tsx` now just maps over it; `/categories` is
+  visually unchanged and keeps its grid — a grid is the right shape for a
+  browse-everything page.
+- New `components/storefront/category-carousel.tsx` (`"use client"`).
+  Mechanics follow `featured-carousel.tsx`, including its RTL arrow
+  convention («السابق» = `step(1)` on the right, «التالي» = `step(-1)` on
+  the left). Added on top of that: per-card 3D transform, a scroll-progress
+  bar (replacing the hidden scrollbar — 15 dots would be too many), and
+  arrows that disable themselves at each end. Transforms are written
+  straight to the DOM from one rAF-throttled passive scroll listener; no
+  React state is involved, so there is no re-render per frame (same
+  imperative approach as `collagen/story-stack.tsx`).
+- **Two bugs worth recording, both found by driving the page in a real
+  browser rather than by reading the code:**
+  1. The side padding that lets the first and last card reach dead centre
+     must be *half the card width at every breakpoint*. It was written once
+     for the `md` card (`w-60` → `7.5rem`) and reused for mobile, where the
+     card is `w-40` — so on a phone the first card sat 16px off centre.
+     Now `calc(50% - 5rem)` / `sm:6rem` / `md:7.5rem`, tracking `w-40` /
+     `sm:w-48` / `md:w-60`.
+  2. The depth maths originally measured each card with
+     `getBoundingClientRect()`. That returns the box **after** transforms,
+     so the transform fed back into its own input; combined with the
+     `perspective: 1200px` projection the error grew toward the ends and the
+     last category could never read as centred (it stayed at 93% progress
+     and never became the focused card). Now measured in layout coordinates
+     (`offsetLeft` / `scrollLeft`, with the track made `relative` so it is
+     the `offsetParent`), which is immune to the transforms and counts the
+     same way in RTL. Verified: card 15/15 now reaches dead centre with an
+     exact identity transform at 360, 640 and 1280.
+- Category cards now carry a live product count («15 منتج»), computed on the
+  server in `category-grid.tsx` from the `products` the home page already
+  fetches — `Product.category` holds the category document id, the same key
+  the tiles link with. No Firestore field was added and no admin change was
+  needed. The count phrasing reuses `products-browser.tsx`'s existing
+  `{n} منتج`, so no new Arabic copy was invented.
+- Accessibility/motion: the track is a labelled `region` and keyboard
+  focusable, arrows keep their Arabic `aria-label`s, and under
+  `prefers-reduced-motion: reduce` the 3D effect is skipped entirely and the
+  cards render flat.
+- Verified with `npx tsc --noEmit`, `npx eslint` (both clean), `npm run
+  build`, and a headless-Chromium pass at 360x740 / 640x800 / 1280x800
+  against **real Firestore data** (15 categories): section reveals, swipe
+  snaps and moves the focused card, tapping the focused card lands on
+  `/products?cat=breast_enlargement` with the heading «منتجات تكبير الصدر»,
+  desktop arrows move in the correct RTL direction and disable at the ends,
+  progress bar runs 0% → 100%, reduced-motion renders flat.
+  One thing that could NOT be checked here: this sandbox's proxy blocks
+  `firebasestorage.googleapis.com` from the browser
+  (`net::ERR_CONNECTION_RESET`), so the real category photos never loaded —
+  the layout was judged with stand-in images injected at the network layer.
+  Worth one look on a real device to confirm the photos crop well in the
+  taller `aspect-[1/1.25]` card.
