@@ -6,6 +6,7 @@
 
 import { cn } from "@/lib/utils";
 import { uploadImage } from "@/lib/admin";
+import { trackReasonAr, trackStateAr } from "@/lib/tracking-labels";
 
 export const inp =
   "w-full rounded-[11px] border-[1.5px] border-input bg-[var(--card-2)] px-[.9rem] py-[.7rem] text-[.9rem] text-foreground outline-none transition-colors placeholder:text-[var(--ink-3)] focus:border-[var(--rose)]";
@@ -172,4 +173,92 @@ export function fmtDate(d: Date | number | string | null | undefined): string {
   if (d == null || d === "") return "";
   const dt = d instanceof Date ? d : new Date(d);
   return isNaN(dt.getTime()) ? "" : dt.toLocaleString("ar-DZ");
+}
+
+
+/* ── Carrier tracking text ──
+   The delivery tracker's own chrome is Arabic, but the text the CARRIERS
+   report is not: ZR sends snake_case French (`sortie_en_livraison`), Noest
+   accented French ("Enlevé par le livreur"), Yalidine English ("Out for
+   delivery"). These two render such a value Arabic-first with the carrier's
+   exact original kept beside it, small and muted — so the card is readable at
+   a glance AND it stays clear what the delivery API literally reported (the
+   reason the raw text was shown in the first place).
+
+   An unrecognised value renders raw and alone: `trackStateAr`/`trackReasonAr`
+   return null rather than echoing their input precisely so this can tell
+   "translated" from "passed through" and never print the same string twice.
+   Carrier state names are not a fixed enum (ZR's are per-tenant configurable),
+   so falling through is the normal case, not the error case.
+
+   Display only. Every matcher that drives behaviour — OUT_FOR_DELIVERY_RE,
+   NO_ANSWER_RE, AT_DESK_RE, URGENT_REASON, isPastCancelWindow — keeps testing
+   the RAW string at its own call site. */
+
+// The carrier's untranslated original, trailing the Arabic. `dir="ltr"` inside
+// a `<bdi>` keeps a Latin/snake_case run from being reordered by the RTL page;
+// the separator sits outside it so the "·" doesn't jump to the wrong side.
+function RawEcho({ raw }: { raw: string }) {
+  return (
+    <span className="text-[.66rem] font-normal text-[var(--ink-3)]">
+      {" · "}
+      <bdi dir="ltr">{raw}</bdi>
+    </span>
+  );
+}
+
+// A carrier STATE name (`trackingStatus.lastLabel`, `TrackEvent.label`).
+// `suffix` is appended to the Arabic head only — never to the raw echo, which
+// must stay a faithful quote of the carrier payload — so a redelivery reads
+// «خرج للتوصيل مجددا · sortie_en_livraison».
+export function TrackLabel({
+  raw,
+  suffix = "",
+  className,
+  empty = "—",
+}: {
+  raw?: string | null;
+  suffix?: string;
+  className?: string;
+  empty?: string;
+}) {
+  const s = String(raw ?? "");
+  const ar = trackStateAr(s);
+  if (!ar)
+    return (
+      <b className={className}>
+        {s || empty}
+        {suffix}
+      </b>
+    );
+  return (
+    <>
+      <b className={className}>
+        {ar}
+        {suffix}
+      </b>
+      <RawEcho raw={s} />
+    </>
+  );
+}
+
+// A free-text failure reason (`TrackEvent.content`). Same contract as
+// TrackLabel; rendered as a span because its call sites sit inline in a
+// details row rather than as a heading.
+export function TrackReason({
+  raw,
+  className,
+}: {
+  raw?: string | null;
+  className?: string;
+}) {
+  const s = String(raw ?? "");
+  const ar = trackReasonAr(s);
+  if (!ar) return <span className={className}>{s}</span>;
+  return (
+    <>
+      <span className={className}>{ar}</span>
+      <RawEcho raw={s} />
+    </>
+  );
 }

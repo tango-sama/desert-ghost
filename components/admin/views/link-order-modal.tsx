@@ -36,7 +36,14 @@ import {
   type CarrierCache,
   type DeliveryType,
 } from "@/lib/delivery";
-import { inp, btn, Field, rowActions, fmtDate } from "@/components/admin/ui";
+import {
+  inp,
+  btn,
+  Field,
+  rowActions,
+  fmtDate,
+  TrackLabel,
+} from "@/components/admin/ui";
 import { nowMs } from "@/lib/time";
 
 // Phone formats the carrier APIs actually return: local 0[567]XXXXXXXX
@@ -417,8 +424,12 @@ export function LinkOrderModal({
                 </span>
               </div>
               {result.status?.lastLabel && (
-                <div className="mb-2 text-[.78rem] font-bold text-[var(--ok-ink)]">
-                  ✅ {result.status.lastLabel}
+                <div className="mb-2 text-[.78rem]">
+                  ✅{" "}
+                  <TrackLabel
+                    raw={result.status.lastLabel}
+                    className="font-bold text-[var(--ok-ink)]"
+                  />
                 </div>
               )}
               <div className="flex flex-wrap gap-x-4 gap-y-1 text-[.8rem] text-[var(--ink-2)]">
