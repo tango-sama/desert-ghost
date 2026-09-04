@@ -22,17 +22,27 @@ import { priceNum, type Product } from "@/lib/firebase";
 
 export type Goal =
   | "skin" | "hair" | "slim" | "gain" | "curves" | "hormones" | "vitality";
-export type Duration = "new" | "months" | "long";
 export type Age = "u25" | "a25" | "a35" | "a45";
 export type Form = "caps" | "topical" | "oil" | "any";
-export type Budget = "low" | "mid" | "high";
+/**
+ * How far she wants to go — deliberately NOT a budget question.
+ *
+ * Asking a cold ad click "what is your budget" is friction, and naming dinar
+ * amounts frames the visit around cost before she has seen anything. This
+ * carries the same signal (an accessible product versus the strongest one) and
+ * steers price without ever mentioning money.
+ *
+ * It steers PRICE only, never how many products the result shows — that is the
+ * A/B variant's job (`variantBundleSize`). If both moved the count, the
+ * experiment would be measuring two changes at once and could conclude nothing.
+ */
+export type Intensity = "gentle" | "serious";
 
 export type Answers = {
   goal?: Goal;
-  duration?: Duration;
   age?: Age;
   form?: Form;
-  budget?: Budget;
+  intensity?: Intensity;
 };
 
 export type QuestionOption = { value: string; label: string; hint?: string };
@@ -42,10 +52,11 @@ export type Question = {
   options: QuestionOption[];
 };
 
-/* Five single-select questions, no branching. Branching would personalise a
+/* Four single-select questions, no branching. Branching would personalise a
    little better and would also make every funnel-step number incomparable
    between visitors, which is worse: the whole point of this funnel is to
-   learn where people drop off. */
+   learn where people drop off. Four rather than five because every extra
+   question is another place to abandon, and none of these is dead weight. */
 export const QUESTIONS: Question[] = [
   {
     key: "goal",
@@ -58,15 +69,6 @@ export const QUESTIONS: Question[] = [
       { value: "curves", label: "تكبير الصدر أو المؤخرة" },
       { value: "hormones", label: "هرموناتي ودورتي" },
       { value: "vitality", label: "طاقتي وصحتي العامة", hint: "فيتامينات ومناعة" },
-    ],
-  },
-  {
-    key: "duration",
-    title: "منذ متى وأنتِ تلاحظين هذا؟",
-    options: [
-      { value: "new", label: "أقل من ٣ أشهر" },
-      { value: "months", label: "من ٣ إلى ١٢ شهراً" },
-      { value: "long", label: "أكثر من سنة" },
     ],
   },
   {
@@ -90,12 +92,11 @@ export const QUESTIONS: Question[] = [
     ],
   },
   {
-    key: "budget",
-    title: "ما ميزانيتكِ التقريبية؟",
+    key: "intensity",
+    title: "ما الذي يناسبكِ أكثر؟",
     options: [
-      { value: "low", label: "أقل من ٥٠٠٠ دج" },
-      { value: "mid", label: "٥٠٠٠ – ١٢٠٠٠ دج" },
-      { value: "high", label: "أكثر من ١٢٠٠٠ دج" },
+      { value: "gentle", label: "بداية بسيطة", hint: "شيء خفيف أجرّبه أولاً" },
+      { value: "serious", label: "الأقوى المتوفر", hint: "أريد أقوى تركيبة متاحة" },
     ],
   },
 ];
@@ -115,11 +116,31 @@ const GOAL_CATEGORIES: Record<Goal, { primary: string[]; related: string[] }> = 
   vitality: { primary: ["NF", "Fm", "AMF"], related: ["Ms", "Msl", "Bibo88"] },
 };
 
-const BUDGET_CEILING: Record<Budget, number> = {
-  low: 5000,
-  mid: 12000,
-  high: Number.MAX_SAFE_INTEGER,
-};
+/* Price bands the `intensity` answer maps onto, in dinars. Derived from the
+   answer, never shown to her and never asked about directly. The numbers come
+   from the live catalog's own spread (roughly 1,700–21,000 DA): ACCESSIBLE is
+   about where the middle of it sits, PREMIUM where the strong formulations
+   start. */
+const ACCESSIBLE_MAX = 8000;
+const PREMIUM_MIN = 8000;
+const STEEP = 15000;
+
+/**
+ * What "بداية بسيطة" should actually cost — approachable, NOT the cheapest
+ * thing on the shelf.
+ *
+ * This number is set by the unit economics, not by taste. At the real observed
+ * acquisition cost (~1,650 DA per order on the Glutathione campaign) and a 35%
+ * margin, a single-product order has to clear roughly 6,700 DA at a 70%
+ * delivery rate — nearer 9,400 DA at 50% — before it earns anything at all. A
+ * 1,700 DA soap returns 595 DA and loses money on every paid click.
+ *
+ * So ties among equally-matched products resolve toward this target rather
+ * than downward. Sorting ascending instead would hand every tie to the
+ * cheapest product in the catalog, which is how a funnel ends up busily
+ * selling at a loss.
+ */
+const GENTLE_TARGET = 7000;
 
 /* Product form, read off the Arabic title. The catalog has no `form` field and
    adding one would mean the owner re-tagging 149 products, so this infers it
@@ -194,29 +215,28 @@ export function scoreProduct(p: Product, a: Answers): Scored {
   }
 
   const price = priceNum(p.price);
-  if (a.budget) {
-    const ceiling = BUDGET_CEILING[a.budget];
-    if (price <= ceiling) {
+  if (a.intensity === "gentle") {
+    // Nudges, not filters: someone starting gently is still shown a dearer
+    // product when nothing accessible fits her goal, rather than an empty
+    // result or something off-target.
+    if (price <= ACCESSIBLE_MAX) {
       score += 30;
-      why.push("budget");
-      // Comfortably inside the budget — a small nudge, not a race to the
-      // cheapest thing on the shelf.
-      if (price <= ceiling * 0.6) score += 10;
-    } else {
-      // Over budget is a soft penalty, not a filter: someone who says "under
-      // 5000" will still be shown a 5500 hero if nothing else fits, rather
-      // than an empty result.
-      score -= 40;
+      why.push("intensity");
+    } else if (price >= STEEP) {
+      score -= 25;
+    }
+  } else if (a.intensity === "serious") {
+    if (price >= PREMIUM_MIN) {
+      score += 20;
+      why.push("intensity");
     }
   }
 
   score += stockScore(p);
 
-  // A long-standing problem is not going to be fixed by a soap. Nudge toward
-  // supplements, which is what actually gets taken for months.
-  if (a.duration === "long" && form === "caps") {
+  // Someone asking for the strongest option is after a supplement, not a soap.
+  if (a.intensity === "serious" && form === "caps") {
     score += 12;
-    why.push("duration");
   }
   // Age-appropriate formulations, matched on what the titles actually say.
   const title = `${p.title ?? p.name ?? ""}`;
@@ -254,13 +274,31 @@ export function recommend(products: Product[], a: Answers, bundleSize = 3): Reco
   // This matters more than it looks on a cash-on-delivery shop: an order for
   // something out of stock is a paid click that turns into a cancelled parcel,
   // which damages the confirmation rate the whole profit engine turns on.
+  //
+  // THE TIEBREAK FOLLOWS `intensity`, and it matters far more than a tiebreak
+  // usually would. Scores here compress: products sharing a category, form and
+  // stock state score identically, so price decides a great many of these
+  // comparisons in practice, not just the occasional draw. An unconditional
+  // descending sort (what this was) hands every one of those to the dearest
+  // product — measured against the live catalog it doubled the average
+  // recommendation to ~14,400 DA. Ascending for `gentle` is what keeps "بداية
+  // بسيطة" an honest answer rather than a label on the most expensive shelf.
+  // `serious` asked for the strongest thing available, so dearest wins ties.
+  // Everyone else resolves toward GENTLE_TARGET — closest to it first — which
+  // avoids both the priciest shelf and the loss-making bottom of it.
+  const dearestFirst = a.intensity === "serious";
+  const tiebreak = (xp: number, yp: number) =>
+    dearestFirst
+      ? yp - xp
+      : Math.abs(xp - GENTLE_TARGET) - Math.abs(yp - GENTLE_TARGET);
+
   const scored = products
     .map((p) => scoreProduct(p, a))
     .sort(
       (x, y) =>
         Number(isSoldOut(x.product)) - Number(isSoldOut(y.product)) ||
         y.score - x.score ||
-        priceNum(y.product.price) - priceNum(x.product.price),
+        tiebreak(priceNum(x.product.price), priceNum(y.product.price)),
     );
 
   const hero = scored[0]?.product ?? null;

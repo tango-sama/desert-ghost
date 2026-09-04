@@ -191,35 +191,31 @@ export function QuizPage({
           <div className={styles.intro}>
             <span className={styles.introKicker}>خاص بكِ</span>
             <h1 className={styles.introTitle}>
-              أجيبي على ٥ أسئلة،
+              ما المنتج المناسب
               <br />
-              ونقترح عليكِ ما يناسبكِ فعلاً
+              <em className={styles.introEm}>لكِ أنتِ؟</em>
             </h1>
             <p className={styles.introLead}>
-              بدل التنقّل بين ١٤٩ منتجاً، أخبرينا عن هدفكِ وسنختار لكِ ما يناسب
-              حالتكِ وميزانيتكِ — في أقل من دقيقة.
+              {arNum(products.length)} منتجاً على الرف، وواحد أو اثنان فقط يناسبان
+              حالتكِ. أخبرينا عن هدفكِ ونتكفّل بالباقي.
             </p>
-            <div className={styles.introPoints}>
-              <div className={styles.point}>
-                <span className={styles.pointIc}>🎯</span> اقتراح مبني على إجاباتكِ أنتِ
-              </div>
-              <div className={styles.point}>
-                <span className={styles.pointIc}>💳</span> الدفع عند الاستلام
-              </div>
-              <div className={styles.point}>
-                <span className={styles.pointIc}>🚚</span> توصيل لكل ولايات الوطن
-              </div>
-            </div>
             <button
               type="button"
-              className={styles.cta}
+              className={styles.ctaBig}
               onClick={() => {
                 setStage("questions");
                 trackFunnel({ step: "start", variant: variant ?? undefined });
               }}
             >
-              ابدئي الآن
+              اكتشفي منتجكِ
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                <path d="M19 12H5" />
+                <path d="m12 19-7-7 7-7" />
+              </svg>
             </button>
+            <div className={styles.introMeta}>
+              {arNum(QUESTIONS.length)} أسئلة · أقل من دقيقة · بدون تسجيل
+            </div>
           </div>
         )}
 
@@ -400,14 +396,33 @@ export function QuizPage({
 
 /* Shown immediately, and kept if the personalised wording never arrives. It
    has to stand on its own as a real sentence, not read like a placeholder
-   waiting to be replaced. */
+   waiting to be replaced.
+
+   Questions are looked up BY KEY. This used to index into QUESTIONS by
+   position, which meant removing a question left it reading past the end of
+   the array and throwing on `.options` — taking the whole result screen down
+   with it. Nothing here should care where a question sits in the list. */
+function labelFor(key: keyof Answers, value: string | undefined): string | undefined {
+  if (!value) return undefined;
+  return QUESTIONS.find((q) => q.key === key)?.options.find((o) => o.value === value)?.label;
+}
+
 function fallbackWhy(a: Answers, count: number): string {
-  const goal = QUESTIONS[0].options.find((o) => o.value === a.goal)?.label ?? "هدفكِ";
-  const budget = QUESTIONS[4].options.find((o) => o.value === a.budget)?.label;
+  const goal = labelFor("goal", a.goal) ?? "هدفكِ";
+  const intensity = labelFor("intensity", a.intensity);
   const many = count > 1;
   return (
     `اخترنا لكِ ${many ? "هذه المنتجات" : "هذا المنتج"} بناءً على ${goal}` +
-    (budget ? ` وميزانية ${budget}` : "") +
+    (intensity ? ` وتفضيلكِ «${intensity}»` : "") +
     `${many ? "، وهي تعمل معاً لا كبدائل عن بعضها" : ""}. الدفع عند الاستلام، ويمكنكِ تعديل اختياركِ قبل الطلب.`
   );
+}
+
+/* Western digits → Arabic-Indic, so counts rendered from real data match the
+   hand-written numerals everywhere else on the page. The alternative is
+   hardcoding "٥ أسئلة" and "١٤٩ منتجاً" in the copy, which is how those two
+   went stale the moment the question set and the catalog changed. */
+const AR_DIGITS = "٠١٢٣٤٥٦٧٨٩";
+function arNum(n: number): string {
+  return String(n).replace(/\d/g, (d) => AR_DIGITS[Number(d)]);
 }

@@ -49,7 +49,7 @@
 }
 
 /* ───────── intro ───────── */
-.intro { text-align: center; padding: 2.5rem 0 1rem; }
+.intro { text-align: center; padding: 3.5rem 0 1rem; }
 .introKicker {
   display: inline-block;
   font-size: 0.7rem;
@@ -62,38 +62,81 @@
   margin-bottom: 1.2rem;
 }
 .introTitle {
-  font-size: clamp(1.6rem, 6vw, 2.3rem);
+  font-size: clamp(2rem, 8.5vw, 2.9rem);
   font-weight: 900;
-  line-height: 1.35;
+  line-height: 1.3;
   color: var(--foreground);
-  margin-bottom: 0.9rem;
+  margin-bottom: 1rem;
 }
 .introLead {
-  font-size: 0.98rem;
-  line-height: 1.9;
+  font-size: 1rem;
+  line-height: 1.95;
   color: var(--ink-2);
-  margin-bottom: 2rem;
+  margin: 0 auto 2.4rem;
+  max-width: 400px;
 }
-.introPoints {
-  display: flex;
-  flex-direction: column;
-  gap: 0.7rem;
-  text-align: right;
-  margin: 0 auto 2.2rem;
-  max-width: 380px;
+/* The headline's second line, set apart so the question lands on "لكِ أنتِ" —
+   the whole promise of the funnel is that it is about her, not the catalog. */
+.introEm {
+  font-style: normal;
+  background: linear-gradient(120deg, var(--rose-deep), var(--gold));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
 }
-.point {
-  display: flex;
+
+/* The one thing on the screen worth pressing, so it is allowed to be large,
+   full-width and gently in motion. The float stops after a few cycles: a
+   button that never stops moving reads as an advert and gets ignored. */
+.ctaBig {
+  display: inline-flex;
   align-items: center;
-  gap: 0.7rem;
-  font-size: 0.88rem;
-  color: var(--ink-2);
-  background: #fff;
-  border: 1px solid var(--line);
-  border-radius: 14px;
-  padding: 0.8rem 1rem;
+  justify-content: center;
+  gap: 0.6rem;
+  width: 100%;
+  max-width: 340px;
+  padding: 1.15rem 2rem;
+  font-weight: 900;
+  font-size: 1.08rem;
+  border: none;
+  border-radius: 100px;
+  cursor: pointer;
+  font-family: inherit;
+  color: #fff;
+  background: linear-gradient(135deg, var(--rose), var(--rose-deep));
+  box-shadow: 0 14px 34px rgba(200, 84, 111, 0.38);
+  transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+  animation: rise 0.7s var(--ease) both, float 3.2s var(--ease) 0.7s 3;
 }
-.pointIc { font-size: 1.1rem; }
+.ctaBig svg { width: 19px; height: 19px; }
+.ctaBig:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 20px 44px rgba(200, 84, 111, 0.48);
+  animation: none;
+}
+.ctaBig:active { transform: translateY(-1px); }
+
+.introMeta {
+  margin-top: 1.1rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+
+@keyframes rise {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes float {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-5px); }
+}
+
+/* Respect a reduced-motion preference — the button must still arrive and still
+   be pressable, it just stops moving on its own. */
+@media (prefers-reduced-motion: reduce) {
+  .ctaBig { animation: none; }
+}
 
 /* ───────── question ───────── */
 .qTitle {
