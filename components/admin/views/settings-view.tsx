@@ -101,6 +101,11 @@ export function SettingsView() {
   const [zrKey, setZrKey] = useState("");
   // live
   const [liveHours, setLiveHours] = useState(Number(settings.tiktokLiveHours ?? 2));
+  // Stored as a decimal (0.65) but edited as a percentage (65) — a shop owner
+  // thinks "the goods cost me 65% of the price", not "0.65".
+  const [cogsPct, setCogsPct] = useState(
+    String(Math.round(Number(settings.cogsRate ?? 0.65) * 100))
+  );
   const [busy, setBusy] = useState<Record<string, boolean>>({});
 
   const yalEnabled = settings.yalidineEnabled !== false;
@@ -484,8 +489,55 @@ export function SettingsView() {
   const credPlaceholder = (ready: unknown, hint: string) =>
     ready ? "•••••• (محفوظ)" : hint;
 
+  // Cost rate feeds every profit number in the shop, so it is validated hard:
+  // anything outside 1–99% is rejected rather than silently stored, since a
+  // 0 or 100 would make margins read as "all profit" or "no profit at all".
+  async function saveCogs() {
+    const pct = Number(cogsPct);
+    if (!Number.isFinite(pct) || pct < 1 || pct > 99) {
+      toast("أدخلي نسبة بين 1 و 99");
+      return;
+    }
+    await persistSettings({ cogsRate: pct / 100 }, "تم حفظ نسبة التكلفة ✓");
+  }
+
+  const marginPct = (() => {
+    const pct = Number(cogsPct);
+    return Number.isFinite(pct) && pct >= 1 && pct <= 99 ? 100 - pct : null;
+  })();
+
   return (
     <div>
+      <div className={cardNarrow}>
+        <h3 className={cardH3}>💵 تكلفة البضاعة</h3>
+        <div className="mb-4 text-[.82rem] text-[var(--ink-2)]">
+          كم تكلّفكِ البضاعة من سعر البيع. تُستعمل لحساب الربح الصافي لكل طلب
+          وكل حملة إعلانية. يمكنكِ إدخال سعر شراء دقيق لأي منتج من تبويب
+          المنتجات، وسيُستعمل بدل هذه النسبة.
+        </div>
+        <div className={grid2}>
+          <Field label="نسبة التكلفة من السعر (%)">
+            <input
+              className={inp}
+              value={cogsPct}
+              onChange={(e) => setCogsPct(e.target.value)}
+              inputMode="numeric"
+              placeholder="65"
+            />
+          </Field>
+          <Field label="هامش الربح الناتج">
+            <div className="py-2 text-[.9rem] font-bold text-[var(--ink-2)]">
+              {marginPct != null ? `${marginPct}%` : "—"}
+            </div>
+          </Field>
+        </div>
+        <div className={rowActions}>
+          <button type="button" className={btn("green")} onClick={saveCogs}>
+            حفظ نسبة التكلفة
+          </button>
+        </div>
+      </div>
+
       <div className={cardNarrow}>
         <h3 className={cardH3}>🎨 مظهر لوحة التحكم</h3>
         <div className="mb-4 text-[.82rem] text-[var(--ink-2)]">

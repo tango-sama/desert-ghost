@@ -3029,6 +3029,82 @@ not the intended state (see `development-workflow.md`).
   label on the home section, which has always described a quantity sort
   rather than an order count.
 
+## Completed (this session, 2026-09-04)
+
+### Growth Phase 1 — attribution & profit spine
+
+The foundation for the AI growth agent: make every order traceable to the ad
+that produced it, and make every order's real profit computable.
+
+- **`lib/attribution.ts` (new)** — captures `utm_*`, Meta/TikTok click ids
+  (`fbclid`/`ttclid`) and campaign/adset/ad ids off the landing URL, keeping
+  BOTH first touch and last touch in `localStorage` for 90 days (matching
+  Meta's own `_fbc` window, so ours doesn't expire first and silently report
+  "direct"). Reuses `getVisitorId()`/`getFbc()` from `lib/meta-pixel.ts` rather
+  than duplicating them.
+  - **The overwrite rule is the part that matters**: stored attribution is only
+    replaced when the CURRENT url actually carries ad parameters. Plain internal
+    navigation (`/` → `/checkout`) has none, and clobbering on it would
+    attribute every order to the last page browsed. Verified by test.
+  - First touch is what a COD shop should generally credit: an Algerian
+    customer commonly clicks an ad, leaves, and returns directly a day later to
+    order. Crediting that to "direct" makes every campaign look unprofitable.
+  - Accepts both `campaignId` and Meta's own `campaign_id` spelling — both show
+    up depending on how the ad's URL parameters were typed in Ads Manager.
+- **`lib/profit.ts` (new)** — pure functions (no I/O), so the admin UI, a route
+  handler and a future Cloud Function share one copy of the arithmetic:
+  `orderRevenue`, `orderCogs`, `orderGrossMargin`, `orderNetProfit`,
+  `orderOutcome`, `summarize`.
+  - **Encodes the COD reality**: an order is not revenue. Revenue counts only
+    on `delivered`; a `returned` order earns nothing and still costs its
+    delivery fee; anything in flight is worth zero — pending, not profit.
+    Reporting gross order value as revenue is the standard way an Algerian COD
+    store convinces itself an unprofitable campaign is working.
+  - Cost model: owner-supplied **cost = 65% of price** (35% gross margin), as
+    `DEFAULT_COGS_RATE`, overridable globally by `site_settings.cogsRate` and
+    per product by `product.cost`. An out-of-range configured rate falls back
+    rather than inverting every margin in the dashboard.
+  - `summarize()` produces net profit, CAC, ROAS, **profit-ROAS**, confirmation
+    rate and delivery rate. Rates are computed over terminal orders only.
+- **`saveOrder()` (`lib/firebase.ts`)** stamps attribution onto every order.
+  All order paths — main checkout, all four landing funnels, the seller modal —
+  already funnel through it, so one touch point instruments every entry point.
+  Seller phone orders (`source: admin_phone`) are attributed `channel: 'phone'`
+  with no ad fields: they're placed from the shop's own browser, which may hold
+  a stale ad click from the owner's own browsing. Best-effort — if attribution
+  throws, the order still saves.
+- **`components/analytics/attribution-capture.tsx` (new)**, mounted in
+  `app/layout.tsx`. Deliberately NOT gated on `NEXT_PUBLIC_META_PIXEL_ID`:
+  knowing which campaign produced an order is our own bookkeeping and must keep
+  working whether or not Meta's pixel is configured or blocked.
+- **Admin UI**: cost-rate card in `settings-view.tsx` (edited as a percentage —
+  an owner thinks "goods cost me 65%", not "0.65" — validated to 1–99% and
+  showing the resulting margin), and an optional per-product buy price in
+  `products-view.tsx`. A blank cost is omitted from the document entirely so
+  the engine falls back to the rate rather than treating unknown cost as zero,
+  which would report the product as pure profit.
+- **Types**: `Product.cost`, `SiteSettings.cogsRate`, and
+  `Order.outcome`/`outcomeAt`/`channel`/`visitorId`/`attribution` added.
+
+Verified: `npm run build` clean, eslint clean, and 35 assertions covering the
+cost model, the COD outcome rules, campaign rollups, and every attribution rule
+above (including that internal navigation cannot clobber a click).
+
+**Companion change in `tango-sama/trinkl`** (which owns the Cloud Functions):
+the carrier webhooks now write a canonical `order.outcome` — see that repo's
+progress tracker. `lib/profit.ts` reads it and falls back for older orders.
+
+**Not yet done / owner action required**: Meta does NOT add campaign ids to
+landing URLs on its own. Until the ads' URL parameters are set in Ads Manager
+with the dynamic macros below, only `utm_*` and `fbclid` arrive and per-campaign
+profit stays unattributable:
+
+```
+utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}
+&utm_content={{ad.name}}&campaignId={{campaign.id}}
+&adsetId={{adset.id}}&adId={{ad.id}}
+```
+
 ## Next Up
 
 - **Owner action required**: generate a Meta CAPI access token (Business
