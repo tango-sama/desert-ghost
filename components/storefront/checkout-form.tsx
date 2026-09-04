@@ -319,7 +319,7 @@ export function CheckoutForm({ settings }: { settings: SiteSettings }) {
 
   if (items.length === 0 && !order) {
     return (
-      <div className="mx-auto max-w-[1100px] px-5 py-24 text-center md:px-12">
+      <div className="mx-auto max-w-[1100px] px-5 py-14 text-center md:px-12">
         <div className="mb-4 text-6xl">🛍️</div>
         <h1 className="mb-2 text-2xl font-black">سلتكِ فارغة</h1>
         <p className="mb-6 text-muted-foreground">لم تُضيفي أي منتجات بعد.</p>
@@ -368,7 +368,7 @@ export function CheckoutForm({ settings }: { settings: SiteSettings }) {
   }
 
   return (
-    <div className="mx-auto max-w-[1100px] px-5 py-24 md:px-12">
+    <div className="mx-auto max-w-[1100px] px-5 py-14 md:px-12">
       <h1 className="mb-1 text-center text-[clamp(1.6rem,3.5vw,2.2rem)] font-black">إتمام الطلب</h1>
       <p className="mb-9 text-center text-muted-foreground">
         أكملي بياناتكِ وسنتواصل معكِ لتأكيد الطلب — الدفع عند الاستلام

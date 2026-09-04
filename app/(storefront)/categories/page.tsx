@@ -14,7 +14,7 @@ export default async function CategoriesPage() {
 
   return (
     <div>
-      <div className="mx-auto max-w-[1320px] px-5 pt-30 pb-4 text-center md:px-12 md:pt-32">
+      <div className="mx-auto max-w-[1320px] px-5 pt-10 pb-4 text-center md:px-12 md:pt-12">
         <span className="mb-3.5 inline-block rounded-full border border-[rgba(217,168,108,.5)] bg-[rgba(217,168,108,.14)] px-4.5 py-1.5 text-[0.74rem] font-extrabold tracking-[.3px] text-[var(--rose-deep)]">
           تسوّقي حسب الفئة
         </span>

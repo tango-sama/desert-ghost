@@ -46,7 +46,7 @@ export default async function ProductPage({ params }: { params: Promise<Params> 
 
   return (
     <div>
-      <div className="mx-auto flex max-w-[1240px] flex-wrap items-center gap-2 px-5 pt-26 pb-2 text-[0.82rem] text-[var(--ink-3)] md:px-12 md:pt-24">
+      <div className="mx-auto flex max-w-[1240px] flex-wrap items-center gap-2 px-5 pt-6 pb-2 text-[0.82rem] text-[var(--ink-3)] md:px-12 md:pt-8">
         <Link href="/" className="hover:text-[var(--rose-deep)]">الرئيسية</Link>
         <span className="opacity-50">/</span>
         <Link

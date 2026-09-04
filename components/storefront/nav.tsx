@@ -9,14 +9,22 @@ import { cn } from "@/lib/utils";
 import { useCartStore, cartCount } from "@/stores/cart-store";
 import type { SiteSettings } from "@/lib/firebase";
 
-const NAV_LINKS = [
-  { href: "/", label: "الرئيسية" },
-  { href: "/products", label: "المنتجات" },
-  { href: "/categories", label: "التصنيفات" },
-  { href: "/#contact", label: "تواصلي معنا" },
-];
-
-export function Nav({ settings }: { settings: SiteSettings }) {
+// The header's second deck. Three zones, RTL-first: brand at the start,
+// search in the middle, cart at the end. The search field is *visible* from
+// md up rather than hidden behind a toggle — on a 15-category catalog it is
+// the fastest path to a product, and a search box shoppers can see gets used.
+// Below md there is no room for it, so the old icon-toggle panel is kept.
+//
+// `children` is the category strip (a server component, so it costs nothing
+// in this bundle). It is rendered inside the same fixed stack so the whole
+// header moves as one; `--header-h` in globals.css is its total height.
+export function Nav({
+  settings,
+  children,
+}: {
+  settings: SiteSettings;
+  children?: React.ReactNode;
+}) {
   const router = useRouter();
   const [scrolled, setScrolled] = useState(false);
   const [menuOpen, setMenuOpen] = useState(false);
@@ -44,84 +52,109 @@ export function Nav({ settings }: { settings: SiteSettings }) {
     if (!q) return;
     router.push(`/products?q=${encodeURIComponent(q)}`);
     setSearchOpen(false);
+    setQuery("");
   }
 
   return (
-    <nav
-      className={cn(
-        "fixed top-0 z-50 w-full transition-all duration-300",
-        "flex items-center justify-between px-5 py-4 md:px-12",
-        scrolled &&
-          "bg-background/90 backdrop-blur-md border-b border-border shadow-sm py-3"
-      )}
-    >
-      <Link href="/" className="flex items-center gap-3">
-        <Image src="/assets/logo.webp" alt={settings.storeName || "Desert Shop"} width={46} height={46} className="h-11 w-auto object-contain" />
-        <span className="flex flex-col leading-tight">
-          <span className="bg-gradient-to-br from-[var(--rose-deep)] to-[var(--gold)] bg-clip-text text-lg font-extrabold text-transparent">
-            جمالكِ الخارجي
-          </span>
-          <span className="mt-0.5 text-[0.58rem] tracking-[3px] text-[var(--ink-3)] uppercase">
-            {settings.storeName || "Desert Shop"}
-          </span>
-        </span>
-      </Link>
-
-      <ul className="hidden items-center gap-9 md:flex">
-        {NAV_LINKS.map((l) => (
-          <li key={l.href}>
-            <Link
-              href={l.href}
-              className="relative text-sm font-semibold text-[var(--ink-2)] transition-colors hover:text-[var(--rose-deep)]"
-            >
-              {l.label}
-            </Link>
-          </li>
-        ))}
-      </ul>
-
-      <div className="flex items-center gap-4">
-        <button
-          type="button"
-          aria-label="بحث"
-          onClick={() => {
-            setSearchOpen((v) => !v);
-            setMenuOpen(false);
-          }}
-          className="flex p-1.5 text-foreground"
-        >
-          {searchOpen ? <X className="size-6" /> : <Search className="size-6" />}
-        </button>
-        <button
-          type="button"
-          aria-label="السلة"
-          onClick={openCart}
-          className="relative flex p-1.5 text-foreground"
-        >
-          <ShoppingCart className="size-6" />
-          {count > 0 && (
-            <span className="absolute -top-1 -left-1.5 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--rose)] px-1 text-[0.66rem] font-extrabold text-white">
-              {count}
+    <header className="fixed inset-x-0 top-[var(--announce-h)] z-50">
+      <div
+        className={cn(
+          "bg-[var(--cream)]/92 backdrop-blur-md transition-shadow duration-300",
+          scrolled && "shadow-[0_6px_24px_rgba(224,114,140,.10)]"
+        )}
+      >
+        <div className="mx-auto flex h-[var(--nav-h)] max-w-[1320px] items-center gap-4 px-5 md:gap-8 md:px-12">
+          <Link href="/" className="flex shrink-0 items-center gap-3">
+            <Image
+              src="/assets/logo.webp"
+              alt={settings.storeName || "Desert Shop"}
+              width={46}
+              height={46}
+              priority
+              className="h-10 w-auto object-contain md:h-12"
+            />
+            <span className="flex flex-col leading-tight">
+              <span className="bg-gradient-to-br from-[var(--rose-deep)] to-[var(--gold)] bg-clip-text text-base font-extrabold text-transparent md:text-lg">
+                جمالكِ الخارجي
+              </span>
+              <span className="mt-0.5 hidden text-[0.58rem] tracking-[3px] text-[var(--ink-3)] uppercase sm:block">
+                {settings.storeName || "Desert Shop"}
+              </span>
             </span>
-          )}
-        </button>
-        <button
-          type="button"
-          aria-label="القائمة"
-          className="flex flex-col gap-1.5 p-1 md:hidden"
-          onClick={() => {
-            setMenuOpen((v) => !v);
-            setSearchOpen(false);
-          }}
-        >
-          {menuOpen ? <X className="size-6" /> : <Menu className="size-6" />}
-        </button>
+          </Link>
+
+          {/* md+: the search field itself, not a button that reveals one */}
+          <form
+            onSubmit={submitSearch}
+            role="search"
+            className="hidden min-w-0 flex-1 items-center gap-2.5 rounded-full border border-[var(--line)] bg-card px-5 py-2.5 shadow-[0_1px_3px_rgba(224,114,140,.06)] transition-colors focus-within:border-[var(--rose-soft)] md:flex"
+          >
+            <Search className="size-4.5 shrink-0 text-[var(--ink-3)]" />
+            <input
+              type="search"
+              value={query}
+              onChange={(e) => setQuery(e.target.value)}
+              placeholder="ابحثي عن أي منتج في الموقع..."
+              aria-label="بحث"
+              className="min-w-0 flex-1 bg-transparent text-[0.88rem] text-foreground outline-none placeholder:text-[var(--ink-3)]"
+            />
+            <button
+              type="submit"
+              className="shrink-0 rounded-full bg-gradient-to-br from-[var(--rose)] to-[var(--rose-deep)] px-5 py-1.5 text-[0.78rem] font-extrabold text-white transition-all hover:shadow-[0_6px_16px_rgba(224,114,140,.4)]"
+            >
+              بحث
+            </button>
+          </form>
+
+          <div className="flex shrink-0 items-center gap-1 ms-auto md:ms-0">
+            <button
+              type="button"
+              aria-label="بحث"
+              aria-expanded={searchOpen}
+              onClick={() => {
+                setSearchOpen((v) => !v);
+                setMenuOpen(false);
+              }}
+              className="flex p-2 text-foreground md:hidden"
+            >
+              {searchOpen ? <X className="size-5.5" /> : <Search className="size-5.5" />}
+            </button>
+            <button
+              type="button"
+              aria-label="السلة"
+              onClick={openCart}
+              className="relative flex p-2 text-foreground transition-colors hover:text-[var(--rose-deep)]"
+            >
+              <ShoppingCart className="size-5.5 md:size-6" />
+              {count > 0 && (
+                <span className="absolute top-0 end-0 flex h-[18px] min-w-[18px] items-center justify-center rounded-full bg-[var(--rose)] px-1 text-[0.66rem] font-extrabold text-white">
+                  <span className="num">{count}</span>
+                </span>
+              )}
+            </button>
+            <button
+              type="button"
+              aria-label="القائمة"
+              aria-expanded={menuOpen}
+              className="flex p-2 md:hidden"
+              onClick={() => {
+                setMenuOpen((v) => !v);
+                setSearchOpen(false);
+              }}
+            >
+              {menuOpen ? <X className="size-5.5" /> : <Menu className="size-5.5" />}
+            </button>
+          </div>
+        </div>
+
+        {children}
       </div>
 
       {searchOpen && (
         <form
           onSubmit={submitSearch}
-          className="fixed inset-x-0 top-[62px] z-40 flex items-center gap-3 border-b border-border bg-background/98 p-4 shadow-lg backdrop-blur-md md:px-12"
+          role="search"
+          className="flex items-center gap-3 border-b border-border bg-[var(--cream)]/98 p-4 shadow-lg backdrop-blur-md md:hidden"
         >
           <Search className="size-4.5 shrink-0 text-[var(--ink-3)]" />
           <input
@@ -130,6 +163,7 @@ export function Nav({ settings }: { settings: SiteSettings }) {
             value={query}
             onChange={(e) => setQuery(e.target.value)}
             placeholder="ابحثي عن أي منتج في الموقع..."
+            aria-label="بحث"
             className="min-w-0 flex-1 bg-transparent text-[0.92rem] text-foreground outline-none placeholder:text-[var(--ink-3)]"
           />
           <button
@@ -142,16 +176,25 @@ export function Nav({ settings }: { settings: SiteSettings }) {
       )}
 
       {menuOpen && (
-        <ul className="fixed inset-x-0 top-[62px] z-40 flex flex-col gap-5 border-b border-border bg-background/98 p-6 text-center shadow-lg backdrop-blur-md md:hidden">
-          {NAV_LINKS.map((l) => (
+        <ul className="flex flex-col gap-5 border-b border-border bg-[var(--cream)]/98 p-6 text-center shadow-lg backdrop-blur-md md:hidden">
+          {[
+            { href: "/", label: "الرئيسية" },
+            { href: "/products", label: "المنتجات" },
+            { href: "/categories", label: "التصنيفات" },
+            { href: "/#contact", label: "تواصلي معنا" },
+          ].map((l) => (
             <li key={l.href}>
-              <Link href={l.href} onClick={() => setMenuOpen(false)} className="text-sm font-semibold text-[var(--ink-2)]">
+              <Link
+                href={l.href}
+                onClick={() => setMenuOpen(false)}
+                className="text-sm font-semibold text-[var(--ink-2)]"
+              >
                 {l.label}
               </Link>
             </li>
           ))}
         </ul>
       )}
-    </nav>
+    </header>
   );
 }

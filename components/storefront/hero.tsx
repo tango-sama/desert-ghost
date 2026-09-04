@@ -3,7 +3,7 @@ import { Star, Truck } from "lucide-react";
 
 export function Hero({ heroImage }: { heroImage?: string }) {
   return (
-    <header className="mx-auto grid min-h-[88vh] max-w-[1320px] grid-cols-1 items-center gap-10 px-5 pt-28 pb-16 md:grid-cols-[1.05fr_1fr] md:gap-12 md:px-12 md:pt-32">
+    <header className="mx-auto grid min-h-[88vh] max-w-[1320px] grid-cols-1 items-center gap-10 px-5 pt-10 pb-16 md:grid-cols-[1.05fr_1fr] md:gap-12 md:px-12 md:pt-12">
       <div className="relative z-[2] text-center md:text-right">
         <div className="mx-auto mb-6 inline-flex items-center gap-2 rounded-full border border-[rgba(217,168,108,.45)] bg-[rgba(217,168,108,.16)] px-4.5 py-2 text-[0.72rem] font-extrabold tracking-[2px] text-[var(--rose-deep)] uppercase md:mx-0">
           <span className="size-[7px] animate-pulse rounded-full bg-[var(--rose)]" />
