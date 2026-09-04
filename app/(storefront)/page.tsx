@@ -1,8 +1,7 @@
 import { getCategories, getFeatured, getProducts, getSettings } from "@/lib/firebase";
-import { Hero } from "@/components/storefront/hero";
+import { HeroBanner } from "@/components/storefront/hero-banner";
 import { FeatureStrip } from "@/components/storefront/feature-strip";
 import { CategoryGrid } from "@/components/storefront/category-grid";
-import { FeaturedCarousel } from "@/components/storefront/featured-carousel";
 import { ProductGrid } from "@/components/storefront/product-grid";
 import { ContactForm } from "@/components/storefront/contact-form";
 import { RevealRoot } from "@/components/storefront/reveal-root";
@@ -17,13 +16,10 @@ export default async function HomePage() {
 
   return (
     <>
-      <Hero heroImage={settings.heroImage} />
+      <HeroBanner items={featured} heroImage={settings.heroImage} />
       <RevealRoot>
         <FeatureStrip />
         <CategoryGrid categories={categories} products={products} />
-      </RevealRoot>
-      <RevealRoot>
-        <FeaturedCarousel items={featured} />
       </RevealRoot>
       <RevealRoot>
         <ProductGrid products={products} categories={categories} />
