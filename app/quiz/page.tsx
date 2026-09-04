@@ -10,8 +10,12 @@ export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
   title: "ما المنتج المناسب لكِ؟ | Desert Shop",
+  // Kept in step with the quiz itself: this used to promise five questions and
+  // mention a budget, both of which the funnel no longer does. It is the text
+  // that shows in search results and when the link is shared, so a stale
+  // promise here is the first thing a visitor reads.
   description:
-    "أجيبي على ٥ أسئلة قصيرة ونقترح عليكِ المنتجات التي تناسب هدفكِ وميزانيتكِ. الدفع عند الاستلام وتوصيل لكل الولايات.",
+    "أجيبي على ٤ أسئلة قصيرة ونقترح عليكِ المنتجات التي تناسب هدفكِ وحالتكِ. الدفع عند الاستلام وتوصيل لكل الولايات.",
 };
 
 export default async function Page() {
