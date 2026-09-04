@@ -363,23 +363,202 @@ export function variantStats(events: FunnelEventDoc[]): VariantStat[] {
     .sort((a, b) => b.sessions - a.sessions);
 }
 
-/** Which goal answer people pick, and how well each converts. */
-export function goalStats(events: FunnelEventDoc[]): { goal: string; sessions: number; orders: number }[] {
+/** The goal a quiz order was placed under, if it came through the funnel. */
+export function orderGoal(order: Order): string | undefined {
+  return order.quiz?.goal || undefined;
+}
+
+export type GoalStat = {
+  goal: string;
+  /** Distinct visitors who chose this goal. */
+  sessions: number;
+  orders: number;
+  delivered: number;
+  returned: number;
+  /** Delivered / (delivered + returned) — over settled orders only. */
+  deliveryRate: number | null;
+  /**
+   * Revenue minus goods minus the freight eaten on returns, with NO ad spend
+   * subtracted. Spend is bought per ad, not per answer, so there is no honest
+   * way to split it across goals — pretending otherwise would invent a number.
+   * Campaign-level net profit lives in the campaign panel, where spend is real.
+   */
+  margin: number;
+  inFlight: number;
+};
+
+/**
+ * Which goal each visitor picks, and what those visitors were worth.
+ *
+ * Sessions come from the funnel events; everything downstream of the order
+ * comes from the order documents, because only they carry `outcome` and the
+ * money. The two are joined on `quiz.goal`, which the quiz order modal stamps
+ * onto every order it creates.
+ */
+export function goalStats(
+  events: FunnelEventDoc[],
+  // Required, not defaulted: order counts come from the order DOCUMENTS, not
+  // from `order` funnel events, because only the documents carry the outcome
+  // and the money — and a beacon lost on page-unload would undercount. A
+  // default of [] would let a one-argument call silently report zero orders
+  // for every goal, which reads as "nothing converts" rather than as a bug.
+  orders: Order[],
+  profit?: ProfitInputs,
+): GoalStat[] {
+  // One goal per visitor — the last one recorded, since she can go back and
+  // change her answer, and the events are append-only.
   const goalOf = new Map<string, string>();
-  const orderedSessions = new Set<string>();
   for (const e of events) {
     const g = e.answers?.goal;
     if (g && e.sessionId) goalOf.set(e.sessionId, g);
-    if (e.step === "order" && e.sessionId) orderedSessions.add(e.sessionId);
   }
-  const counts = new Map<string, { sessions: number; orders: number }>();
+
+  const sessions = new Map<string, number>();
+  for (const goal of goalOf.values()) sessions.set(goal, (sessions.get(goal) ?? 0) + 1);
+
+  const byGoal = new Map<string, Order[]>();
+  for (const o of orders) {
+    const g = orderGoal(o);
+    if (!g) continue;
+    const list = byGoal.get(g);
+    if (list) list.push(o);
+    else byGoal.set(g, [o]);
+  }
+
+  const goals = new Set<string>([...sessions.keys(), ...byGoal.keys()]);
+  return [...goals]
+    .map((goal) => {
+      const list = byGoal.get(goal) ?? [];
+      const t = summarize(list, profit, 0);
+      return {
+        goal,
+        sessions: sessions.get(goal) ?? 0,
+        orders: t.orders,
+        delivered: t.delivered,
+        returned: t.returned,
+        deliveryRate: t.deliveryRate,
+        margin: t.netProfit,
+        inFlight: t.orders - t.delivered - t.returned,
+      };
+    })
+    .sort((a, b) => b.sessions - a.sessions || b.orders - a.orders);
+}
+
+export type CampaignGoalRow = {
+  campaignId: string;
+  campaignName: string;
+  goal: string;
+  sessions: number;
+  orders: number;
+  delivered: number;
+  deliveryRate: number | null;
+  margin: number;
+  /**
+   * Margin divided by visitors — the number that actually discriminates here.
+   *
+   * `margin` alone barely moves: the only cost a failed order carries is its
+   * delivery fee, so one delivered sale (≈5,075 DA on a 14,500 DA product)
+   * outweighs five refused parcels (≈600 DA each) and the total stays positive
+   * even at a dreadful delivery rate. Per visitor is the comparable unit —
+   * it sits in the same currency as what a visitor costs to buy, so a row
+   * earning less per visitor than the ad pays for one is losing money.
+   */
+  marginPerVisitor: number | null;
+};
+
+/**
+ * The cross-tab: which goal each campaign actually brings, and what those
+ * visitors are worth once delivery is accounted for.
+ *
+ * This is the view that turns "the quiz is collecting answers" into something
+ * you can act on — an ad whose visitors overwhelmingly want a product line
+ * that rarely gets delivered is losing money no matter how cheap its clicks
+ * are, and nothing else on this page would show that.
+ *
+ * Sessions are attributed by the campaign stamped on the funnel event; orders
+ * by the campaign stamped on the order (lib/attribution.ts). Both come from
+ * the same capture, so they agree.
+ */
+export function goalsByCampaign(
+  events: FunnelEventDoc[],
+  orders: Order[],
+  opts: {
+    profit?: ProfitInputs;
+    allowed?: Set<string>;
+    /** Campaign id → display name, from the spend rows. */
+    names?: Map<string, string>;
+  } = {},
+): CampaignGoalRow[] {
+  const { profit, allowed, names } = opts;
+
+  // Resolve each visitor's goal and campaign once. A visitor's campaign is
+  // whichever one her events carry; unattributed visitors are grouped under a
+  // blank id rather than dropped, so the totals still add up.
+  const goalOf = new Map<string, string>();
+  const campaignOf = new Map<string, string>();
+  for (const e of events) {
+    if (!e.sessionId) continue;
+    if (e.answers?.goal) goalOf.set(e.sessionId, e.answers.goal);
+    if (e.campaignId) campaignOf.set(e.sessionId, e.campaignId);
+  }
+
+  const key = (c: string, g: string) => `${c}\u0000${g}`;
+  const sessions = new Map<string, number>();
   for (const [session, goal] of goalOf) {
-    const row = counts.get(goal) ?? { sessions: 0, orders: 0 };
-    row.sessions++;
-    if (orderedSessions.has(session)) row.orders++;
-    counts.set(goal, row);
+    const campaign = campaignOf.get(session) ?? "";
+    if (allowed && campaign && !allowed.has(campaign)) continue;
+    const k = key(campaign, goal);
+    sessions.set(k, (sessions.get(k) ?? 0) + 1);
   }
-  return [...counts.entries()]
-    .map(([goal, v]) => ({ goal, ...v }))
-    .sort((a, b) => b.sessions - a.sessions);
+
+  const ordersByKey = new Map<string, Order[]>();
+  for (const o of orders) {
+    const goal = orderGoal(o);
+    if (!goal) continue;
+    const campaign = orderCampaignId(o) ?? "";
+    if (allowed && campaign && !allowed.has(campaign)) continue;
+    const k = key(campaign, goal);
+    const list = ordersByKey.get(k);
+    if (list) list.push(o);
+    else ordersByKey.set(k, [o]);
+  }
+
+  const keys = new Set<string>([...sessions.keys(), ...ordersByKey.keys()]);
+  return [...keys]
+    .map((k) => {
+      const [campaignId, goal] = k.split("\u0000");
+      const list = ordersByKey.get(k) ?? [];
+      const t = summarize(list, profit, 0);
+      const visitors = sessions.get(k) ?? 0;
+      return {
+        campaignId,
+        campaignName: names?.get(campaignId) || (campaignId ? campaignId : "غير منسوب"),
+        goal,
+        sessions: visitors,
+        orders: t.orders,
+        delivered: t.delivered,
+        deliveryRate: t.deliveryRate,
+        margin: t.netProfit,
+        marginPerVisitor: visitors ? t.netProfit / visitors : null,
+      };
+    })
+    // Ordered by margin per visitor, not by raw margin: a campaign that simply
+    // sent more traffic would otherwise always look best.
+    .sort(
+      (a, b) =>
+        (b.marginPerVisitor ?? -Infinity) - (a.marginPerVisitor ?? -Infinity) ||
+        b.sessions - a.sessions ||
+        a.goal.localeCompare(b.goal),
+    );
+}
+
+/** Campaign id → name, taken from whichever spend rows carry it. */
+export function campaignNames(insights: Insight[]): Map<string, string> {
+  const m = new Map<string, string>();
+  for (const i of insights) {
+    if (i.campaignId && i.campaignName && !m.has(i.campaignId)) {
+      m.set(i.campaignId, i.campaignName);
+    }
+  }
+  return m;
 }

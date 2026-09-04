@@ -14,6 +14,8 @@ import {
   funnelSteps,
   variantStats,
   goalStats,
+  goalsByCampaign,
+  campaignNames,
   type Insight,
   type Group,
   type FunnelEventDoc,
@@ -215,7 +217,15 @@ export function GrowthView() {
 
   const steps = useMemo(() => funnelSteps(funnelEvents), [funnelEvents]);
   const variants = useMemo(() => variantStats(funnelEvents), [funnelEvents]);
-  const goals = useMemo(() => goalStats(funnelEvents), [funnelEvents]);
+  const goals = useMemo(
+    () => goalStats(funnelEvents, inRange, profitInputs),
+    [funnelEvents, inRange, profitInputs],
+  );
+  const names = useMemo(() => campaignNames(insights), [insights]);
+  const byCampaignGoal = useMemo(
+    () => goalsByCampaign(funnelEvents, inRange, { profit: profitInputs, allowed, names }),
+    [funnelEvents, inRange, profitInputs, allowed, names],
+  );
   const hasFunnel = funnelEvents.length > 0;
 
   const noSpend = ready && insights.length === 0;
@@ -435,32 +445,110 @@ export function GrowthView() {
             <div className={cn(cardCls, "m-0 mb-0")}>
               <h3 className={cardH3}>ما الذي تبحث عنه الزائرات</h3>
               <div className="mb-3 text-[.76rem] text-[var(--ink-3)]">
-                الهدف الذي تختاره كل زائرة في السؤال الأول.
+                الهدف الذي تختاره كل زائرة، وكم يُسلَّم منه فعلاً.
               </div>
-              <table className="w-full border-collapse text-[.82rem]">
-                <thead>
-                  <tr>
-                    <th className={thCls}>الهدف</th>
-                    <th className={thCls}>زائرات</th>
-                    <th className={thCls}>طلبات</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  {goals.map((g) => (
-                    <tr key={g.goal}>
-                      <td className={tdCls}>{GOAL_LABELS[g.goal] ?? g.goal}</td>
-                      <td className={cn(tdCls, "num")}>{g.sessions}</td>
-                      <td className={cn(tdCls, "num")}>{g.orders}</td>
+              <div className="overflow-x-auto">
+                <table className="w-full border-collapse text-[.82rem]">
+                  <thead>
+                    <tr>
+                      <th className={thCls}>الهدف</th>
+                      <th className={thCls}>زائرات</th>
+                      <th className={thCls}>طلبات</th>
+                      <th className={thCls}>مُسلَّم</th>
+                      <th className={thCls}>التسليم</th>
+                      <th className={thCls}>الهامش</th>
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {goals.map((g) => (
+                      <tr key={g.goal}>
+                        <td className={tdCls}>
+                          {GOAL_LABELS[g.goal] ?? g.goal}
+                          {g.inFlight > 0 && (
+                            <div className="mt-0.5 text-[.66rem] text-[var(--ink-3)]">
+                              {g.inFlight} في الطريق
+                            </div>
+                          )}
+                        </td>
+                        <td className={cn(tdCls, "num")}>{g.sessions}</td>
+                        <td className={cn(tdCls, "num")}>{g.orders}</td>
+                        <td className={cn(tdCls, "num")}>{g.delivered}</td>
+                        <td className={cn(tdCls, "num")}>{pct(g.deliveryRate)}</td>
+                        <td
+                          className={cn(tdCls, "num font-bold")}
+                          style={{ color: g.margin >= 0 ? GOOD : BAD }}
+                        >
+                          {money(g.margin)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
           </div>
         </>
       )}
 
-      {/* ── Panel 3: cash actually collected (delivery date) ── */}
+      {hasFunnel && byCampaignGoal.length > 0 && (
+        <div className={cn(cardCls, "mb-8")}>
+          <h3 className={cardH3}>🎯 من تجلبه كل حملة</h3>
+          <div className="mb-1 text-[.8rem] text-[var(--ink-2)]">
+            أي هدف تجلبه كل حملة، وكم يُسلَّم منه. حملة تجلب زائرات لهدف لا
+            يُسلَّم تخسر مهما كانت النقرة رخيصة.
+          </div>
+          <div className="mb-4 text-[.72rem] text-[var(--ink-3)]">
+            «الهامش» هنا بعد البضاعة والمرتجعات وقبل الإعلانات — الإنفاق يُشترى
+            لكل إعلان لا لكل هدف، فلا يمكن قسمته على الأهداف بصدق. الربح الصافي
+            لكل حملة في الجدول الأول. قارني «لكل زائرة» بما تدفعينه لجلب زائرة
+            واحدة: إن كان أقل، فهذا الصف يخسر.
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full border-collapse text-[.82rem]">
+              <thead>
+                <tr>
+                  <th className={thCls}>الحملة</th>
+                  <th className={thCls}>الهدف</th>
+                  <th className={thCls}>زائرات</th>
+                  <th className={thCls}>طلبات</th>
+                  <th className={thCls}>مُسلَّم</th>
+                  <th className={thCls}>التسليم</th>
+                  <th className={thCls}>الهامش</th>
+                  <th className={thCls}>لكل زائرة</th>
+                </tr>
+              </thead>
+              <tbody>
+                {byCampaignGoal.map((r) => (
+                  <tr key={`${r.campaignId}-${r.goal}`}>
+                    <td className={tdCls}>{r.campaignName}</td>
+                    <td className={tdCls}>{GOAL_LABELS[r.goal] ?? r.goal}</td>
+                    <td className={cn(tdCls, "num")}>{r.sessions}</td>
+                    <td className={cn(tdCls, "num")}>{r.orders}</td>
+                    <td className={cn(tdCls, "num")}>{r.delivered}</td>
+                    <td className={cn(tdCls, "num")}>{pct(r.deliveryRate)}</td>
+                    <td className={cn(tdCls, "num")}>{money(r.margin)}</td>
+                    <td
+                      className={cn(tdCls, "num font-bold")}
+                      style={{
+                        color:
+                          r.marginPerVisitor == null
+                            ? undefined
+                            : r.marginPerVisitor > 0
+                              ? GOOD
+                              : BAD,
+                      }}
+                    >
+                      {r.marginPerVisitor == null ? "—" : money(Math.round(r.marginPerVisitor))}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* ── Panel 4: cash actually collected (delivery date) ── */}
       <h3 className={cn(cardH3, "mb-3 border-0")}>💰 الصندوق — ما وصل فعلاً</h3>
       <div className="mb-2 text-[.76rem] text-[var(--ink-3)]">
         محسوب بتاريخ التسليم لا بتاريخ الطلب — هذا ما دخل الصندوق خلال {days} يوماً.
