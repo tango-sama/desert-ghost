@@ -172,6 +172,18 @@ export type Order = {
   // lib/profit.ts orderOutcome() falls back for those rather than guessing.
   outcome?: string;
   outcomeAt?: number;
+  // What the quiz funnel learned about her, written by the quiz order modal as
+  // short codes. Typed rather than left to the index signature because the
+  // growth dashboard joins on `quiz.goal` — an untyped read there is one
+  // rename away from silently returning undefined for every order.
+  quiz?: {
+    goal?: string;
+    age?: string;
+    form?: string;
+    intensity?: string;
+    variant?: string;
+    summary?: string;
+  } | null;
   // Where this order came from — stamped by lib/attribution.ts at save time
   // so profit can be attributed per campaign/ad set/ad.
   channel?: string;
