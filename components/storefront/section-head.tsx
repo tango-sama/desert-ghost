@@ -9,7 +9,7 @@ export function SectionHead({
 }) {
   return (
     <div className="mx-auto mb-12 max-w-[560px] text-center">
-      <span className="mb-3.5 inline-block rounded-full border border-[rgba(217,168,108,.5)] bg-[rgba(217,168,108,.14)] px-4.5 py-1.5 text-[0.74rem] font-extrabold tracking-[.3px] text-[var(--rose-deep)]">
+      <span className="mx-auto mb-3.5 block w-fit rounded-full border border-[rgba(217,168,108,.5)] bg-[rgba(217,168,108,.14)] px-4.5 py-1.5 text-[0.74rem] font-extrabold tracking-[.3px] text-[var(--rose-deep)]">
         {label}
       </span>
       <h2 className="inline-block bg-gradient-to-br from-[var(--rose-deep)] to-[var(--gold)] bg-clip-text text-[clamp(1.8rem,4vw,2.7rem)] leading-[1.15] font-black text-transparent">
