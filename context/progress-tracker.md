@@ -3029,6 +3029,221 @@ not the intended state (see `development-workflow.md`).
   label on the home section, which has always described a quantity sort
   rather than an order count.
 
+## Completed (this session, 2026-09-04) — Growth Phase 3
+
+### The AI quiz funnel (`/quiz`)
+
+A second acquisition path: five questions, a personalised recommendation, and a
+COD order — instrumented end to end so it can be compared against the product
+pages on delivered profit rather than on order count.
+
+- **`lib/quiz.ts` (new)** — pure and I/O-free like `lib/profit.ts`. Five
+  single-select questions (goal, duration, age, form, budget) scored against
+  the catalog. **Category ids are the real Firestore ones** (`skin_care`,
+  `hair_care`, `Venom`, `Bibo88`, …) — invented ids would have silently
+  recommended nothing.
+  - **Deterministic scoring, not a model call.** This sits on a paid-traffic
+    conversion path: a two-second wait costs orders and a model outage would
+    break the funnel outright. Scoring answers instantly, always, and is
+    unit-testable. The model's job here is the *wording*, not the choice.
+  - **Availability is a TIER, not a score penalty.** A penalty big enough to
+    bury a sold-out on-goal product would also drag it below in-stock
+    *off-goal* products and recommend something irrelevant; tiering keeps goal
+    relevance deciding the order within what can actually be shipped. This
+    matters for COD specifically — an order for something out of stock is a
+    paid click that becomes a cancelled parcel, damaging the confirmation rate
+    the whole profit engine turns on.
+  - `stock` is read as `unknown`: the live catalog stores an empty STRING for
+    untracked products, and trusting the declared `number` type would make
+    `Number("")` collapse to 0 and mark 83 of 149 products sold out.
+  - Bundles take at most one product per category — three collagen creams is a
+    worse routine than a cream plus a supplement plus a wash.
+- **A/B from day one**: single hero product vs. a 3-product routine. That is
+  the real tension in a bundle offer — a routine raises order value but asks
+  for a bigger yes, and in COD a bigger yes tends to mean a worse confirmation
+  rate. The variant derives from the funnel session id (stable, nothing extra
+  stored) and is stamped on every event and every order.
+- **`lib/funnel.ts` + `app/api/funnel/route.ts` (new)** — events go through a
+  route with the Admin SDK because `funnels/**` is `allow write: if false`,
+  not create-only like `orders`: funnel counts drive campaign decisions, so a
+  client that could write them could forge them, and unlike an order no human
+  would notice. The route accepts a fixed step vocabulary and code-only
+  answers, so no customer-typed text can reach the collection. Client sends
+  via `sendBeacon` — the most interesting event (leaving mid-funnel) fires
+  exactly when the page is going away.
+- **`app/api/quiz-blurb/route.ts` (new)** — Claude writes the one personalised
+  sentence on the result screen. Strictly cosmetic and non-blocking: the
+  recommendation is already on screen before this is called, so a failure costs
+  a nicer sentence and nothing else. **The client sends product IDS ONLY** —
+  titles are resolved server-side from Firestore, so the browser cannot put
+  text into the prompt. Capped by a small output budget, a per-instance cache
+  (the whole answer space is ~1000 combinations) and a rate limit.
+- **`components/storefront/quiz/*` (new)** — intro, questions, a deliberate
+  ~1.1s "thinking" pause (an instant result reads as a lookup, not as
+  consideration, and is trusted less), result with an editable selection, and
+  a COD modal reusing the same carrier helpers and order shape as the collagen
+  and glutathione funnels. Orders carry `source: "funnel_quiz"` plus the
+  answers and variant.
+  - The variant is read with `useSyncExternalStore`, not an effect — it lives
+    in localStorage, which does not exist during the server render, and this
+    avoids both a hydration mismatch and a second render pass.
+- **Growth dashboard** gains a funnel panel: step-by-step drop-off **counted by
+  visitor, not by event** (one visitor answering five questions fires five
+  `answer` events; counting those would make the funnel's middle look five
+  times wider than its top), the A/B table with a small-sample warning, and
+  which goals visitors actually pick.
+- `quiz` added to `LANDING_RESERVED_SLUGS` so a landing-page slug cannot shadow
+  the route (static routes win over `app/[slug]`, so the slug would just break).
+
+Verified: build + eslint clean; **71 new assertions** — 51 running the scoring
+engine against the **real 149-product catalog** (every goal returns a hero from
+the right category, no sold-out product reaches any bundle, budget and form
+honoured, variant split ~50/50) and 20 over the funnel aggregation. Then the
+production server was actually run: `/quiz` returns 200 with the full catalog
+and real product titles in the payload, the funnel route accepts a valid event
+and rejects an invalid step and a missing session, and `/api/quiz-blurb`
+returns `{text:null}` rather than a 500 with no API key **and rejects a prompt
+injection attempt in the answers**. All seven routes still 200.
+
+**Not yet done**: no ad campaign points at `/quiz` yet. It needs traffic before
+the A/B test means anything — the dashboard warns while any arm is under 100
+visitors.
+
+## Completed (this session, 2026-09-04) — Growth Phase 2
+
+### Spend ingestion & the Growth dashboard
+
+Phase 1 gave the order side; this brings in ad spend and puts the two together
+on screen. New **نمو** tab in `/amelhadj`.
+
+- **`lib/marketing.ts` (new)** — reads the spend rows written by the
+  `syncMetaInsights` Cloud Function (in `tango-sama/trinkl`, which owns the
+  Functions) and joins them to orders on `attribution.adId`, falling back to
+  `campaignId` for orders whose ad carried only campaign-level URL parameters.
+  All profit arithmetic reuses `summarize()` from `lib/profit.ts` — the join
+  buckets orders once and summarizes per bucket, rather than calling
+  `summarize()` per order, which would be quadratic.
+- **`components/admin/views/growth-view.tsx` (new)** — two panels, because in
+  COD these are genuinely different questions and answering only one misleads:
+  1. **أداء الحملات** — cohort by ORDER date. Spend on a day is judged against
+     the orders that day produced, followed to whatever they became. This is
+     what measures the ad.
+  2. **الصندوق** — by DELIVERY date. What money actually landed, matching the
+     income ledger's view of the world.
+- **Maturity signal.** A cohort measured a few days after the spend has barely
+  any delivered orders yet, so its profit reads deeply negative. In-flight
+  orders are counted and surfaced ("قيد النضج — N في الطريق") so a recent red
+  number reads as incomplete rather than as a loss. This is the single most
+  likely way the dashboard would otherwise be misread.
+- **Unallocated spend.** The allowlist's one real hazard is a Desert Shop
+  campaign the owner forgets to tick: its spend would quietly leave the profit
+  numbers and make every other campaign look better than it is. Any spend
+  outside the ticked set is reported explicitly, by campaign, instead of being
+  dropped. An EMPTY allowlist is treated as "not configured yet" (count
+  everything, with a warning) rather than as "exclude everything", which would
+  render a blank dashboard that reads as "no data".
+- **Settings**: ad account id, EUR→DZD rate (**260**), a campaign picker fed by
+  `listMetaCampaigns`, and a "sync now" button. Each failure path names which
+  of the two owner-supplied prerequisites is actually missing rather than
+  saying "failed".
+- **Types**: `eurToDzd`, `metaAdAccountId`, `metaCampaignIds` on `SiteSettings`.
+
+**What the numbers say.** At 1 EUR = 260 DA, the Glutathione campaign
+(€50.69 → 13,179 DA, 8 orders) against the real product (14,500 DA, 35% margin
+= 5,075 DA/unit) breaks even at a **~40% delivery rate** once the delivery fee
+eaten on each returned parcel is counted. 3 of 8 delivered loses money; 4 of 8
+clears it. That boundary is asserted in the test harness, not just asserted here.
+
+Verified: `npm run build` and eslint clean; 29 assertions over the join, the
+allowlist, the cohort split, the maturity signal and the cash panel — plus 9
+in the trinkl repo over the sync's own helpers.
+
+**Owner action required**: a Business Manager System User token with `ads_read`
+on ad account `839446010997263`, saved as `private/meta.adsToken`. Until then
+the sync writes nothing by design and the dashboard shows orders and margin
+without spend. The scheduled sync also needs Cloud Scheduler enabled on
+`desert-shop-24af9`; the "sync now" button works without it.
+
+**Still the gate**: without the `{{campaign.id}}`/`{{ad.id}}` URL macros on the
+ads (Phase 1), orders arrive with no ad ids and the dashboard will show spend
+on one side and unattributed orders on the other.
+
+## Completed (this session, 2026-09-04)
+
+### Growth Phase 1 — attribution & profit spine
+
+The foundation for the AI growth agent: make every order traceable to the ad
+that produced it, and make every order's real profit computable.
+
+- **`lib/attribution.ts` (new)** — captures `utm_*`, Meta/TikTok click ids
+  (`fbclid`/`ttclid`) and campaign/adset/ad ids off the landing URL, keeping
+  BOTH first touch and last touch in `localStorage` for 90 days (matching
+  Meta's own `_fbc` window, so ours doesn't expire first and silently report
+  "direct"). Reuses `getVisitorId()`/`getFbc()` from `lib/meta-pixel.ts` rather
+  than duplicating them.
+  - **The overwrite rule is the part that matters**: stored attribution is only
+    replaced when the CURRENT url actually carries ad parameters. Plain internal
+    navigation (`/` → `/checkout`) has none, and clobbering on it would
+    attribute every order to the last page browsed. Verified by test.
+  - First touch is what a COD shop should generally credit: an Algerian
+    customer commonly clicks an ad, leaves, and returns directly a day later to
+    order. Crediting that to "direct" makes every campaign look unprofitable.
+  - Accepts both `campaignId` and Meta's own `campaign_id` spelling — both show
+    up depending on how the ad's URL parameters were typed in Ads Manager.
+- **`lib/profit.ts` (new)** — pure functions (no I/O), so the admin UI, a route
+  handler and a future Cloud Function share one copy of the arithmetic:
+  `orderRevenue`, `orderCogs`, `orderGrossMargin`, `orderNetProfit`,
+  `orderOutcome`, `summarize`.
+  - **Encodes the COD reality**: an order is not revenue. Revenue counts only
+    on `delivered`; a `returned` order earns nothing and still costs its
+    delivery fee; anything in flight is worth zero — pending, not profit.
+    Reporting gross order value as revenue is the standard way an Algerian COD
+    store convinces itself an unprofitable campaign is working.
+  - Cost model: owner-supplied **cost = 65% of price** (35% gross margin), as
+    `DEFAULT_COGS_RATE`, overridable globally by `site_settings.cogsRate` and
+    per product by `product.cost`. An out-of-range configured rate falls back
+    rather than inverting every margin in the dashboard.
+  - `summarize()` produces net profit, CAC, ROAS, **profit-ROAS**, confirmation
+    rate and delivery rate. Rates are computed over terminal orders only.
+- **`saveOrder()` (`lib/firebase.ts`)** stamps attribution onto every order.
+  All order paths — main checkout, all four landing funnels, the seller modal —
+  already funnel through it, so one touch point instruments every entry point.
+  Seller phone orders (`source: admin_phone`) are attributed `channel: 'phone'`
+  with no ad fields: they're placed from the shop's own browser, which may hold
+  a stale ad click from the owner's own browsing. Best-effort — if attribution
+  throws, the order still saves.
+- **`components/analytics/attribution-capture.tsx` (new)**, mounted in
+  `app/layout.tsx`. Deliberately NOT gated on `NEXT_PUBLIC_META_PIXEL_ID`:
+  knowing which campaign produced an order is our own bookkeeping and must keep
+  working whether or not Meta's pixel is configured or blocked.
+- **Admin UI**: cost-rate card in `settings-view.tsx` (edited as a percentage —
+  an owner thinks "goods cost me 65%", not "0.65" — validated to 1–99% and
+  showing the resulting margin), and an optional per-product buy price in
+  `products-view.tsx`. A blank cost is omitted from the document entirely so
+  the engine falls back to the rate rather than treating unknown cost as zero,
+  which would report the product as pure profit.
+- **Types**: `Product.cost`, `SiteSettings.cogsRate`, and
+  `Order.outcome`/`outcomeAt`/`channel`/`visitorId`/`attribution` added.
+
+Verified: `npm run build` clean, eslint clean, and 35 assertions covering the
+cost model, the COD outcome rules, campaign rollups, and every attribution rule
+above (including that internal navigation cannot clobber a click).
+
+**Companion change in `tango-sama/trinkl`** (which owns the Cloud Functions):
+the carrier webhooks now write a canonical `order.outcome` — see that repo's
+progress tracker. `lib/profit.ts` reads it and falls back for older orders.
+
+**Not yet done / owner action required**: Meta does NOT add campaign ids to
+landing URLs on its own. Until the ads' URL parameters are set in Ads Manager
+with the dynamic macros below, only `utm_*` and `fbclid` arrive and per-campaign
+profit stays unattributable:
+
+```
+utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}
+&utm_content={{ad.name}}&campaignId={{campaign.id}}
+&adsetId={{adset.id}}&adId={{ad.id}}
+```
+
 ## Next Up
 
 - **Owner action required**: generate a Meta CAPI access token (Business

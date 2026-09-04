@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Cairo } from "next/font/google";
 import { MetaPixel } from "@/components/analytics/meta-pixel";
 import { MetaPixelRouteTracker } from "@/components/analytics/meta-pixel-route-tracker";
+import { AttributionCapture } from "@/components/analytics/attribution-capture";
 import "./globals.css";
 
 const metaPixelId = process.env.NEXT_PUBLIC_META_PIXEL_ID;
@@ -36,6 +37,7 @@ export default function RootLayout({
   return (
     <html lang="ar" dir="rtl" className={`${cairo.variable} h-full antialiased`}>
       <body className="min-h-full flex flex-col">
+        <AttributionCapture />
         {metaPixelId && (
           <>
             <MetaPixel pixelId={metaPixelId} />

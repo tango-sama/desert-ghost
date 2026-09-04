@@ -11,6 +11,7 @@ import {
   type DocumentData,
 } from "firebase/firestore";
 import type { CarrierData } from "@/lib/delivery";
+import { orderAttribution } from "@/lib/attribution";
 
 // Public web config for project desert-shop-24af9 — safe to ship to the
 // client (see context/architecture-context.md). Reads/writes the existing
@@ -45,6 +46,10 @@ export type Product = {
   // count. The Storage Counter admin tab derives "in closet" from this
   // minus units currently out (sending/delivered/return).
   stock?: number;
+  // What ONE unit costs us to buy, in dinars. Optional: when absent the
+  // profit engine falls back to site_settings.cogsRate (see lib/profit.ts).
+  // Only worth filling in for products actually being advertised.
+  cost?: number;
   [key: string]: unknown;
 };
 
@@ -124,6 +129,7 @@ export type LandingPagesContent = Partial<Record<LandingPageKey, LandingPageCont
 // static file routes under app/ always win over the app/[slug] catch-all,
 // so reusing one of these would make that page's content unreachable.
 export const LANDING_RESERVED_SLUGS = [
+  "quiz",
   "sunguard",
   "collagen",
   "glutathione",
@@ -145,6 +151,20 @@ export type SiteSettings = {
   tiktok?: string;
   tiktokLiveUntil?: number;
   landingPages?: LandingPagesContent;
+  // Fraction of selling price that goods cost us, as a decimal (0.65 = a 35%
+  // gross margin). The profit engine's global fallback wherever a product has
+  // no explicit `cost`. See lib/profit.ts DEFAULT_COGS_RATE.
+  cogsRate?: number;
+  // Meta bills this account in EUR while every price and cost in the shop is
+  // in dinars, so spend is unusable until it is converted. Stored on each
+  // spend row at sync time as well, so changing this never rewrites history.
+  eurToDzd?: number;
+  // Ad account the spend sync reads (digits only, no `act_` prefix).
+  metaAdAccountId?: string;
+  // Campaigns that count as Desert Shop's. The ad account is shared with an
+  // unrelated business, so the growth dashboard reports only these — and
+  // reports everything else as "unallocated" rather than dropping it.
+  metaCampaignIds?: string[];
   [key: string]: unknown;
 };
 
@@ -238,12 +258,38 @@ export async function saveMessage(msg: {
   return addDoc(collection(db, "messages"), { timestamp: Date.now(), ...msg });
 }
 
+/**
+ * Create an order document.
+ *
+ * Every order path in the app funnels through here — the main checkout, all
+ * four landing funnels, and the admin's seller/phone modal — so this is the
+ * one place ad attribution has to be stamped for every entry point to be
+ * instrumented at once.
+ *
+ * Seller-entered phone orders are attributed as `phone` and carry no ad
+ * fields: they are placed from the shop's own browser, which may hold a stale
+ * ad click from the owner's own browsing, and crediting them to that campaign
+ * would quietly inflate its numbers. Same reasoning that makes the Meta
+ * Purchase trigger skip `source: admin_phone`.
+ *
+ * Attribution is merged BEFORE `...order` so an explicit caller-supplied value
+ * still wins, and is best-effort: if it throws, the order must still save.
+ */
 export async function saveOrder(order: Record<string, unknown>) {
+  let attribution: Record<string, unknown> = {};
+  try {
+    attribution = orderAttribution(
+      order.source === "admin_phone" ? "phone" : undefined,
+    ) as unknown as Record<string, unknown>;
+  } catch (e) {
+    console.error("[DS] saveOrder attribution", e);
+  }
   return addDoc(collection(db, "orders"), {
     status: "New",
     fulfilled: false,
     placedAt: serverTimestamp(),
     createdAt: Date.now(),
+    ...attribution,
     ...order,
   });
 }

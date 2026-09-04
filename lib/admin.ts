@@ -166,6 +166,18 @@ export type Order = {
   fulfilled?: boolean;
   status?: string;
   source?: string;
+  // Canonical lifecycle state, written server-side by the carrier webhooks
+  // from the same normalizers that drive the admin tracker (see
+  // trinkl/functions/index.js). Absent on orders placed before that landed —
+  // lib/profit.ts orderOutcome() falls back for those rather than guessing.
+  outcome?: string;
+  outcomeAt?: number;
+  // Where this order came from — stamped by lib/attribution.ts at save time
+  // so profit can be attributed per campaign/ad set/ad.
+  channel?: string;
+  visitorId?: string;
+  attribution?: Record<string, unknown>;
+  attributionLast?: Record<string, unknown>;
   placedAt?: { seconds?: number };
   createdAt?: number;
   yalidine?: ParcelInfo | null;

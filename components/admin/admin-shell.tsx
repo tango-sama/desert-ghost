@@ -14,6 +14,7 @@ import { StorageCounterView } from "@/components/admin/views/storage-counter-vie
 import { MessagesView } from "@/components/admin/views/messages-view";
 import { InboxView } from "@/components/admin/views/inbox-view";
 import { IncomeView } from "@/components/admin/views/income-view";
+import { GrowthView } from "@/components/admin/views/growth-view";
 import { SettingsView } from "@/components/admin/views/settings-view";
 import { LandingPagesView } from "@/components/admin/views/landing-pages-view";
 
@@ -26,6 +27,7 @@ type ViewKey =
   | "messages"
   | "inbox"
   | "income"
+  | "growth"
   | "landing"
   | "settings";
 
@@ -38,6 +40,7 @@ const NAV: { key: ViewKey; icon: string; label: string }[] = [
   { key: "messages", icon: "💬", label: "الرسائل" },
   { key: "inbox", icon: "🤖", label: "واتساب" },
   { key: "income", icon: "💰", label: "الأرباح" },
+  { key: "growth", icon: "📈", label: "النمو" },
   { key: "landing", icon: "🖼️", label: "صفحات الهبوط" },
   { key: "settings", icon: "⚙️", label: "الإعدادات" },
 ];
@@ -51,6 +54,7 @@ const TITLES: Record<ViewKey, string> = {
   messages: "رسائل الزبائن",
   inbox: "محادثات واتساب",
   income: "الأرباح والمصاريف",
+  growth: "النمو — الإعلانات والربح",
   landing: "صفحات الهبوط",
   settings: "إعدادات الموقع",
 };
@@ -64,6 +68,7 @@ const VIEWS: Record<ViewKey, React.ComponentType> = {
   messages: MessagesView,
   inbox: InboxView,
   income: IncomeView,
+  growth: GrowthView,
   landing: LandingPagesView,
   settings: SettingsView,
 };

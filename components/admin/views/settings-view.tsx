@@ -23,6 +23,8 @@ import {
   pickImage,
 } from "@/components/admin/ui";
 
+type MetaCampaign = { id: string; name: string; status: string };
+
 function b64ToU8(base64: string): Uint8Array {
   const pad = "=".repeat((4 - (base64.length % 4)) % 4);
   const b = (base64 + pad).replace(/-/g, "+").replace(/_/g, "/");
@@ -101,6 +103,18 @@ export function SettingsView() {
   const [zrKey, setZrKey] = useState("");
   // live
   const [liveHours, setLiveHours] = useState(Number(settings.tiktokLiveHours ?? 2));
+  // Stored as a decimal (0.65) but edited as a percentage (65) — a shop owner
+  // thinks "the goods cost me 65% of the price", not "0.65".
+  const [cogsPct, setCogsPct] = useState(
+    String(Math.round(Number(settings.cogsRate ?? 0.65) * 100))
+  );
+  const [eurRate, setEurRate] = useState(String(Number(settings.eurToDzd ?? 260)));
+  const [adAccount, setAdAccount] = useState(String(settings.metaAdAccountId ?? ""));
+  const [campaigns, setCampaigns] = useState<MetaCampaign[]>([]);
+  const [picked, setPicked] = useState<string[]>(
+    Array.isArray(settings.metaCampaignIds) ? settings.metaCampaignIds.map(String) : []
+  );
+  const [campaignsMsg, setCampaignsMsg] = useState("");
   const [busy, setBusy] = useState<Record<string, boolean>>({});
 
   const yalEnabled = settings.yalidineEnabled !== false;
@@ -484,8 +498,228 @@ export function SettingsView() {
   const credPlaceholder = (ready: unknown, hint: string) =>
     ready ? "•••••• (محفوظ)" : hint;
 
+  // Cost rate feeds every profit number in the shop, so it is validated hard:
+  // anything outside 1–99% is rejected rather than silently stored, since a
+  // 0 or 100 would make margins read as "all profit" or "no profit at all".
+  async function saveCogs() {
+    const pct = Number(cogsPct);
+    if (!Number.isFinite(pct) || pct < 1 || pct > 99) {
+      toast("أدخلي نسبة بين 1 و 99");
+      return;
+    }
+    await persistSettings({ cogsRate: pct / 100 }, "تم حفظ نسبة التكلفة ✓");
+  }
+
+  const marginPct = (() => {
+    const pct = Number(cogsPct);
+    return Number.isFinite(pct) && pct >= 1 && pct <= 99 ? 100 - pct : null;
+  })();
+
+  // Ad account + rate. The rate is validated because every profit figure in
+  // the dashboard is denominated through it — a zero or a stray digit would
+  // silently rewrite every campaign's economics.
+  async function saveAds() {
+    const rate = Number(eurRate);
+    if (!Number.isFinite(rate) || rate <= 0 || rate > 100000) {
+      toast("أدخلي سعر صرف صحيح");
+      return;
+    }
+    await persistSettings(
+      { eurToDzd: rate, metaAdAccountId: adAccount.replace(/^act_/, "").trim() },
+      "تم حفظ إعدادات الإعلانات ✓"
+    );
+  }
+
+  async function loadCampaigns() {
+    setBusyKey("mCampaigns", true);
+    setCampaignsMsg("");
+    try {
+      const r = await callFn<{ ok: boolean; reason?: string; campaigns?: MetaCampaign[] }>(
+        "listMetaCampaigns"
+      );
+      if (!r.ok) {
+        // The function reports WHY rather than throwing, so say which of the
+        // two owner-supplied prerequisites is actually missing.
+        setCampaignsMsg(
+          r.reason === "no-token"
+            ? "لا يوجد رمز وصول للإعلانات (adsToken) في private/meta."
+            : r.reason === "no-ad-account"
+              ? "احفظي رقم حساب الإعلانات أولاً."
+              : r.reason === "forbidden"
+                ? "الرمز الحالي لا يملك صلاحية ads_read."
+                : "تعذّر جلب الحملات."
+        );
+        setCampaigns([]);
+        return;
+      }
+      setCampaigns(r.campaigns ?? []);
+      if (!r.campaigns?.length) setCampaignsMsg("لا توجد حملات في هذا الحساب.");
+    } catch (e) {
+      console.error(e);
+      setCampaignsMsg("تعذّر جلب الحملات.");
+    } finally {
+      setBusyKey("mCampaigns", false);
+    }
+  }
+
+  async function saveCampaigns() {
+    await persistSettings({ metaCampaignIds: picked }, "تم حفظ حملات ديزرت شوب ✓");
+  }
+
+  async function syncNow() {
+    setBusyKey("mSync", true);
+    try {
+      const r = await callFn<{ ok: boolean; reason?: string; written?: number }>(
+        "syncMetaInsightsNow"
+      );
+      toast(
+        r.ok
+          ? `تمت مزامنة ${r.written ?? 0} سطر إنفاق ✓`
+          : r.reason === "no-token"
+            ? "لا يوجد رمز وصول للإعلانات (adsToken)"
+            : r.reason === "no-ad-account"
+              ? "احفظي رقم حساب الإعلانات أولاً"
+              : r.reason === "forbidden"
+                ? "الرمز لا يملك صلاحية ads_read"
+                : "فشلت المزامنة"
+      );
+    } catch (e) {
+      console.error(e);
+      toast("فشلت المزامنة");
+    } finally {
+      setBusyKey("mSync", false);
+    }
+  }
+
   return (
     <div>
+      <div className={cardNarrow}>
+        <h3 className={cardH3}>📣 إنفاق الإعلانات (Meta)</h3>
+        <div className="mb-4 text-[.82rem] text-[var(--ink-2)]">
+          يقرأ الإنفاق اليومي من حساب الإعلانات لحساب الربح الصافي لكل حملة.
+          يحتاج رمز وصول بصلاحية <span className="ltr">ads_read</span> محفوظاً في{" "}
+          <span className="ltr">private/meta.adsToken</span>. بدونه تبقى لوحة
+          النمو تعمل لكن بدون أرقام الإنفاق.
+        </div>
+        <div className={grid2}>
+          <Field label="رقم حساب الإعلانات">
+            <input
+              className={inp}
+              value={adAccount}
+              onChange={(e) => setAdAccount(e.target.value)}
+              placeholder="839446010997263"
+              inputMode="numeric"
+              dir="ltr"
+            />
+          </Field>
+          <Field label="سعر الصرف (1 يورو = ؟ دينار)">
+            <input
+              className={inp}
+              value={eurRate}
+              onChange={(e) => setEurRate(e.target.value)}
+              placeholder="260"
+              inputMode="numeric"
+              dir="ltr"
+            />
+          </Field>
+        </div>
+        <div className={rowActions}>
+          <button type="button" className={btn("green")} onClick={saveAds}>
+            حفظ إعدادات الإعلانات
+          </button>
+          <button
+            type="button"
+            className={btn("gray", true)}
+            onClick={syncNow}
+            disabled={!!busy.mSync}
+          >
+            {busy.mSync ? "جارٍ المزامنة…" : "مزامنة الإنفاق الآن"}
+          </button>
+        </div>
+
+        <div className="mt-5 border-t border-[var(--border)] pt-4">
+          <div className="mb-2 text-[.82rem] font-bold text-[var(--ink-2)]">
+            حملات ديزرت شوب
+          </div>
+          <div className="mb-3 text-[.78rem] text-[var(--ink-3)]">
+            هذا الحساب مشترك مع نشاط آخر. اختاري حملات ديزرت شوب فقط — أي إنفاق
+            خارجها يظهر في لوحة النمو كـ «إنفاق غير مصنَّف» ولا يُحتسب ضمن الربح.
+          </div>
+          <div className={`${rowActions} mb-3`}>
+            <button
+              type="button"
+              className={btn("gray", true)}
+              onClick={loadCampaigns}
+              disabled={!!busy.mCampaigns}
+            >
+              {busy.mCampaigns ? "جارٍ الجلب…" : "جلب الحملات"}
+            </button>
+            {campaigns.length > 0 && (
+              <button type="button" className={btn("green")} onClick={saveCampaigns}>
+                حفظ الاختيار ({picked.length})
+              </button>
+            )}
+          </div>
+          {campaignsMsg && (
+            <div className="mb-3 text-[.78rem] text-[var(--ink-3)]">{campaignsMsg}</div>
+          )}
+          {campaigns.length > 0 && (
+            <div className="max-h-72 overflow-y-auto rounded-xl border border-[var(--border)]">
+              {campaigns.map((c) => (
+                <label
+                  key={c.id}
+                  className="flex cursor-pointer items-center gap-2 border-b border-[var(--border)] px-3 py-2 text-[.82rem] last:border-b-0"
+                >
+                  <input
+                    type="checkbox"
+                    checked={picked.includes(c.id)}
+                    onChange={(e) =>
+                      setPicked((prev) =>
+                        e.target.checked
+                          ? [...prev, c.id]
+                          : prev.filter((x) => x !== c.id)
+                      )
+                    }
+                  />
+                  <span className="flex-1">{c.name || c.id}</span>
+                  <span className="text-[.7rem] text-[var(--ink-3)] ltr">{c.status}</span>
+                </label>
+              ))}
+            </div>
+          )}
+        </div>
+      </div>
+
+      <div className={cardNarrow}>
+        <h3 className={cardH3}>💵 تكلفة البضاعة</h3>
+        <div className="mb-4 text-[.82rem] text-[var(--ink-2)]">
+          كم تكلّفكِ البضاعة من سعر البيع. تُستعمل لحساب الربح الصافي لكل طلب
+          وكل حملة إعلانية. يمكنكِ إدخال سعر شراء دقيق لأي منتج من تبويب
+          المنتجات، وسيُستعمل بدل هذه النسبة.
+        </div>
+        <div className={grid2}>
+          <Field label="نسبة التكلفة من السعر (%)">
+            <input
+              className={inp}
+              value={cogsPct}
+              onChange={(e) => setCogsPct(e.target.value)}
+              inputMode="numeric"
+              placeholder="65"
+            />
+          </Field>
+          <Field label="هامش الربح الناتج">
+            <div className="py-2 text-[.9rem] font-bold text-[var(--ink-2)]">
+              {marginPct != null ? `${marginPct}%` : "—"}
+            </div>
+          </Field>
+        </div>
+        <div className={rowActions}>
+          <button type="button" className={btn("green")} onClick={saveCogs}>
+            حفظ نسبة التكلفة
+          </button>
+        </div>
+      </div>
+
       <div className={cardNarrow}>
         <h3 className={cardH3}>🎨 مظهر لوحة التحكم</h3>
         <div className="mb-4 text-[.82rem] text-[var(--ink-2)]">

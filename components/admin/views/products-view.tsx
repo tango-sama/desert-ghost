@@ -32,6 +32,7 @@ type PForm = {
   title: string;
   subtitle: string;
   price: string;
+  cost: string;
   category: string;
   image: string;
   images: string[];
@@ -43,6 +44,7 @@ const EMPTY_FORM: PForm = {
   title: "",
   subtitle: "",
   price: "",
+  cost: "",
   category: "",
   image: "",
   images: [],
@@ -110,6 +112,7 @@ export function ProductsView() {
       title: p.title ?? p.name ?? "",
       subtitle: p.subtitle ?? "",
       price: String(p.price ?? ""),
+      cost: p.cost != null ? String(p.cost) : "",
       category: p.category ?? "",
       image: p.image ?? productImages(p)[0] ?? "",
       images: Array.isArray(p.images) ? p.images.slice(1) : [],
@@ -137,6 +140,17 @@ export function ProductsView() {
       description: form.description,
       lastModified: Date.now(),
     };
+    // Real buy price, when the owner has entered one. Left off the document
+    // entirely when blank so the profit engine falls back to the global
+    // cogsRate rather than treating "unknown cost" as "costs nothing" —
+    // a zero here would report the product as pure profit.
+    const costNum = Number(form.cost);
+    if (form.cost.trim() && Number.isFinite(costNum) && costNum >= 0) {
+      data.cost = Math.round(costNum);
+    } else if (existing && existing.cost != null) {
+      // Cleared on an edit — remove it so the fallback takes over again.
+      data.cost = null;
+    }
     const allImages = [form.image, ...form.images].filter(Boolean);
     // Write images[] when there are extras — and also when editing a product
     // that already had an images array, so removing extras actually clears
@@ -220,6 +234,15 @@ export function ProductsView() {
               value={form.price}
               onChange={(e) => setForm({ ...form, price: e.target.value })}
               placeholder="مثال: 2500 DA"
+            />
+          </Field>
+          <Field label="سعر الشراء (اختياري)">
+            <input
+              className={inp}
+              value={form.cost}
+              onChange={(e) => setForm({ ...form, cost: e.target.value })}
+              placeholder="تكلفة الوحدة — اتركيه فارغاً لاستعمال النسبة العامة"
+              inputMode="numeric"
             />
           </Field>
           <Field label="التصنيف">
