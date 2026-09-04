@@ -39,9 +39,9 @@ import { cardCls, cardH3, btn, EmptyState, tblWrap, thCls, tdCls } from "@/compo
 // chooses a window, renders, and stays out of the way.
 
 const RANGES = [
-  { key: "7", label: "٧ أيام", days: 7 },
-  { key: "30", label: "٣٠ يوماً", days: 30 },
-  { key: "90", label: "٩٠ يوماً", days: 90 },
+  { key: "7", label: "7 أيام", days: 7 },
+  { key: "30", label: "30 يوماً", days: 30 },
+  { key: "90", label: "90 يوماً", days: 90 },
 ] as const;
 
 function pct(v: number | null): string {
@@ -83,7 +83,7 @@ const STEP_LABELS: Record<string, string> = {
 };
 const VARIANT_LABELS: Record<string, string> = {
   single: "منتج واحد",
-  bundle: "روتين (٣ منتجات)",
+  bundle: "روتين (3 منتجات)",
 };
 const GOAL_LABELS: Record<string, string> = {
   skin: "البشرة",
@@ -403,7 +403,7 @@ export function GrowthView() {
             <div className={cn(cardCls, "m-0 mb-0")}>
               <h3 className={cardH3}>تجربة A/B — شكل النتيجة</h3>
               <div className="mb-3 text-[.76rem] text-[var(--ink-3)]">
-                منتج واحد مقابل روتين من ٣ منتجات.
+                منتج واحد مقابل روتين من 3 منتجات.
               </div>
               <table className="w-full border-collapse text-[.82rem]">
                 <thead>
