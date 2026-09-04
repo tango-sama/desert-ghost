@@ -196,7 +196,7 @@ export function QuizPage({
               <em className={styles.introEm}>لكِ أنتِ؟</em>
             </h1>
             <p className={styles.introLead}>
-              {arNum(products.length)} منتجاً على الرف، وواحد أو اثنان فقط يناسبان
+              {products.length} منتجاً على الرف، وواحد أو اثنان فقط يناسبان
               حالتكِ. أخبرينا عن هدفكِ ونتكفّل بالباقي.
             </p>
             <button
@@ -214,7 +214,7 @@ export function QuizPage({
               </svg>
             </button>
             <div className={styles.introMeta}>
-              {arNum(QUESTIONS.length)} أسئلة · أقل من دقيقة · بدون تسجيل
+              {QUESTIONS.length} أسئلة · أقل من دقيقة · بدون تسجيل
             </div>
           </div>
         )}
@@ -330,7 +330,7 @@ export function QuizPage({
 
             <div className={styles.trust}>
               <span>✓ الدفع عند الاستلام</span>
-              <span>✓ توصيل ٥٨ ولاية</span>
+              <span>✓ توصيل 58 ولاية</span>
               <span>✓ منتجات أصلية</span>
             </div>
 
@@ -418,11 +418,3 @@ function fallbackWhy(a: Answers, count: number): string {
   );
 }
 
-/* Western digits → Arabic-Indic, so counts rendered from real data match the
-   hand-written numerals everywhere else on the page. The alternative is
-   hardcoding "٥ أسئلة" and "١٤٩ منتجاً" in the copy, which is how those two
-   went stale the moment the question set and the catalog changed. */
-const AR_DIGITS = "٠١٢٣٤٥٦٧٨٩";
-function arNum(n: number): string {
-  return String(n).replace(/\d/g, (d) => AR_DIGITS[Number(d)]);
-}

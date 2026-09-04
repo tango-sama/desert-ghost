@@ -75,10 +75,15 @@ export const QUESTIONS: Question[] = [
     key: "age",
     title: "كم عمركِ؟",
     options: [
-      { value: "u25", label: "أقل من ٢٥" },
-      { value: "a25", label: "٢٥ – ٣٤" },
-      { value: "a35", label: "٣٥ – ٤٤" },
-      { value: "a45", label: "٤٥ فأكثر" },
+      // Ranges are written "من X إلى Y" rather than "X – Y" on purpose. A bare
+      // range sits in an RTL line as two numbers around a neutral dash, and the
+      // bidi algorithm reorders that pair — "25 – 34" can display as "34 – 25".
+      // Arabic words between the numbers make the direction unambiguous, and it
+      // reads better than a dash in Arabic anyway.
+      { value: "u25", label: "أقل من 25" },
+      { value: "a25", label: "من 25 إلى 34" },
+      { value: "a35", label: "من 35 إلى 44" },
+      { value: "a45", label: "من 45 فأكثر" },
     ],
   },
   {

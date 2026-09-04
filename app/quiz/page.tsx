@@ -15,7 +15,7 @@ export const metadata: Metadata = {
   // that shows in search results and when the link is shared, so a stale
   // promise here is the first thing a visitor reads.
   description:
-    "أجيبي على ٤ أسئلة قصيرة ونقترح عليكِ المنتجات التي تناسب هدفكِ وحالتكِ. الدفع عند الاستلام وتوصيل لكل الولايات.",
+    "أجيبي على 4 أسئلة قصيرة ونقترح عليكِ المنتجات التي تناسب هدفكِ وحالتكِ. الدفع عند الاستلام وتوصيل لكل الولايات.",
 };
 
 export default async function Page() {
