@@ -3029,6 +3029,86 @@ not the intended state (see `development-workflow.md`).
   label on the home section, which has always described a quantity sort
   rather than an order count.
 
+## Completed (this session, 2026-09-04) — Growth Phase 3
+
+### The AI quiz funnel (`/quiz`)
+
+A second acquisition path: five questions, a personalised recommendation, and a
+COD order — instrumented end to end so it can be compared against the product
+pages on delivered profit rather than on order count.
+
+- **`lib/quiz.ts` (new)** — pure and I/O-free like `lib/profit.ts`. Five
+  single-select questions (goal, duration, age, form, budget) scored against
+  the catalog. **Category ids are the real Firestore ones** (`skin_care`,
+  `hair_care`, `Venom`, `Bibo88`, …) — invented ids would have silently
+  recommended nothing.
+  - **Deterministic scoring, not a model call.** This sits on a paid-traffic
+    conversion path: a two-second wait costs orders and a model outage would
+    break the funnel outright. Scoring answers instantly, always, and is
+    unit-testable. The model's job here is the *wording*, not the choice.
+  - **Availability is a TIER, not a score penalty.** A penalty big enough to
+    bury a sold-out on-goal product would also drag it below in-stock
+    *off-goal* products and recommend something irrelevant; tiering keeps goal
+    relevance deciding the order within what can actually be shipped. This
+    matters for COD specifically — an order for something out of stock is a
+    paid click that becomes a cancelled parcel, damaging the confirmation rate
+    the whole profit engine turns on.
+  - `stock` is read as `unknown`: the live catalog stores an empty STRING for
+    untracked products, and trusting the declared `number` type would make
+    `Number("")` collapse to 0 and mark 83 of 149 products sold out.
+  - Bundles take at most one product per category — three collagen creams is a
+    worse routine than a cream plus a supplement plus a wash.
+- **A/B from day one**: single hero product vs. a 3-product routine. That is
+  the real tension in a bundle offer — a routine raises order value but asks
+  for a bigger yes, and in COD a bigger yes tends to mean a worse confirmation
+  rate. The variant derives from the funnel session id (stable, nothing extra
+  stored) and is stamped on every event and every order.
+- **`lib/funnel.ts` + `app/api/funnel/route.ts` (new)** — events go through a
+  route with the Admin SDK because `funnels/**` is `allow write: if false`,
+  not create-only like `orders`: funnel counts drive campaign decisions, so a
+  client that could write them could forge them, and unlike an order no human
+  would notice. The route accepts a fixed step vocabulary and code-only
+  answers, so no customer-typed text can reach the collection. Client sends
+  via `sendBeacon` — the most interesting event (leaving mid-funnel) fires
+  exactly when the page is going away.
+- **`app/api/quiz-blurb/route.ts` (new)** — Claude writes the one personalised
+  sentence on the result screen. Strictly cosmetic and non-blocking: the
+  recommendation is already on screen before this is called, so a failure costs
+  a nicer sentence and nothing else. **The client sends product IDS ONLY** —
+  titles are resolved server-side from Firestore, so the browser cannot put
+  text into the prompt. Capped by a small output budget, a per-instance cache
+  (the whole answer space is ~1000 combinations) and a rate limit.
+- **`components/storefront/quiz/*` (new)** — intro, questions, a deliberate
+  ~1.1s "thinking" pause (an instant result reads as a lookup, not as
+  consideration, and is trusted less), result with an editable selection, and
+  a COD modal reusing the same carrier helpers and order shape as the collagen
+  and glutathione funnels. Orders carry `source: "funnel_quiz"` plus the
+  answers and variant.
+  - The variant is read with `useSyncExternalStore`, not an effect — it lives
+    in localStorage, which does not exist during the server render, and this
+    avoids both a hydration mismatch and a second render pass.
+- **Growth dashboard** gains a funnel panel: step-by-step drop-off **counted by
+  visitor, not by event** (one visitor answering five questions fires five
+  `answer` events; counting those would make the funnel's middle look five
+  times wider than its top), the A/B table with a small-sample warning, and
+  which goals visitors actually pick.
+- `quiz` added to `LANDING_RESERVED_SLUGS` so a landing-page slug cannot shadow
+  the route (static routes win over `app/[slug]`, so the slug would just break).
+
+Verified: build + eslint clean; **71 new assertions** — 51 running the scoring
+engine against the **real 149-product catalog** (every goal returns a hero from
+the right category, no sold-out product reaches any bundle, budget and form
+honoured, variant split ~50/50) and 20 over the funnel aggregation. Then the
+production server was actually run: `/quiz` returns 200 with the full catalog
+and real product titles in the payload, the funnel route accepts a valid event
+and rejects an invalid step and a missing session, and `/api/quiz-blurb`
+returns `{text:null}` rather than a 500 with no API key **and rejects a prompt
+injection attempt in the answers**. All seven routes still 200.
+
+**Not yet done**: no ad campaign points at `/quiz` yet. It needs traffic before
+the A/B test means anything — the dashboard warns while any arm is under 100
+visitors.
+
 ## Completed (this session, 2026-09-04) — Growth Phase 2
 
 ### Spend ingestion & the Growth dashboard

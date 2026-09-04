@@ -6,12 +6,17 @@ import { orderStamp, type Order } from "@/lib/admin";
 import { useAdminStore } from "@/stores/admin-store";
 import {
   getInsights,
+  getFunnelEvents,
   groupByCampaign,
   unallocatedSpend,
   cashInPeriod,
   spendInPeriod,
+  funnelSteps,
+  variantStats,
+  goalStats,
   type Insight,
   type Group,
+  type FunnelEventDoc,
 } from "@/lib/marketing";
 import { DEFAULT_COGS_RATE, type ProfitInputs, type Totals } from "@/lib/profit";
 import { cn } from "@/lib/utils";
@@ -64,6 +69,31 @@ function StatCard({
 }
 
 const EMPTY_INSIGHTS: Insight[] = [];
+const EMPTY_EVENTS: FunnelEventDoc[] = [];
+
+// Arabic labels for the funnel's stored codes. Kept here rather than in
+// lib/quiz.ts so the storefront bundle never pulls in admin-only strings.
+const STEP_LABELS: Record<string, string> = {
+  view: "وصلت للصفحة",
+  start: "بدأت الأسئلة",
+  answer: "أجابت على سؤال",
+  result: "شاهدت الاقتراح",
+  checkout: "فتحت نموذج الطلب",
+  order: "أتمّت الطلب",
+};
+const VARIANT_LABELS: Record<string, string> = {
+  single: "منتج واحد",
+  bundle: "روتين (٣ منتجات)",
+};
+const GOAL_LABELS: Record<string, string> = {
+  skin: "البشرة",
+  hair: "الشعر",
+  slim: "التنحيف",
+  gain: "التسمين",
+  curves: "تكبير الصدر/المؤخرة",
+  hormones: "الهرمونات",
+  vitality: "الطاقة والصحة",
+};
 
 const GOOD = "#22c55e";
 const BAD = "#ef4444";
@@ -85,6 +115,7 @@ export function GrowthView() {
     days: number;
     sinceMs: number;
     rows: Insight[];
+    funnel: FunnelEventDoc[];
   } | null>(null);
 
   const days = RANGES.find((r) => r.key === rangeKey)!.days;
@@ -92,8 +123,11 @@ export function GrowthView() {
   useEffect(() => {
     let alive = true;
     const sinceMs = Date.now() - days * 86400000;
-    getInsights(new Date(sinceMs).toISOString().slice(0, 10)).then((rows) => {
-      if (alive) setData({ days, sinceMs, rows });
+    Promise.all([
+      getInsights(new Date(sinceMs).toISOString().slice(0, 10)),
+      getFunnelEvents("quiz", sinceMs),
+    ]).then(([rows, funnel]) => {
+      if (alive) setData({ days, sinceMs, rows, funnel });
     });
     return () => {
       alive = false;
@@ -104,6 +138,7 @@ export function GrowthView() {
   // shows one range's spend against another's orders.
   const ready = data !== null && data.days === days;
   const insights = ready ? data.rows : EMPTY_INSIGHTS;
+  const funnelEvents = ready ? data.funnel : EMPTY_EVENTS;
   const sinceMs = ready ? data.sinceMs : Number.MAX_SAFE_INTEGER;
   const loading = !ready;
 
@@ -177,6 +212,11 @@ export function GrowthView() {
     () => spendInPeriod(insights, sinceMs, allowed),
     [insights, sinceMs, allowed],
   );
+
+  const steps = useMemo(() => funnelSteps(funnelEvents), [funnelEvents]);
+  const variants = useMemo(() => variantStats(funnelEvents), [funnelEvents]);
+  const goals = useMemo(() => goalStats(funnelEvents), [funnelEvents]);
+  const hasFunnel = funnelEvents.length > 0;
 
   const noSpend = ready && insights.length === 0;
 
@@ -325,7 +365,102 @@ export function GrowthView() {
         </div>
       )}
 
-      {/* ── Panel 2: cash actually collected (delivery date) ── */}
+      {/* ── Panel 2: the quiz funnel ── */}
+      <h3 className={cn(cardH3, "mb-3 border-0")}>🧭 قمع الاستبيان (/quiz)</h3>
+      <div className="mb-3 text-[.76rem] text-[var(--ink-3)]">
+        كم زائرة تصل إلى كل مرحلة — محسوبة بعدد الزائرات لا بعدد الأحداث.
+      </div>
+      {!hasFunnel ? (
+        <div className={cn(cardCls, "text-[.84rem] text-[var(--ink-2)]")}>
+          لا توجد بيانات للقمع في هذه الفترة بعد. وجّهي زيارات إلى{" "}
+          <span className="ltr">/quiz</span> وستظهر هنا.
+        </div>
+      ) : (
+        <>
+          <div className={cn(cardCls, "mb-4")}>
+            {steps.map((s) => (
+              <div key={s.step} className="mb-3 last:mb-0">
+                <div className="mb-1 flex justify-between text-[.8rem]">
+                  <span className="font-bold">{STEP_LABELS[s.step] ?? s.step}</span>
+                  <span className="num text-[var(--ink-3)]">
+                    {s.sessions} · {Math.round(s.pctOfTop * 100)}%
+                  </span>
+                </div>
+                <div className="h-2 overflow-hidden rounded-full bg-[var(--card-2,rgba(0,0,0,.06))]">
+                  <div
+                    className="h-full rounded-full"
+                    style={{
+                      width: `${Math.max(s.pctOfTop * 100, s.sessions ? 2 : 0)}%`,
+                      background: "linear-gradient(90deg,#D9A86C,#E0728C)",
+                    }}
+                  />
+                </div>
+              </div>
+            ))}
+          </div>
+
+          <div className="mb-6 grid grid-cols-2 gap-4 max-[860px]:grid-cols-1">
+            <div className={cn(cardCls, "m-0 mb-0")}>
+              <h3 className={cardH3}>تجربة A/B — شكل النتيجة</h3>
+              <div className="mb-3 text-[.76rem] text-[var(--ink-3)]">
+                منتج واحد مقابل روتين من ٣ منتجات.
+              </div>
+              <table className="w-full border-collapse text-[.82rem]">
+                <thead>
+                  <tr>
+                    <th className={thCls}>النسخة</th>
+                    <th className={thCls}>زائرات</th>
+                    <th className={thCls}>طلبات</th>
+                    <th className={thCls}>التحويل</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {variants.map((v) => (
+                    <tr key={v.variant}>
+                      <td className={tdCls}>{VARIANT_LABELS[v.variant] ?? v.variant}</td>
+                      <td className={cn(tdCls, "num")}>{v.sessions}</td>
+                      <td className={cn(tdCls, "num")}>{v.orders}</td>
+                      <td className={cn(tdCls, "num")}>{pct(v.conversion)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              {variants.every((v) => v.sessions < 100) && (
+                <div className="mt-3 text-[.72rem] text-[var(--ink-3)]">
+                  ⚠️ العيّنة ما زالت صغيرة — لا تُحسم النتيجة بعد.
+                </div>
+              )}
+            </div>
+
+            <div className={cn(cardCls, "m-0 mb-0")}>
+              <h3 className={cardH3}>ما الذي تبحث عنه الزائرات</h3>
+              <div className="mb-3 text-[.76rem] text-[var(--ink-3)]">
+                الهدف الذي تختاره كل زائرة في السؤال الأول.
+              </div>
+              <table className="w-full border-collapse text-[.82rem]">
+                <thead>
+                  <tr>
+                    <th className={thCls}>الهدف</th>
+                    <th className={thCls}>زائرات</th>
+                    <th className={thCls}>طلبات</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {goals.map((g) => (
+                    <tr key={g.goal}>
+                      <td className={tdCls}>{GOAL_LABELS[g.goal] ?? g.goal}</td>
+                      <td className={cn(tdCls, "num")}>{g.sessions}</td>
+                      <td className={cn(tdCls, "num")}>{g.orders}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </>
+      )}
+
+      {/* ── Panel 3: cash actually collected (delivery date) ── */}
       <h3 className={cn(cardH3, "mb-3 border-0")}>💰 الصندوق — ما وصل فعلاً</h3>
       <div className="mb-2 text-[.76rem] text-[var(--ink-3)]">
         محسوب بتاريخ التسليم لا بتاريخ الطلب — هذا ما دخل الصندوق خلال {days} يوماً.

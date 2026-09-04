@@ -10,7 +10,7 @@
 // were actually worth. The profit math itself lives in lib/profit.ts and is
 // reused here rather than restated.
 import { db } from "@/lib/firebase";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, limit, query, where } from "firebase/firestore";
 import { summarize, type ProfitInputs, type Totals } from "@/lib/profit";
 import { orderStamp, type Order } from "@/lib/admin";
 
@@ -247,4 +247,139 @@ export function spendInPeriod(
     if (allowed && !allowed.has(i.campaignId || "")) return sum;
     return sum + (i.spendDzd || 0);
   }, 0);
+}
+
+// --------------------------------------------------------------------------
+// Funnel events
+// --------------------------------------------------------------------------
+
+/** One recorded step of one visitor's walk through a funnel. */
+export type FunnelEventDoc = {
+  id: string;
+  funnel: string;
+  step: string;
+  sessionId: string;
+  ts: number;
+  variant?: string | null;
+  stepIndex?: number | null;
+  answers?: Record<string, string> | null;
+  value?: number | null;
+  orderId?: string | null;
+  campaignId?: string | null;
+  channel?: string | null;
+};
+
+/** The funnel's stages, in order. Mirrors the vocabulary the API route accepts. */
+export const FUNNEL_STEPS = ["view", "start", "answer", "result", "checkout", "order"] as const;
+
+export async function getFunnelEvents(
+  funnel: string,
+  sinceMs: number,
+  max = 5000,
+): Promise<FunnelEventDoc[]> {
+  try {
+    const snap = await getDocs(
+      query(
+        collection(db, "funnels", funnel, "events"),
+        where("ts", ">=", sinceMs),
+        limit(max),
+      ),
+    );
+    return snap.docs.map((d) => ({ id: d.id, ...(d.data() as Omit<FunnelEventDoc, "id">) }));
+  } catch (e) {
+    console.error("[DS] getFunnelEvents", e);
+    return [];
+  }
+}
+
+export type StepStat = { step: string; sessions: number; pctOfTop: number };
+
+/**
+ * How many distinct visitors reached each stage.
+ *
+ * Counted by SESSION, not by event: a visitor who answers five questions fires
+ * five `answer` events, and counting those would make the middle of the funnel
+ * look five times wider than the top. Percentages are against the first stage
+ * that anyone actually reached, so a funnel whose `view` events are missing
+ * still reports usable ratios instead of dividing by zero.
+ */
+export function funnelSteps(events: FunnelEventDoc[]): StepStat[] {
+  const bySt = new Map<string, Set<string>>();
+  for (const e of events) {
+    if (!e.step || !e.sessionId) continue;
+    const set = bySt.get(e.step) ?? new Set<string>();
+    set.add(e.sessionId);
+    bySt.set(e.step, set);
+  }
+  const rows = FUNNEL_STEPS.map((step) => ({
+    step,
+    sessions: bySt.get(step)?.size ?? 0,
+  }));
+  const top = rows.find((r) => r.sessions > 0)?.sessions ?? 0;
+  return rows.map((r) => ({
+    ...r,
+    pctOfTop: top ? r.sessions / top : 0,
+  }));
+}
+
+export type VariantStat = {
+  variant: string;
+  sessions: number;
+  orders: number;
+  conversion: number | null;
+};
+
+/**
+ * The A/B result: how many visitors each arm got, and how many ordered.
+ *
+ * Conversion is orders over sessions that actually entered the funnel, so an
+ * arm is never flattered by visitors who never saw it.
+ */
+export function variantStats(events: FunnelEventDoc[]): VariantStat[] {
+  const seen = new Map<string, Set<string>>();
+  const ordered = new Map<string, Set<string>>();
+  for (const e of events) {
+    const v = e.variant || "—";
+    if (!e.sessionId) continue;
+    const s = seen.get(v) ?? new Set<string>();
+    s.add(e.sessionId);
+    seen.set(v, s);
+    if (e.step === "order") {
+      const o = ordered.get(v) ?? new Set<string>();
+      o.add(e.sessionId);
+      ordered.set(v, o);
+    }
+  }
+  return [...seen.entries()]
+    .map(([variant, s]) => {
+      const orders = ordered.get(variant)?.size ?? 0;
+      return {
+        variant,
+        sessions: s.size,
+        orders,
+        conversion: s.size ? orders / s.size : null,
+      };
+    })
+    .sort((a, b) => b.sessions - a.sessions);
+}
+
+/** Which goal answer people pick, and how well each converts. */
+export function goalStats(events: FunnelEventDoc[]): { goal: string; sessions: number; orders: number }[] {
+  const goalOf = new Map<string, string>();
+  const orderedSessions = new Set<string>();
+  for (const e of events) {
+    const g = e.answers?.goal;
+    if (g && e.sessionId) goalOf.set(e.sessionId, g);
+    if (e.step === "order" && e.sessionId) orderedSessions.add(e.sessionId);
+  }
+  const counts = new Map<string, { sessions: number; orders: number }>();
+  for (const [session, goal] of goalOf) {
+    const row = counts.get(goal) ?? { sessions: 0, orders: 0 };
+    row.sessions++;
+    if (orderedSessions.has(session)) row.orders++;
+    counts.set(goal, row);
+  }
+  return [...counts.entries()]
+    .map(([goal, v]) => ({ goal, ...v }))
+    .sort((a, b) => b.sessions - a.sessions);
 }

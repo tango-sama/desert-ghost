@@ -129,6 +129,7 @@ export type LandingPagesContent = Partial<Record<LandingPageKey, LandingPageCont
 // static file routes under app/ always win over the app/[slug] catch-all,
 // so reusing one of these would make that page's content unreachable.
 export const LANDING_RESERVED_SLUGS = [
+  "quiz",
   "sunguard",
   "collagen",
   "glutathione",
