@@ -1,5 +1,6 @@
 import Link from "next/link";
 import type { Category } from "@/lib/firebase";
+import { CategoryMarquee } from "@/components/storefront/category-marquee";
 
 // The category strip under the nav row — the reference layout's second deck,
 // and the reason the old generic NAV_LINKS row is gone: sending shoppers
@@ -7,25 +8,23 @@ import type { Category } from "@/lib/firebase";
 // "المنتجات". Driven by live Firestore categories, linking with the same
 // `?cat=<document id>` key `category-tile.tsx` already uses.
 //
-// It drifts sideways on its own (see `.cat-marquee` in globals.css), so the
-// links past the fold are seen rather than waited on. Motion pauses on hover
-// and on keyboard focus, and under `prefers-reduced-motion` the track stops
-// and the strip becomes a normal scroller instead.
+// It drifts sideways on its own and can be swiped or dragged — see
+// `category-marquee.tsx`, which owns the scroll container. This file stays a
+// server component and hands it the markup as children, so the only client
+// code involved is that small shell.
 //
-// The list is repeated, and how many times matters. The loop translates the
-// track by exactly one copy's width and then snaps back; for that to be
-// invisible, the copies still on screen at the end of the run have to cover
-// the viewport. Two copies do not when the strip is narrower than the window
-// — a short category list on a wide desktop would flash an empty gap once per
-// cycle. So the count is chosen to keep roughly TARGET_ITEMS rendered
-// whatever the catalog size, and the per-cycle shift (1 / repeats) is handed
-// to CSS as a custom property. Every copy after the first is `aria-hidden`
-// with unfocusable links, so the strip is announced and tabbed through once.
-//
-// A server component on purpose: it is passed to the client `Nav` as
-// children, so none of this lands in the browser bundle.
+// The list is repeated, and how many times matters. The track wraps after
+// moving by one copy's width, so the copies still on screen at that moment
+// have to cover the viewport: (copies - 1) x copy width must exceed the
+// widest window this will ever open in. Two copies do not, once the strip is
+// narrower than the window — a short category list on a wide desktop would
+// flash an empty gap every cycle. Keeping roughly TARGET_ITEMS rendered
+// whatever the catalog size clears it with room (the real strip: 8 items,
+// ~1070px, 4 copies, so 3210px of cover). Every copy after the first is
+// `aria-hidden` with unfocusable links, so the strip is announced and tabbed
+// through once.
 const MAX = 6;
-const TARGET_ITEMS = 24;
+const TARGET_ITEMS = 32;
 
 const linkClass =
   "rounded-full px-3.5 py-1 text-[0.8rem] font-bold whitespace-nowrap text-[var(--ink-2)] transition-colors hover:text-[var(--rose-deep)] md:px-4 md:text-[0.84rem]";
@@ -72,16 +71,13 @@ export function CategoryNav({ categories }: { categories: Category[] }) {
     ));
 
   return (
-    <nav
-      aria-label="التصنيفات"
-      className="cat-marquee h-[var(--catnav-h)] border-t border-[var(--line)] bg-[var(--blush)]/70"
+    <CategoryMarquee
+      copies={repeats}
+      label="التصنيفات"
+      className="h-[var(--catnav-h)] cursor-grab touch-pan-y overflow-hidden border-t border-[var(--line)] bg-[var(--blush)]/70 select-none active:cursor-grabbing"
+      trackClassName="flex h-full w-max items-center will-change-transform"
     >
-      <ul
-        className="cat-marquee-track h-full items-center"
-        style={{ "--marquee-shift": `${100 / repeats}%` } as React.CSSProperties}
-      >
-        {Array.from({ length: repeats }, (_, i) => run(i))}
-      </ul>
-    </nav>
+      {Array.from({ length: repeats }, (_, i) => run(i))}
+    </CategoryMarquee>
   );
 }

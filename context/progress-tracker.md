@@ -3971,25 +3971,59 @@ renders opaque immediately — a section linked straight to is not waiting to
 fade in, and while it was, its 30px reveal offset was part of the box the
 browser scrolled to.
 
-### Follow-up: the category strip auto-scrolls
+### Follow-up: the category strip drifts, and is draggable
 
-Owner asked for it to drift on its own. CSS-only marquee (`.cat-marquee` in
-globals.css): 60s linear, 90s where there is no hover to pause with
-(`@media (hover: none)`), paused on hover / focus-within / active, and
-under `prefers-reduced-motion` the track stops and the strip becomes an
-ordinary scroller so nothing past the fold is stranded.
+Owner asked for it to auto-scroll, then for it to be draggable too. It is
+now `components/storefront/category-marquee.tsx` (`"use client"`), a shell
+around the server-rendered list — the list itself is still built in
+`category-nav.tsx` and passed as children, so only the shell is client code.
 
-The repeat count is the part worth remembering. The loop translates the
-track by one copy's width and snaps back; for that to be invisible the
-copies still on screen at the end have to cover the viewport, and **two
-copies do not when the strip is narrower than the window** — the real strip
-is 1070px against a 1280–1920px desktop, so it flashed an empty gap once
-per cycle. `category-nav.tsx` now repeats the list to roughly
-`TARGET_ITEMS` (24) whatever the catalog size and hands CSS the per-cycle
-shift as `--marquee-shift`. Verified gap-free at 360, 1280 and 1920, with
-24 `<li>` rendered but only 8 links tabbable/announced (every copy after
-the first is `aria-hidden` with `tabIndex={-1}`).
+**It owns the position as a number and applies it as a transform.** Two
+earlier attempts failed, both only visible by driving it:
 
-Note for future browser tests: Playwright refuses to click a moving
-element, so click assertions on this strip need
-`.cat-marquee-track{animation:none!important}` injected first.
+1. A CSS-transform marquee drifted but could not be dragged: a transformed
+   track has no scroll position to grab.
+2. A native scroll container could be dragged but would not drift —
+   16px/s is ~0.26px per frame and **Chromium rounds `scrollLeft` to whole
+   pixels**, so every nudge rounded straight back to 0. And in RTL
+   `scrollLeft` clamps at 0, so dragging back past the first item was
+   impossible, which an endless strip should always allow.
+
+A float in a ref has neither problem. Drift is 16px/s rightwards, paused on
+hover and on focus, off entirely under `prefers-reduced-motion` (dragging
+still works there). A flick carries momentum that decays over ~1s, capped at
+2200px/s.
+
+**Two traps worth remembering if this is ever touched again:**
+
+- `setPointerCapture` must NOT be taken on pointerdown. Capturing retargets
+  the compatibility mouse events with it, so `click` fires on the `<nav>`
+  instead of the link under the finger and **no category link navigates at
+  all**. The capture is taken in pointermove, once past the 5px slop, which
+  also gives the "a drag must not follow the link" suppression for free.
+- Only the first copy of the list is focusable, and the drift can carry it
+  off screen, so a focused link is pulled back into view — and wrapping is
+  suspended while anything inside has focus, since wrapping shifts by a
+  whole copy and would carry the focused link away again.
+
+Touch is native pointer events with `touch-action: pan-y`, so a horizontal
+swipe drags the strip and a vertical one still scrolls the page.
+
+The repeat count still matters: the track wraps after moving one copy's
+width, so `(copies - 1) x copy width` must exceed the widest window. The
+list is repeated to roughly `TARGET_ITEMS` (32) whatever the catalog size —
+the real strip is 8 items / ~1070px / 4 copies, so 3210px of cover.
+Verified gap-free at 390, 1280, 1920 and 2560, with 32 `<li>` rendered but
+only 8 links tabbable/announced (every copy after the first is
+`aria-hidden` with `tabIndex={-1}`).
+
+Verified in Chromium: drift 16.5 -> 64.8px over 3s, pauses on hover, drags
+both directions, a drag does not navigate, a flick coasts, a click on a
+link inside the strip lands on «مكملات غذائية للعناية بالبشرة», a focused
+link is pulled into view, a touch swipe moves it, and reduced motion stops
+the drift while leaving the drag.
+
+Note for future browser tests: Playwright will not click a moving element,
+and `overflow: hidden` clips the other copies while Playwright still calls
+them "visible" — so click assertions must pick a link whose box is inside
+the nav's box and click its coordinates directly.
