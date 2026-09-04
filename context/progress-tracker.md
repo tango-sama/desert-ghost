@@ -3943,3 +3943,53 @@ trailing `%` is bidi-neutral and rendered as «%100» once the line wrapped.
   cards and will crop tightly as full-bleed banners.** Nothing to fix in
   code — wider art uploaded through the existing admin panel is all it
   needs.
+
+### Follow-up: category strip did not change the filter (fixed)
+
+Reported by the owner after the redesign landed: the strip's links updated
+the address bar and nothing else.
+
+`products-browser.tsx` seeded its state with `useState(initialCat)`. That
+prop comes from the URL, and the URL changes under this component **without
+remounting it** — the header's category strip and its search box both
+navigate to `/products` while the customer is already standing on it, so
+React kept whatever the first render saw. Same bug hit `?q=`, and the
+always-visible search field made it much easier to hit than the old toggle
+did. Both now use a small `useSyncedState` (React's "adjusting state when a
+prop changes" pattern, done during render rather than in an effect, so
+there is no flash of the stale value); typing still only moves the local
+value.
+
+Verified: `/products` → strip category A → heading «مكملات غذائية للعناية
+بالبشرة», 30 cards; → strip category B → «منتجات تكبير الصدر», 20 cards
+(was 298 and «كل المنتجات» throughout, before). Header search from inside
+`/products` filters and clears the category. «التصنيفات» was never broken.
+
+Also fixed here: `#contact` / `#collection` / `#categories` got
+`scroll-margin-top: calc(var(--header-h) + 1rem)`, and `:target.reveal`
+renders opaque immediately — a section linked straight to is not waiting to
+fade in, and while it was, its 30px reveal offset was part of the box the
+browser scrolled to.
+
+### Follow-up: the category strip auto-scrolls
+
+Owner asked for it to drift on its own. CSS-only marquee (`.cat-marquee` in
+globals.css): 60s linear, 90s where there is no hover to pause with
+(`@media (hover: none)`), paused on hover / focus-within / active, and
+under `prefers-reduced-motion` the track stops and the strip becomes an
+ordinary scroller so nothing past the fold is stranded.
+
+The repeat count is the part worth remembering. The loop translates the
+track by one copy's width and snaps back; for that to be invisible the
+copies still on screen at the end have to cover the viewport, and **two
+copies do not when the strip is narrower than the window** — the real strip
+is 1070px against a 1280–1920px desktop, so it flashed an empty gap once
+per cycle. `category-nav.tsx` now repeats the list to roughly
+`TARGET_ITEMS` (24) whatever the catalog size and hands CSS the per-cycle
+shift as `--marquee-shift`. Verified gap-free at 360, 1280 and 1920, with
+24 `<li>` rendered but only 8 links tabbable/announced (every copy after
+the first is `aria-hidden` with `tabIndex={-1}`).
+
+Note for future browser tests: Playwright refuses to click a moving
+element, so click assertions on this strip need
+`.cat-marquee-track{animation:none!important}` injected first.

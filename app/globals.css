@@ -295,6 +295,68 @@ bdi {
   }
 }
 
+/* Hash targets have to clear the fixed header stack, or an in-page link
+   lands with the section's heading hidden behind it. */
+:target,
+#categories,
+#collection,
+#contact {
+  scroll-margin-top: calc(var(--header-h) + 1rem);
+}
+/* A section you linked straight to is not waiting to fade in — and while it
+   is, its 30px reveal offset is part of the box the browser scrolls to, so
+   the section lands 30px under the header once the transform clears. */
+:target.reveal {
+  opacity: 1;
+  transform: none;
+}
+
+/* The category strip drifts sideways on its own. The track holds the list
+   several times over and --marquee-shift is one copy's share of the track
+   width (set per-instance in category-nav.tsx), so translating by it lands a
+   copy exactly where the previous one was and the loop is seamless. RTL flows
+   right-to-left, so the copies sit to the LEFT and the track moves right (+X)
+   to bring them in; transforms are physical, unaffected by direction.
+   Pauses on hover and on keyboard focus so a link can be read and clicked. */
+.cat-marquee {
+  overflow: hidden;
+}
+.cat-marquee-track {
+  display: flex;
+  width: max-content;
+  animation: cat-marquee 60s linear infinite;
+}
+.cat-marquee:hover .cat-marquee-track,
+.cat-marquee:focus-within .cat-marquee-track,
+.cat-marquee:active .cat-marquee-track {
+  animation-play-state: paused;
+}
+/* Touch has no hover to pause on, so it gets a slower drift instead: the tap
+   target is resolved at touch-down, but a link should still be easy to aim at. */
+@media (hover: none) {
+  .cat-marquee-track {
+    animation-duration: 90s;
+  }
+}
+@keyframes cat-marquee {
+  from { transform: translateX(0); }
+  to { transform: translateX(var(--marquee-shift, 50%)); }
+}
+/* No drift: the strip becomes an ordinary scroller, so everything past the
+   fold is still reachable by hand. */
+@media (prefers-reduced-motion: reduce) {
+  .cat-marquee {
+    overflow-x: auto;
+    scrollbar-width: none;
+  }
+  .cat-marquee::-webkit-scrollbar {
+    display: none;
+  }
+  .cat-marquee-track {
+    animation: none;
+  }
+}
+
 /* Hide the scrollbar on scroll-snap tracks that carry their own affordance
    (dots, arrows, a progress bar). */
 .no-scrollbar {

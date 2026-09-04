@@ -14,6 +14,25 @@ type Sort = "quantity" | "new" | "price-asc" | "price-desc" | "name";
 const selectClass =
   "cursor-pointer rounded-full border-[1.5px] border-[var(--line)] bg-card px-5 py-3 text-[0.88rem] text-foreground outline-none transition-colors";
 
+/**
+ * State that follows a prop when the prop changes, and is otherwise free to
+ * be edited locally — React's "adjusting state when a prop changes" pattern,
+ * done during render rather than in an effect so there is no flash of the
+ * stale value.
+ *
+ * Typing in the search box only moves the local value; a navigation that
+ * carries a different `?q=`/`?cat=` moves both.
+ */
+function useSyncedState<T>(fromProps: T): [T, (next: T) => void] {
+  const [value, setValue] = useState(fromProps);
+  const [seen, setSeen] = useState(fromProps);
+  if (fromProps !== seen) {
+    setSeen(fromProps);
+    setValue(fromProps);
+  }
+  return [value, setValue];
+}
+
 export function ProductsBrowser({
   products,
   categories,
@@ -26,8 +45,14 @@ export function ProductsBrowser({
   initialQuery?: string;
 }) {
   const router = useRouter();
-  const [activeCat, setActiveCat] = useState(initialCat);
-  const [search, setSearch] = useState(initialQuery);
+  // Synced, not seeded. `initialCat`/`initialQuery` come from the URL, and the
+  // URL changes under this component without remounting it: the header's
+  // category strip and its search box both navigate to /products while the
+  // customer is already standing on it. A plain useState(initialCat) keeps
+  // whatever the first render saw, so those links used to update the address
+  // bar and nothing else.
+  const [activeCat, setActiveCat] = useSyncedState(initialCat);
+  const [search, setSearch] = useSyncedState(initialQuery);
   const [sort, setSort] = useState<Sort>("quantity");
 
   const catMap = useMemo(
