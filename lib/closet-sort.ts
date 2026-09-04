@@ -80,3 +80,34 @@ export function orderByCloset(
     return byRecency(a, b);
   });
 }
+
+/**
+ * Approximate units sold per product, for the home page's card badge.
+ *
+ * SERVER COMPONENTS ONLY, same as `sortByCloset` — it goes through the same
+ * guarded dynamic import of the Admin SDK and inherits its failure mode:
+ * stats unavailable → `{}` → no badge renders, never a badge reading zero.
+ *
+ * Two deliberate limits, because this widens the one place where privileged
+ * Firestore data reaches the public internet (architecture-context.md,
+ * "Storefront-safe closet-stock access"):
+ *
+ *  - Only a derived integer crosses — `sending + delivered` per product id.
+ *    No order document, no field of one, and nothing about the buyer.
+ *  - The integer is floored to the nearest `BUCKET` and dropped below it, so
+ *    the page publishes a band ("+40") rather than the store's exact sales
+ *    figures. A shopper gets the social proof; a competitor reading the RSC
+ *    payload gets a rounded number they could have guessed.
+ */
+const BUCKET = 10;
+
+export async function soldByProduct(): Promise<Record<string, number>> {
+  const stats = await closetStatsOrNull();
+  if (!stats) return {};
+  const out: Record<string, number> = {};
+  for (const [id, s] of Object.entries(stats)) {
+    const sold = s.sending + s.delivered;
+    if (sold >= BUCKET) out[id] = Math.floor(sold / BUCKET) * BUCKET;
+  }
+  return out;
+}
