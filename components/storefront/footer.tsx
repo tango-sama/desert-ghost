@@ -12,7 +12,7 @@ const SOCIALS = [
 export function Footer({ settings }: { settings: SiteSettings }) {
   const year = new Date().getFullYear();
   return (
-    <footer className="relative z-10 mt-12 border-t border-border bg-card px-5 pt-14 pb-8 md:px-12">
+    <footer className="relative z-10 border-t border-border bg-card px-5 pt-14 pb-8 md:px-12">
       <div className="mx-auto max-w-[1320px]">
         <div className="grid grid-cols-1 gap-10 border-b border-border pb-10 md:grid-cols-[1.6fr_1fr_1fr_1.2fr]">
           <div>
@@ -24,15 +24,15 @@ export function Footer({ settings }: { settings: SiteSettings }) {
               وجهتكِ الأولى لمنتجات الجمال والعناية النسائية في الجزائر. جودة أصلية،
               خصوصية تامة، وتوصيل لكل الولايات.
             </p>
-            <div className="mt-4 flex gap-2.5">
+            <div className="mt-5 flex gap-2.5">
               <a
                 href={waLink(settings, "مرحباً")}
                 target="_blank"
                 rel="noopener"
                 aria-label="WhatsApp"
-                className="flex size-9 items-center justify-center rounded-xl bg-muted transition-all hover:-translate-y-0.5 hover:bg-[var(--rose-tint)]"
+                className="flex size-11 items-center justify-center rounded-2xl border border-[var(--line)] bg-muted transition-all hover:-translate-y-0.5 hover:border-[var(--rose-soft)] hover:bg-[var(--rose-tint)]"
               >
-                <Image src="/assets/whatsapp.png" alt="WhatsApp" width={18} height={18} />
+                <Image src="/assets/whatsapp.png" alt="WhatsApp" width={20} height={20} />
               </a>
               {SOCIALS.map(
                 (s) =>
@@ -43,9 +43,9 @@ export function Footer({ settings }: { settings: SiteSettings }) {
                       target="_blank"
                       rel="noopener"
                       aria-label={s.label}
-                      className="flex size-9 items-center justify-center rounded-xl bg-muted transition-all hover:-translate-y-0.5 hover:bg-[var(--rose-tint)]"
+                      className="flex size-11 items-center justify-center rounded-2xl border border-[var(--line)] bg-muted transition-all hover:-translate-y-0.5 hover:border-[var(--rose-soft)] hover:bg-[var(--rose-tint)]"
                     >
-                      <Image src={s.icon} alt={s.label} width={18} height={18} />
+                      <Image src={s.icon} alt={s.label} width={20} height={20} />
                     </a>
                   )
               )}

@@ -80,9 +80,21 @@
   - `components/storefront/product-grid.tsx` (the home page's "أبرز
     المنتجات" section) — a Server Component, so it calls `getOrderStats()`
     directly at render time (no network hop) to sort all products by
-    closet count before picking the top 8. This one runs for every visitor,
-    not just seller mode, since it only affects display order, not any
-    data exposed to the page.
+    closet count before picking the top 8, **and** to derive each card's
+    «بيع +N مرة» badge through `soldByProduct()` (`lib/closet-sort.ts`).
+    The sort exposes nothing. The badge does, and is the one place on the
+    storefront where a quantity derived from `orders` is rendered for the
+    public, so it is deliberately narrow:
+      - what crosses is a single integer per product id, `sending +
+        delivered`. No order document, no field of one, nothing about a
+        buyer.
+      - it is floored to the nearest 10 and dropped below 10, so the page
+        publishes a band ("+40"), never the store's exact sales figures.
+      - stats unavailable (no `FIREBASE_SERVICE_ACCOUNT_KEY`, a Firestore
+        error) means `{}` and no badge — never a badge reading zero.
+    Widening this further (an exact count, a stock-scarcity line like "آخر
+    القطع", per-day sales) is a decision for the store owner, not a
+    refactor: it publishes trading data to anyone who opens the page.
   - `app/(storefront)/products/page.tsx` (the full `/products` listing) —
     also a Server Component, sorting the whole catalog the same way before
     handing it to the client `ProductsBrowser`, whose default

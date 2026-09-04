@@ -3,7 +3,9 @@ import { HeroBanner } from "@/components/storefront/hero-banner";
 import { FeatureStrip } from "@/components/storefront/feature-strip";
 import { CategoryGrid } from "@/components/storefront/category-grid";
 import { ProductGrid } from "@/components/storefront/product-grid";
+import { EditorialBand } from "@/components/storefront/editorial-band";
 import { ContactForm } from "@/components/storefront/contact-form";
+import { ClosingCta } from "@/components/storefront/closing-cta";
 import { RevealRoot } from "@/components/storefront/reveal-root";
 
 export default async function HomePage() {
@@ -23,7 +25,11 @@ export default async function HomePage() {
       </RevealRoot>
       <RevealRoot>
         <ProductGrid products={products} categories={categories} />
+        <EditorialBand categories={categories} products={products} />
+      </RevealRoot>
+      <RevealRoot>
         <ContactForm settings={settings} />
+        <ClosingCta products={products} />
       </RevealRoot>
     </>
   );

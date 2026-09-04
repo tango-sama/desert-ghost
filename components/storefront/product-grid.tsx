@@ -2,24 +2,34 @@ import Link from "next/link";
 import type { Category, Product } from "@/lib/firebase";
 import { ProductCard } from "@/components/storefront/product-card";
 import { SectionHead } from "@/components/storefront/section-head";
-import { sortByCloset, soldByProduct } from "@/lib/closet-sort";
+import { byRecency, sortByCloset, soldByProduct } from "@/lib/closet-sort";
 
 const NEW_FOR_MS = 30 * 24 * 60 * 60 * 1000;
+const MAX_NEW = 3;
 
-// Which products carry the «جديد» badge.
+// Which products may carry the «جديد» badge.
 //
 // `lastModified` is an epoch-ms stamp on newer docs and absent on older ones,
 // where byRecency() falls back to the document id. Only a value that is
 // plausibly a millisecond timestamp counts as a date — an id-shaped number
 // would otherwise mark half the catalog new.
 //
+// Capped at MAX_NEW because the badge is a distinction, not a fact: when the
+// closet stats are unavailable the grid falls back to recency order, and
+// without the cap every card in it would be badged «جديد», which tells a
+// shopper nothing. The newest few keep it.
+//
 // Async, and awaited alongside the Firestore-backed reads below, because
 // reading the clock is impure: it belongs in this page's data phase, not in
 // its render body (react-hooks/purity).
 async function newProductIds(products: Product[]): Promise<Set<string>> {
-  const cutoff = Date.now() - NEW_FOR_MS;
+  const cutoff = Math.max(Date.now() - NEW_FOR_MS, 1e12);
   return new Set(
-    products.filter((p) => Number(p.lastModified ?? 0) > Math.max(cutoff, 1e12)).map((p) => p.id)
+    products
+      .filter((p) => Number(p.lastModified ?? 0) > cutoff)
+      .sort(byRecency)
+      .slice(0, MAX_NEW)
+      .map((p) => p.id)
   );
 }
 

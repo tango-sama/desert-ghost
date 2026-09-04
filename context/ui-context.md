@@ -95,8 +95,27 @@ All buttons are pills with `translateY(-3px)` lift + stronger tinted shadow on h
 
 ## Component Patterns
 
-- **Product card `.pcard`** — white card, image link on top (badge overlay optional), category label, name, subtitle, footer with price + circular `[data-add]` add-to-cart button. Always built through `SiteUI.productCardHTML` — never hand-rolled.
-- **Category tile `.cat-tile`** — square image tile with per-category accent color (`SiteUI.catColor`: admin-set or stable hash fallback palette) and a color dot.
+> The entries below marked **(Next)** describe the Next.js rebuild
+> (`components/storefront/*`); the rest of this file still describes the
+> pre-Next static site and has not been re-audited.
+
+- **Product card (Next)** — `components/storefront/product-card.tsx`, the one
+  card used by the home grid, `/products` and the related rail. White card,
+  square image link, optional badge over the image's top-start corner
+  («بيع +N مرة» gold, «جديد» rose), gold category label, 2-line name,
+  subtitle, price, then a **full-width labelled «أضيفي للسلة» pill**. The
+  round `+` button it replaced asked shoppers to guess what it did. Badges are
+  opt-in props: only the home page passes them.
+  **No star ratings** — Firestore holds no rating data and inventing some
+  would be a lie shown to every visitor. If ratings are ever wanted they must
+  be a real admin-entered field.
+- **Category tile (Next)** — `components/storefront/category-tile.tsx`,
+  `aspect-[1/1.15]` image tile with per-category accent color (`lib/colors.ts`
+  `catColor`: admin-set or stable hash fallback palette), a color dot, a dark
+  bottom scrim, and the product count as a glass pill. Shared by the
+  `/categories` grid and the home carousel — restyle it in one place only.
+- **Category tile `.cat-tile`** (old static site) — square image tile with
+  per-category accent color and a color dot.
 - **`.luxury-card` / `.feature`** — white surfaces with `--line-2` tinted borders and `--shadow`.
 - **Floating elements** — `.wa-float` (bottom-left circle, hidden under `html.no-wa`) and `.tiktok-live` (pill, shown only during a live window).
 - **Cart** — slide-over drawer with `.cart-item` rows (64px thumb, qty steppers); toasts are dark pills.
@@ -104,6 +123,27 @@ All buttons are pills with `translateY(-3px)` lift + stronger tinted shadow on h
 
 ## Layout Patterns
 
+- **Header (Next)** — one fixed three-deck stack, opaque, at the top of every
+  storefront route:
+  1. `announcement-bar.tsx` — the store's three standing promises (cash on
+     delivery, 58 wilayas, genuine products). All three at once from `md`; one
+     at a time below it, cycled by the `.announce-cycle` keyframe (no JS).
+     **Not a shipping offer** — delivery is paid, and the bar must never
+     promise something the store does not do.
+  2. `nav.tsx` — brand at the start, a **visible** search field from `md` up
+     (icon-toggle panel below it), cart at the end. No account icon: there are
+     no customer accounts.
+  3. `category-nav.tsx` — up to six live categories by `sortOrder`, linking
+     `?cat=<document id>`, then التصنيفات and تواصلي معنا. A server component
+     passed to `Nav` as children, so it costs nothing in the client bundle.
+  Its three heights are the `--announce-h` / `--nav-h` / `--catnav-h` tokens,
+  summed as `--header-h`; `<main>` offsets itself against that one value.
+  Pages must not add their own nav-clearing top padding.
+- **Home page order (Next)** — hero banner, trust strip (pulled up over the
+  banner), category carousel, product grid, editorial band, contact form,
+  closing CTA. `hero-banner.tsx` renders `featured_products` as full-bleed
+  slides with dots and 6s autoplay, and falls back to one slide built from
+  `settings.heroImage` when that collection is empty.
 - Fixed top nav (`nav.site-nav`) with brand gradient logo text; burger menu below 768px.
 - Content sections sit in `.wrap` above the fixed `.bg-glow` backdrop.
 - Admin: sidebar + content shell; sidebar becomes an overlay on mobile (`#menuBtn`).

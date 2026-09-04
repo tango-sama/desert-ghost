@@ -63,12 +63,12 @@ export function ProductCard({
         )}
         <Link
           href={`/product/${product.id}`}
-          className="mb-1 line-clamp-2 text-[0.98rem] leading-[1.4] font-extrabold text-foreground transition-colors hover:text-[var(--rose-deep)]"
+          className="mb-1 line-clamp-2 text-[0.98rem] leading-[1.4] font-extrabold text-foreground transition-colors [overflow-wrap:anywhere] hover:text-[var(--rose-deep)]"
         >
           {title}
         </Link>
         {product.subtitle && (
-          <div className="mb-2 line-clamp-1 text-[0.76rem] text-[var(--ink-3)]">
+          <div className="mb-2 line-clamp-1 text-[0.76rem] text-[var(--ink-3)] [overflow-wrap:anywhere]">
             {product.subtitle}
           </div>
         )}

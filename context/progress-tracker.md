@@ -3849,3 +3849,97 @@ not the intended state (see `development-workflow.md`).
   the layout was judged with stand-in images injected at the network layer.
   Worth one look on a real device to confirm the photos crop well in the
   taller `aspect-[1/1.25]` card.
+
+## Home page — premium redesign (branch `claude/premium-homepage-redesign-ix5zit`)
+
+Asked for by the owner against a reference screenshot of an Arabic beauty
+store: "more premium, more converting". The reference's *structure* was
+adopted; the Blush Rose & Gold palette and Cairo typography are unchanged.
+Four commits, all storefront — no admin-panel, `firestore.rules`, Cloud
+Functions or dependency changes.
+
+**Header is now one fixed three-deck stack** (`announcement-bar.tsx`,
+`nav.tsx`, `category-nav.tsx`), opaque, on every storefront route.
+
+- The announcement bar carries the store's own three promises, not a
+  shipping offer — delivery is paid here. Desktop shows all three; mobile
+  cycles them with the `.announce-cycle` keyframe, no JS.
+- Search is a visible field from `md` up instead of an icon toggle. Below
+  `md` the old toggle panel is unchanged.
+- The category strip replaces the four generic NAV_LINKS with up to six
+  live categories by `sortOrder`. It is a server component passed to the
+  client `Nav` as children, so it adds nothing to the browser bundle.
+- Heights are tokens (`--announce-h` / `--nav-h` / `--catnav-h`, summed as
+  `--header-h`) and `<main>` offsets against them once. That removed the
+  hand-tuned `pt-28` / `pt-30` / `pt-26` / `py-24` guesses in
+  `/categories`, `/products`, `/product/[id]` and checkout — **new pages
+  must not add their own nav-clearing padding.**
+
+**The hero is `featured_products`, full-bleed.** Those docs were already
+banner-shaped (image, right/left text, CTA text, link, all admin-editable)
+and were being spent on 250px cards; `featured-carousel.tsx` is deleted and
+`hero.tsx` with it. Dots, arrows, 6s autoplay paused on hover/focus/hidden
+tab and skipped entirely under `prefers-reduced-motion`. RTL: `goTo()`
+derives the scroll sign from the track's computed direction rather than
+assuming a negative delta. Active dot is written to the DOM from one
+rAF-throttled passive scroll listener — no re-render per frame.
+
+Empty/failed `getFeatured()` renders one slide from `settings.heroImage`
+carrying the old hero's copy, and the 💄 panel with no image either
+(invariant 2). **Verified by stubbing `getFeatured()` to `[]`.**
+
+**Product cards** got a full-width labelled «أضيفي للسلة» pill in place of
+the round `+`, and an honest badge. No star ratings — there is no rating
+data in Firestore, and the owner agreed not to fabricate any.
+
+- «بيع +N مرة» comes from the new `soldByProduct()` in `lib/closet-sort.ts`
+  and is **bucketed to the nearest 10**. This widens the documented
+  `getOrderStats()` boundary — see the updated
+  `architecture-context.md` for exactly how far, and why anything beyond it
+  is an owner decision rather than a refactor.
+- «جديد» is capped at 3 products. Without the cap, the recency fallback
+  (which is what runs whenever the closet stats are unavailable) badges
+  every card in the grid, which tells a shopper nothing. Caught by driving
+  the page, not by reading the code.
+
+**New sections:** `editorial-band.tsx` (two large panels built from the two
+best-stocked categories — image, name, live count, existing «تسوّقي الآن ←»
+copy; zero invented strings) and `closing-cta.tsx` («أكثر من 149 منتج
+لجمالكِ», the real catalog size). The closing band lives on the home page
+rather than in the shared `Footer` so no other route pays for a second
+catalog read to print a number.
+
+`category-tile.tsx` and `feature-strip.tsx` were restyled; the tile is
+shared with `/categories`, so that page changed too, intentionally.
+
+### Verified
+
+`npx tsc --noEmit` and `npx eslint` clean (the pre-existing
+`cart-drawer.tsx` `no-html-link-for-pages` error is untouched), `npm run
+build` succeeds, and a headless-Chromium pass at 360x740 / 768x900 /
+1280x900 against **real Firestore data** (149 products, 15 categories, 3
+featured): no horizontal overflow at any width, category strip links land
+on `/products?cat=<id>`, all 8 cards carry a working «أضيفي للسلة», the
+closing band reads the real catalog size, autoplay advances in the correct
+RTL direction with the dots tracking it, and under
+`prefers-reduced-motion` autoplay never starts and reveals render at
+opacity 1.
+
+Two things fixed only because the page was driven rather than read: the
+hero arrows overlapped the headline at 1280 (content now clears them from
+`md` up), and the trust strip truncated all four titles to «الدفع عن…» at
+360 (it wraps below `md` now). «ضمان الجودة 100%» also needed `.num` — a
+trailing `%` is bidi-neutral and rendered as «%100» once the line wrapped.
+
+### Still to check on a real device
+
+- `FIREBASE_SERVICE_ACCOUNT_KEY` is not set in the sandbox, so
+  `getOrderStats()` returned null throughout and **no «بيع +N مرة» badge
+  was ever rendered against real order data.** The `{}` fallback path is
+  verified; the badge itself is not.
+- This sandbox's proxy still blocks `firebasestorage.googleapis.com` from
+  the browser, so layout was judged with stand-in images.
+- **The current `featured_products` images were cropped for 250px square
+  cards and will crop tightly as full-bleed banners.** Nothing to fix in
+  code — wider art uploaded through the existing admin panel is all it
+  needs.

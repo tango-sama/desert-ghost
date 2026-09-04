@@ -1,8 +1,8 @@
-import { Headset, ShieldCheck, Truck, Wallet } from "lucide-react";
+import { Headset, ShieldCheck, Truck, Wallet, type LucideIcon } from "lucide-react";
 
-const FEATURES = [
+const FEATURES: { icon: LucideIcon; title: string; sub: React.ReactNode }[] = [
   { icon: Wallet, title: "الدفع عند الاستلام", sub: "توصيل لـ 58 ولاية" },
-  { icon: ShieldCheck, title: "منتجات أصلية", sub: "ضمان الجودة 100%" },
+  { icon: ShieldCheck, title: "منتجات أصلية", sub: <>ضمان الجودة <span className="num">100%</span></> },
   { icon: Truck, title: "توصيل سريع", sub: "إلى باب المنزل" },
   { icon: Headset, title: "خدمة زبائن", sub: "7/7 أيام" },
 ];
@@ -19,16 +19,16 @@ export function FeatureStrip() {
           {FEATURES.map((f) => (
             <div
               key={f.title}
-              className="flex items-center gap-3.5 px-2 md:px-5 [&:not(:last-child)]:md:border-s [&:not(:last-child)]:md:border-s-[var(--line)]"
+              className="flex items-center gap-2.5 px-1 md:gap-3.5 md:px-5 [&:not(:last-child)]:md:border-s [&:not(:last-child)]:md:border-s-[var(--line)]"
             >
-              <div className="flex size-11 shrink-0 items-center justify-center rounded-2xl bg-gradient-to-br from-[var(--rose-tint)] to-[var(--gold-soft)] text-[var(--rose-deep)] md:size-12">
-                <f.icon className="size-5.5 md:size-6" />
+              <div className="flex size-10 shrink-0 items-center justify-center rounded-xl bg-gradient-to-br from-[var(--rose-tint)] to-[var(--gold-soft)] text-[var(--rose-deep)] md:size-12 md:rounded-2xl">
+                <f.icon className="size-5 md:size-6" />
               </div>
               <div className="min-w-0">
-                <div className="truncate text-[0.86rem] font-extrabold text-foreground md:text-[0.95rem]">
+                <div className="text-[0.8rem] leading-snug font-extrabold text-balance text-foreground md:truncate md:text-[0.95rem]">
                   {f.title}
                 </div>
-                <div className="mt-0.5 truncate text-[0.72rem] text-[var(--ink-3)] md:text-[0.78rem]">
+                <div className="mt-0.5 text-[0.68rem] leading-snug text-[var(--ink-3)] md:truncate md:text-[0.78rem]">
                   {f.sub}
                 </div>
               </div>

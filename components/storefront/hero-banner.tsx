@@ -147,7 +147,7 @@ export function HeroBanner({
     >
       <div
         ref={trackRef}
-        className="no-scrollbar flex h-[440px] snap-x snap-mandatory overflow-x-auto sm:h-[500px] md:h-[min(74vh,600px)]"
+        className="no-scrollbar flex h-[480px] snap-x snap-mandatory overflow-x-auto sm:h-[520px] md:h-[min(74vh,600px)]"
       >
         {slides.map((s) => (
           <div key={s.key} className="relative w-full shrink-0 snap-center overflow-hidden">
@@ -167,17 +167,17 @@ export function HeroBanner({
                 sits, so the headline stays legible over any photo. */}
             <div className="absolute inset-0 bg-gradient-to-l from-[rgba(58,42,48,.80)] via-[rgba(58,42,48,.35)] via-45% to-transparent" />
 
-            <div className="relative mx-auto flex h-full max-w-[1320px] flex-col justify-center px-6 md:px-12">
+            <div className="relative mx-auto flex h-full max-w-[1320px] flex-col justify-center px-6 md:px-20 lg:px-24">
               <div className="max-w-[560px] text-start">
                 <div className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/35 bg-white/15 px-4 py-1.5 text-[0.7rem] font-extrabold tracking-[2px] text-white uppercase backdrop-blur-sm">
                   <span className="size-[7px] animate-pulse rounded-full bg-[var(--rose-soft)]" />
                   أناقتكِ تبدأ من هنا
                 </div>
-                <h1 className="mb-4 text-[clamp(1.9rem,5vw,3.4rem)] leading-[1.2] font-black text-white [text-shadow:0_3px_18px_rgba(0,0,0,.35)]">
+                <h1 className="mb-4 line-clamp-3 text-[clamp(1.7rem,4.4vw,3.1rem)] leading-[1.2] font-black text-balance text-white [overflow-wrap:anywhere] [text-shadow:0_3px_18px_rgba(0,0,0,.35)]">
                   {s.title}
                 </h1>
                 {s.lead && (
-                  <p className="mb-7 line-clamp-3 max-w-[440px] text-[0.98rem] leading-[1.85] text-white/85">
+                  <p className="mb-7 line-clamp-2 max-w-[440px] text-[0.94rem] leading-[1.8] text-white/85 md:line-clamp-3 md:text-[0.98rem]">
                     {s.lead}
                   </p>
                 )}
