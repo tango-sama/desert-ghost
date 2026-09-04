@@ -3029,6 +3029,65 @@ not the intended state (see `development-workflow.md`).
   label on the home section, which has always described a quantity sort
   rather than an order count.
 
+## Completed (this session, 2026-09-04) — Growth Phase 2
+
+### Spend ingestion & the Growth dashboard
+
+Phase 1 gave the order side; this brings in ad spend and puts the two together
+on screen. New **نمو** tab in `/amelhadj`.
+
+- **`lib/marketing.ts` (new)** — reads the spend rows written by the
+  `syncMetaInsights` Cloud Function (in `tango-sama/trinkl`, which owns the
+  Functions) and joins them to orders on `attribution.adId`, falling back to
+  `campaignId` for orders whose ad carried only campaign-level URL parameters.
+  All profit arithmetic reuses `summarize()` from `lib/profit.ts` — the join
+  buckets orders once and summarizes per bucket, rather than calling
+  `summarize()` per order, which would be quadratic.
+- **`components/admin/views/growth-view.tsx` (new)** — two panels, because in
+  COD these are genuinely different questions and answering only one misleads:
+  1. **أداء الحملات** — cohort by ORDER date. Spend on a day is judged against
+     the orders that day produced, followed to whatever they became. This is
+     what measures the ad.
+  2. **الصندوق** — by DELIVERY date. What money actually landed, matching the
+     income ledger's view of the world.
+- **Maturity signal.** A cohort measured a few days after the spend has barely
+  any delivered orders yet, so its profit reads deeply negative. In-flight
+  orders are counted and surfaced ("قيد النضج — N في الطريق") so a recent red
+  number reads as incomplete rather than as a loss. This is the single most
+  likely way the dashboard would otherwise be misread.
+- **Unallocated spend.** The allowlist's one real hazard is a Desert Shop
+  campaign the owner forgets to tick: its spend would quietly leave the profit
+  numbers and make every other campaign look better than it is. Any spend
+  outside the ticked set is reported explicitly, by campaign, instead of being
+  dropped. An EMPTY allowlist is treated as "not configured yet" (count
+  everything, with a warning) rather than as "exclude everything", which would
+  render a blank dashboard that reads as "no data".
+- **Settings**: ad account id, EUR→DZD rate (**260**), a campaign picker fed by
+  `listMetaCampaigns`, and a "sync now" button. Each failure path names which
+  of the two owner-supplied prerequisites is actually missing rather than
+  saying "failed".
+- **Types**: `eurToDzd`, `metaAdAccountId`, `metaCampaignIds` on `SiteSettings`.
+
+**What the numbers say.** At 1 EUR = 260 DA, the Glutathione campaign
+(€50.69 → 13,179 DA, 8 orders) against the real product (14,500 DA, 35% margin
+= 5,075 DA/unit) breaks even at a **~40% delivery rate** once the delivery fee
+eaten on each returned parcel is counted. 3 of 8 delivered loses money; 4 of 8
+clears it. That boundary is asserted in the test harness, not just asserted here.
+
+Verified: `npm run build` and eslint clean; 29 assertions over the join, the
+allowlist, the cohort split, the maturity signal and the cash panel — plus 9
+in the trinkl repo over the sync's own helpers.
+
+**Owner action required**: a Business Manager System User token with `ads_read`
+on ad account `839446010997263`, saved as `private/meta.adsToken`. Until then
+the sync writes nothing by design and the dashboard shows orders and margin
+without spend. The scheduled sync also needs Cloud Scheduler enabled on
+`desert-shop-24af9`; the "sync now" button works without it.
+
+**Still the gate**: without the `{{campaign.id}}`/`{{ad.id}}` URL macros on the
+ads (Phase 1), orders arrive with no ad ids and the dashboard will show spend
+on one side and unattributed orders on the other.
+
 ## Completed (this session, 2026-09-04)
 
 ### Growth Phase 1 — attribution & profit spine

@@ -154,6 +154,16 @@ export type SiteSettings = {
   // gross margin). The profit engine's global fallback wherever a product has
   // no explicit `cost`. See lib/profit.ts DEFAULT_COGS_RATE.
   cogsRate?: number;
+  // Meta bills this account in EUR while every price and cost in the shop is
+  // in dinars, so spend is unusable until it is converted. Stored on each
+  // spend row at sync time as well, so changing this never rewrites history.
+  eurToDzd?: number;
+  // Ad account the spend sync reads (digits only, no `act_` prefix).
+  metaAdAccountId?: string;
+  // Campaigns that count as Desert Shop's. The ad account is shared with an
+  // unrelated business, so the growth dashboard reports only these — and
+  // reports everything else as "unallocated" rather than dropping it.
+  metaCampaignIds?: string[];
   [key: string]: unknown;
 };
 
