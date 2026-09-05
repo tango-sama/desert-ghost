@@ -966,9 +966,10 @@ export function OrdersView() {
   // A single-order refresh is always triggered from inside that order's own
   // (already open) card — force it to stay open even if the result is
   // "delivered", so the admin actually sees the stepper land on the final
-  // step instead of the card folding out from under them.
+  // step instead of the card folding out from under them. Written as a whole
+  // new map so it upholds the accordion rule (one open card) on its own.
   function forceOpen(oid: string) {
-    setFolds((f) => ({ ...f, [oid]: true }));
+    setFolds({ [oid]: true });
   }
 
   async function refreshTracking(orderId: string) {
@@ -1951,20 +1952,12 @@ export function OrdersView() {
                 // finishing a drag-select on this header would also
                 // collapse/expand the card out from under the selection.
                 if (window.getSelection()?.toString()) return;
-                setFolds((f) => {
-                  const next = { ...f, [oid]: !isOpen };
-                  // Expanding a card collapses every other already-delivered
-                  // order, so opening one parcel doesn't leave a wall of
-                  // finished ones stuck open alongside it.
-                  if (!isOpen) {
-                    for (const other of list) {
-                      const otherId = String(other.id);
-                      if (otherId !== oid && isDelivered(other))
-                        next[otherId] = false;
-                    }
-                  }
-                  return next;
-                });
+                // Accordion: at most one card is ever open, so opening this
+                // one collapses whatever else was expanded. Every card is
+                // folded by default, which makes both branches a whole new
+                // map rather than an edit of the old one — opening keeps
+                // just this card, closing keeps nothing.
+                setFolds(isOpen ? {} : { [oid]: true });
               }}
             >
               <div className="mb-3 flex flex-wrap items-start justify-between gap-3">

@@ -3266,11 +3266,13 @@ utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}
 
 ## Open Questions
 
-- **Bulk tracking refresh vs. folded cards** — now that every order card
-  starts folded, «🔄 تحديث حالة الطرود المفتوحة» has nothing to refresh on a
-  fresh load. Should it keep meaning "open cards" (admin opens what they
-  want refreshed), or switch to "every tracked order that is not delivered"
-  (more carrier API calls per click)? Owner's call — not changed yet.
+- **Bulk tracking refresh vs. folded cards** — every order card now starts
+  folded AND only one can be open at a time (accordion), so
+  «🔄 تحديث حالة الطرود المفتوحة» can only ever reach one order: (0) on a fresh
+  load, (1) with a card open. Should it keep meaning "open cards" (and lose
+  its bulk purpose, or be dropped), or switch to "every tracked order that is
+  not delivered" (one click = one carrier API call per open parcel, so a real
+  jump in call volume)? Owner's call — not changed yet.
 
 - `isPastCancelWindow` (`components/admin/carriers.ts`) matches «Prêt à
   expédier» with `/pr[êe]t\s*[àa]\s*exp[ée]dier/`, but `\s` does not match an
@@ -4273,8 +4275,16 @@ the nav's box and click its coordinates directly.
 - `folds` now only ever holds cards the admin opened or closed by hand, so
   `clearFold()` after a bulk refresh returns a card to folded, and
   `forceOpen()` after a single-order refresh still keeps that one card open.
-- **Known consequence, not yet decided:** the toolbar's
+- **Accordion**: opening a card now collapses whatever else was expanded —
+  at most one card is open at a time. Replaces the older rule (opening a card
+  collapsed only the other *delivered* ones). Both branches of the toggle
+  write a whole new `folds` map — `{ [oid]: true }` to open, `{}` to close —
+  which is only correct because every card defaults to folded; `forceOpen()`
+  does the same so it upholds the rule on its own.
+- **Known consequence, now sharper:** the toolbar's
   «🔄 تحديث حالة الطرود المفتوحة (N)» button refreshes tracking only for cards
-  that are OPEN, so on a fresh load it now reads (0) and toasts "لا توجد طلبات
-  مفتوحة بها طرود لتحديثها" until the admin opens some cards. Open question
-  below — should it instead target every tracked, not-yet-delivered order?
+  that are OPEN. With all cards folded by default AND only one openable at a
+  time, it can never refresh more than a single order — it reads (0) on a
+  fresh load and (1) once a card is open, so it is no longer a bulk action at
+  all. Open question below — should it target every tracked, not-yet-delivered
+  order instead?
