@@ -43,6 +43,31 @@ not the intended state (see `development-workflow.md`).
   NOT done: no production cutover. The live `desert-shop-24af9.web.app`
   (old static `trinkl` site) is untouched and still what customers see.
 
+- **Update (2026-09-05) — `/offer` is on `main`.** Commit `6da2d23` was
+  fast-forwarded onto `main` and pushed (owner asked to merge, then to
+  deploy). Because the Vercel `desert-ghost` project is Git-connected to this
+  repo's `main` (see the 2026-08-07 note below), that push IS the production
+  deploy trigger — no CLI step should be needed.
+  **NOT VERIFIED from the session sandbox**, and it cannot be: this
+  environment's network policy answers 403 to CONNECT for
+  `www.desertshop.fit`, `vercel.com` AND `api.vercel.com`, and no `vercel`,
+  `firebase` or `gcloud` CLI (or credential) is present, so neither running a
+  deploy nor observing one is possible from here. The repo has no
+  `.github/workflows`, no `vercel.json` and no `firebase.json`, so there is no
+  in-repo deploy step to run either.
+  Owner should confirm at
+  `vercel.com/tango0es-3396s-projects/desert-ghost` (or just load
+  `https://www.desertshop.fit/quiz` and walk it through to `/offer`). If the
+  Git connection has since been removed, the manual paths are
+  `vercel --prod` from a linked checkout, or
+  `firebase apphosting:rollouts:create ghost-staging --git-branch main` for
+  the staging backend.
+  **Worth knowing before traffic hits it**: no product has `landing` content
+  entered yet, so every `/offer` page currently runs on generated copy and the
+  ingredients / before-after / per-product-review sections are all absent by
+  design. Per the note above, no ad campaign points at `/quiz` yet, so this is
+  reaching almost nobody until one does.
+
 - **Update (2026-08-07) — a real Vercel production deployment exists and
   appears to already be live**, discovered incidentally while wiring up
   `FIREBASE_SERVICE_ACCOUNT_KEY` (see Completed below): Vercel project
