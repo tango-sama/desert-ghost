@@ -4321,3 +4321,134 @@ the nav's box and click its coordinates directly.
   fresh load and (1) once a card is open, so it is no longer a bulk action at
   all. Open question below — should it target every tracked, not-yet-delivered
   order instead?
+
+## Completed (this session, 2026-09-05)
+
+### The quiz funnel's landing page (`/offer`)
+
+`/quiz` used to ask for the sale off its own result screen: a list of product
+cards, a total, and a COD modal. No benefits, no ingredients, no usage, no
+proof — the exact ask every other funnel in this repo deliberately does not
+make. Its CTA now hands off to `/offer`, a templated landing page built from
+whatever she chose, and the order is taken there.
+
+The template is data-driven, so it works for **any** of the 149 products
+without a page being written, and gets deeper for the ones actually being
+advertised as the owner fills in per-product content.
+
+- **`app/offer/page.tsx` (new)** — self-contained funnel route, `force-dynamic`,
+  `noindex`. Products and answers arrive in the query string
+  (`?ids=…&goal=…&age=…&form=…&intensity=…`), so the page server-renders,
+  survives a refresh and a share, and can be verified by loading an address —
+  none of which the in-place modal could do. Ids keep the quiz's ranking, are
+  capped at 4, and unknown ones are dropped rather than fatal; nothing
+  resolvable redirects to `/quiz`. Answers are validated against `QUESTIONS`
+  **by key**, so an unrecognised code reaches neither the copy nor the order.
+- **The A/B variant is deliberately NOT in the URL.** `/offer` derives it from
+  the funnel session id in `localStorage`, exactly as `/quiz` does, so the arm
+  matches by construction. Carrying it in the link would let a shared or
+  hand-edited URL report a visitor into an arm she never saw, which is how an
+  A/B result quietly becomes meaningless.
+- **`lib/landing-content.ts` (new)** — pure and I/O-free like `lib/quiz.ts`.
+  Per field, most specific wins: the owner's `products/<id>.landing`, then a
+  category archetype (only the seven semantically-named category ids — `NF`,
+  `AMF`, `Ms`, `Fm`, `Msl`, `Bibo88`, `Venom` are supplier codes, not
+  descriptions, so writing "category copy" for them would mean guessing what
+  the code stands for), then a **goal** archetype from her first answer, then
+  the product's own description, then omission.
+  - **The description is parsed, not split.** Splitting on newlines and calling
+    every line a benefit — the first implementation — put cards reading
+    «الفوائد الرئيسية:» and «بخلاصة الحلزون:» on the live page, because the
+    catalog's descriptions are prose with headings, ✅ bullets and a usage
+    paragraph, not the one-benefit-per-line the admin form asks for. Now:
+    headings are skipped, «اسم: شرح» becomes a titled card (exactly a benefit
+    card's shape), the opening paragraph becomes the subhead rather than a
+    card, and anything after a «كيفية الاستخدام»-style heading becomes a REAL
+    usage step. **49 of 149 products** get product-specific instructions this
+    way; a single one is topped up by the form-based steps rather than
+    discarded, so the section is never one orphaned sentence.
+  - Heading matching is **alef-normalised**: the catalog spells it both
+    «الاستعمال» and «الإستعمال», and an unmatched spelling fails silently —
+    the instructions become a benefit card while the usage section falls back
+    to generic. That is what shipped in the first pass and what the
+    normalisation fixed.
+  - A «اسم: نص» item is re-checked **after trimming**: `.{15,}` counts before
+    the trim, which let «الماركة: Propos' Nature» through as a 14-character
+    "benefit".
+- **Three sections have no generated layer at all** — before/after photos,
+  per-product reviews, and ingredients. The rules live in the engine, not the
+  components, so no caller can route around them: an invented transformation
+  photo is a claim about a customer's body, a fabricated named review is a
+  claim about a customer, and a category cannot tell you what is in a bottle.
+  The page's default proof is the **store's** testimonials (ordering,
+  delivery, the confirmation call), because the same set sits beside all 149
+  products and a per-product outcome claim would be false for at least 148.
+  Consistent with the no-invented-ratings rule in `ui-context.md` and with the
+  line `/carnitine` and `/glutathione` already take on before/after.
+- **Stacked full sections per chosen product** (owner's choice over a
+  hero-only page). That makes a 3-product page long, so the ask is kept
+  reachable three ways: a sticky order bar carrying the running total from
+  past the hero, jump chips in the hero, and a CTA at the end of every block.
+- **`components/storefront/offer/*` (new)** — topbar, hero, the repeated
+  `product-block`, a before/after slider generalised from
+  `collagen/before-after.tsx` (data passed in, not a module constant), store
+  reviews, native-`<details>` FAQ (deduped: three products sharing a category
+  would otherwise ask the same question three times), order summary, trust
+  strip, closing CTA, footer, sticky bar, and one `offer.module.css` on theme
+  tokens only.
+- **The COD form is shared, not copied.** `/offer` renders
+  `components/storefront/quiz/order-modal.tsx` with a new optional `source`
+  prop (`"funnel_quiz_offer"`, default `"funnel_quiz"`) rather than a fifth
+  copy — same carrier helpers, same order document, same
+  Purchase-only-on-success rule. The `source` separates the two in the growth
+  dashboard. `/quiz` no longer takes `settings` at all.
+- **`offer` funnel step** added to `lib/funnel.ts`, the API route's step
+  vocabulary, `FUNNEL_STEPS` (`lib/marketing.ts`) and `STEP_LABELS`
+  (`growth-view.tsx`), between `result` and `checkout`. It fires from
+  `/offer`'s own mount, not the quiz's outgoing tap, so it counts **arrivals**
+  — a navigation that never completes is not recorded as one that did, and a
+  shared link counts the same as a tap through.
+- **`products/<id>.landing`** (new optional field) holds the owner's
+  per-product content, edited from a fifth tab in the admin's "صفحات الهبوط"
+  view (`components/admin/views/product-landing-editor.tsx`). Deliberately not
+  under `site_settings.landingPages` like the four hand-built funnels:
+  `site_settings` is a single document and 149 products of copy would run at
+  the 1 MB limit. Written with a merge, and `products-view.tsx` saves edits
+  with `updateDoc`, so an ordinary product edit leaves it alone. No
+  `firestore.rules` change — `products` is already public-read/admin-write.
+- `offer` added to `LANDING_RESERVED_SLUGS` so a custom slug cannot shadow the
+  route (static routes win over `app/[slug]`).
+
+Verified: `tsc --noEmit` and `eslint` clean (the one remaining lint error,
+`cart-drawer.tsx`'s `<a href="/checkout">`, pre-dates this work); production
+build succeeds and `/offer` appears in the route table. **8,346 assertions**
+run against the **real 149-product catalog** pulled live over the Firestore
+REST API — every product yields a non-empty headline, ≥3 benefits, ≥3 usage
+steps and ≥2 FAQ items for every one of the seven goals; no product yields a
+before/after, a review or an ingredient without owner input; no heading, bullet
+glyph or sub-15-character fragment reaches a benefit card; the intro paragraph
+is never both subhead and card; usage icons never mix ordinal and form sets;
+and overrides win field by field with out-of-range stars clamped.
+
+Then the production server was actually run and driven in headless Chromium at
+390px and 1280px: the quiz walks through all four questions, its CTA reads
+«تابعي — التفاصيل والطلب» and navigates to a real `/offer?ids=…` URL with the
+right three ids; the page renders, the sticky bar appears past the hero, a jump
+chip scrolls to the third block, the order modal opens from the sticky bar with
+all three products and the correct total, and neither viewport has any
+horizontal overflow. `/offer` with no ids, garbage ids and a deleted id behaves
+as specified (307 to `/quiz`, or renders the survivors); invalid answer codes
+are ignored rather than rendered. The funnel route accepts an `offer` event and
+still rejects an invalid step and a missing session. All ten pre-existing routes
+still return 200. The only console errors were the usual expected
+Firestore-offline fallback for the client SDK (no outbound Firebase access from
+the browser in this sandbox) — the same note as every other landing-page
+verification in this file.
+
+**Not yet done**: no per-product `landing` content has been entered for any real
+product yet, so every `/offer` page currently runs on generated content. Before
+`/quiz` gets ad spend, the owner should fill in at least the advertised
+products' ingredients, and upload before/after pairs where she genuinely has
+them — those two sections are the page's strongest and neither can appear
+without her. An actual successful submit against production Firestore was not
+exercised (same outstanding recommendation as every other landing page here).

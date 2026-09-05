@@ -26,6 +26,7 @@ const STEPS = [
   "start",     // tapped through to the first question
   "answer",    // answered one question (carries `step_index`)
   "result",    // saw a recommendation
+  "offer",     // tapped through to the /offer landing page
   "checkout",  // opened the order form
   "order",     // order saved
 ] as const;

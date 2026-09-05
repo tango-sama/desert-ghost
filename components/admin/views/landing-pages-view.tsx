@@ -15,6 +15,7 @@ import { SUNGUARD_PRODUCT } from "@/components/storefront/sunguard/product";
 import { COLLAGEN_PRODUCTS } from "@/components/storefront/collagen/products";
 import { GLUTATHIONE_PRODUCT } from "@/components/storefront/glutathione/product";
 import { CARNITINE_PRODUCT } from "@/components/storefront/carnitine/product";
+import { ProductLandingEditor } from "@/components/admin/views/product-landing-editor";
 import {
   inp,
   txt,
@@ -501,26 +502,43 @@ function PageEditor({
   );
 }
 
+// The four hand-built funnels, plus the templated per-product page. The last
+// one is a different kind of thing — it edits a product document rather than
+// site_settings, and it serves all 149 products instead of one hardcoded SKU —
+// so it gets its own tab and its own component rather than being bent into
+// PageEditor's shape.
+const PRODUCT_TAB = "product" as const;
+type Tab = LandingPageKey | typeof PRODUCT_TAB;
+
 export function LandingPagesView() {
   const settings = useAdminStore((s) => s.settings);
   const toast = useAdminStore((s) => s.toast);
-  const [page, setPage] = useState<LandingPageKey>("sunguard");
+  const [tab, setTab] = useState<Tab>("sunguard");
+
+  const tabs: { key: Tab; label: string }[] = [
+    ...PAGES.map((p) => ({ key: p.key as Tab, label: p.label })),
+    { key: PRODUCT_TAB, label: "🛍️ صفحة منتج (تلقائية)" },
+  ];
 
   return (
     <div>
       <div className={cn(rowActions, "mb-5")}>
-        {PAGES.map((p) => (
+        {tabs.map((t) => (
           <button
-            key={p.key}
+            key={t.key}
             type="button"
-            onClick={() => setPage(p.key)}
-            className={cn(btn("gray"), page === p.key && "border-transparent bg-[var(--rose)] text-white")}
+            onClick={() => setTab(t.key)}
+            className={cn(btn("gray"), tab === t.key && "border-transparent bg-[var(--rose)] text-white")}
           >
-            {p.label}
+            {t.label}
           </button>
         ))}
       </div>
-      <PageEditor key={page} page={page} settings={settings} toast={toast} />
+      {tab === PRODUCT_TAB ? (
+        <ProductLandingEditor />
+      ) : (
+        <PageEditor key={tab} page={tab} settings={settings} toast={toast} />
+      )}
     </div>
   );
 }

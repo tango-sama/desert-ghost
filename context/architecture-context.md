@@ -120,6 +120,80 @@
   make every product's full un-decremented `stock` look like its live
   closet count. Consistent with invariant 2 below.
 
+## The quiz funnel's landing page (`/offer`)
+
+`/quiz` no longer takes the order. Its result screen's CTA now navigates to
+`/offer`, a **templated** landing page built at request time from whatever
+products she ended up with, and the COD form lives there.
+
+- **Route**: `app/offer/page.tsx` — self-contained like `/quiz` and the four
+  hand-built funnels (own layout, no shared storefront Nav/CartDrawer, outside
+  the `(storefront)` group, `force-dynamic`). `noindex`: a page built from one
+  visitor's answers has nothing to offer a search index and would compete with
+  the real product pages.
+- **Handoff is the URL**: `/offer?ids=<id>,<id>,<id>&goal=…&age=…&form=…&intensity=…`.
+  Query string rather than sessionStorage, so the page server-renders, survives
+  a refresh and a share, and is verifiable by loading an address. `ids` keeps
+  the quiz's ranking (hero first), is capped at 4, and unknown ids are dropped
+  rather than fatal; no resolvable product redirects to `/quiz`. Answers are
+  validated against `QUESTIONS` by key, so an unrecognised code cannot reach
+  the page copy or the order document.
+- **The A/B variant is NOT in the URL.** `/offer` derives it from the funnel
+  session id in `localStorage` exactly as `/quiz` does, so the arm matches by
+  construction. Two sources of truth for a test arm is how an A/B result
+  quietly becomes meaningless — a shared or hand-edited link would report a
+  visitor into the arm the link claims rather than the one she saw.
+- **One full section stack per chosen product** (owner's call), then one order
+  for all of them. Because that makes the page long, three things keep the ask
+  reachable: a sticky order bar with the running total from past the hero,
+  jump chips in the hero, and a CTA at the end of every block.
+- **Content engine**: `lib/landing-content.ts`, pure and I/O-free like
+  `lib/quiz.ts` and `lib/profit.ts`. Per field, most specific wins:
+  1. `products/<id>.landing` — what the owner wrote for this product
+  2. a **category archetype**, keyed by the real Firestore category ids (only
+     the seven semantically-named ones; `NF`, `AMF`, `Ms`, `Fm`, `Msl`,
+     `Bibo88`, `Venom` are supplier codes, not descriptions, so they fall to…)
+  3. a **goal archetype**, from what she answered in question one
+  4. the product's own `description`, parsed rather than split — the live
+     catalog's descriptions are prose with headings, ✅ bullets and a usage
+     paragraph, not the one-benefit-per-line the admin form asks for. Headings
+     are skipped, "اسم: شرح" becomes a titled card, the opening paragraph
+     becomes the subhead, and anything after a "كيفية الاستخدام"-style heading
+     becomes a REAL usage step (49 of 149 products carry these; a single one is
+     topped up by the form-based steps rather than discarded).
+  5. omitted — a section with nothing true to say is not rendered.
+- **Three sections are owner-only, by design, and have no generated layer**:
+  before/after photos (an invented transformation photo is a claim about a
+  customer's body), per-product reviews, and ingredients (a category cannot
+  tell you what is in a bottle). The rules live in `lib/landing-content.ts`,
+  not in the components, so no caller can route around them. The page's
+  default review set is the STORE's testimonials — about ordering, delivery
+  and the confirmation call — because the same set sits beside all 149
+  products and a per-product outcome claim would be false for at least 148.
+- **`products/<id>.landing`** (new optional field, `ProductLanding` in
+  `lib/firebase.ts`) holds the owner's per-product content. Deliberately NOT
+  under `site_settings.landingPages` like the four hand-built funnels:
+  `site_settings` is a single document and 149 products of landing copy would
+  run at the 1 MB limit. Both collections are already public-read/admin-write,
+  so neither placement needs a `firestore.rules` change. Written with a merge
+  (`setDocIn("products", id, { landing }, true)`), and `products-view.tsx`
+  saves product edits with `updateDoc`, so an ordinary edit leaves it alone.
+  Edited from a fifth tab in the admin's "صفحات الهبوط" view
+  (`components/admin/views/product-landing-editor.tsx`).
+- **Order form is shared, not copied**: `/offer` renders
+  `components/storefront/quiz/order-modal.tsx` with `source:
+  "funnel_quiz_offer"` (default `"funnel_quiz"`) rather than a fifth copy of
+  the COD form — same carrier helpers, same order document, same
+  Purchase-on-success rule. The `source` is what separates the two in the
+  growth dashboard.
+- **`offer` is a funnel step** (`lib/funnel.ts`, `app/api/funnel/route.ts`,
+  `FUNNEL_STEPS` in `lib/marketing.ts`, `STEP_LABELS` in `growth-view.tsx`),
+  between `result` and `checkout`. It fires from `/offer`'s own mount, not
+  from the quiz's outgoing tap, so it counts arrivals rather than departures
+  and a direct or shared link counts the same as a tap through.
+- `offer` is in `LANDING_RESERVED_SLUGS` so an admin-set custom slug cannot
+  shadow the route — static routes win over `app/[slug]`.
+
 ## Analytics
 
 - Meta Pixel ("amel", id in `NEXT_PUBLIC_META_PIXEL_ID`) loads once from

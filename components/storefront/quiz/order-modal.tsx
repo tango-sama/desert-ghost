@@ -25,10 +25,18 @@ import styles from "./quiz.module.css";
 // same Purchase-only-on-success rule — so a quiz order flows through the
 // admin panel and the carrier integrations with nothing special about it.
 //
-// What IS special is `source: "funnel_quiz"` plus the quiz answers and variant
-// on the order. That is what lets the growth dashboard compare this funnel's
+// What IS special is the `source` plus the quiz answers and variant on the
+// order. That is what lets the growth dashboard compare this funnel's
 // delivered profit against the product pages', and one variant against the
 // other, instead of just counting orders.
+//
+// SHARED WITH /offer. The quiz funnel's last step is the templated landing
+// page (components/storefront/offer/), and it takes the order with this same
+// component rather than a fifth copy of the COD form — the carrier helpers,
+// the order document and the Purchase-on-success rule are identical, and a
+// second copy would drift. `source` is what tells the two apart in the growth
+// dashboard: "funnel_quiz" for an order taken on the result screen itself,
+// "funnel_quiz_offer" for one taken on the landing page.
 
 type Pending = { name: string; phone: string; wilaya: string; baladiya: string; address: string };
 const EMPTY_PENDING: Pending = { name: "", phone: "", wilaya: "", baladiya: "", address: "" };
@@ -47,6 +55,7 @@ export function QuizOrderModal({
   variant,
   settings,
   cache,
+  source = "funnel_quiz",
   onClose,
 }: {
   open: boolean;
@@ -55,6 +64,9 @@ export function QuizOrderModal({
   variant: Variant;
   settings: SiteSettings;
   cache: CarrierCache;
+  /** Which step of the quiz funnel took the order. Defaults to the result
+   *  screen; /offer passes "funnel_quiz_offer". */
+  source?: string;
   onClose: () => void;
 }) {
   const company = pickCompany(settings);
@@ -162,7 +174,7 @@ export function QuizOrderModal({
       })),
       subtotal,
       total: subtotal + fee,
-      source: "funnel_quiz",
+      source,
       // What the funnel learned about her, kept as short codes. This is what
       // makes the funnel answerable later: which goals convert, which ones
       // deliver, and which of the two result layouts sells better.

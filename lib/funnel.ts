@@ -39,7 +39,7 @@ export function funnelSessionId(): string {
 }
 
 export type FunnelEvent = {
-  step: "view" | "start" | "answer" | "result" | "checkout" | "order";
+  step: "view" | "start" | "answer" | "result" | "offer" | "checkout" | "order";
   funnel?: string;
   variant?: string;
   stepIndex?: number;

@@ -80,6 +80,7 @@ const STEP_LABELS: Record<string, string> = {
   start: "بدأت الأسئلة",
   answer: "أجابت على سؤال",
   result: "شاهدت الاقتراح",
+  offer: "فتحت صفحة المنتج",
   checkout: "فتحت نموذج الطلب",
   order: "أتمّت الطلب",
 };

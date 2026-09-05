@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getProducts, getSettings } from "@/lib/firebase";
+import { getProducts } from "@/lib/firebase";
 import { QuizPage } from "@/components/storefront/quiz/quiz-page";
 
 // Self-contained funnel, like /collagen and /glutathione — its own layout, no
@@ -22,6 +22,9 @@ export default async function Page() {
   // The whole catalog is scored client-side, so it is fetched once here rather
   // than round-tripping per answer — the quiz must feel instant between
   // questions, and 149 products is small enough to hand over in one payload.
-  const [settings, products] = await Promise.all([getSettings(), getProducts()]);
-  return <QuizPage settings={settings} products={products} />;
+  //
+  // Settings are no longer read here: the order is taken on /offer now, and
+  // that page fetches the carrier and WhatsApp toggles it needs itself.
+  const products = await getProducts();
+  return <QuizPage products={products} />;
 }

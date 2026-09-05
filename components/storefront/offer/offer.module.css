@@ -1,0 +1,988 @@
+/* The templated landing page (/offer).
+ *
+ * One stylesheet for a page whose content is generated per product, so unlike
+ * collagen.module.css or glutathione.module.css nothing here may assume a
+ * particular photo, a particular section count, or a particular amount of text
+ * — every block has to survive a product with a one-line description and a
+ * product with six, and a page with one block or four.
+ *
+ * Blush Rose & Gold tokens only (context/ui-context.md). RTL-first: the page
+ * renders inside dir="rtl", so `inline-start`/`inline-end` do the positioning
+ * wherever a side is meant to follow the text direction, and left/right are
+ * used only where the geometry is physical (the before/after wipe).
+ */
+
+.offer {
+  background:
+    radial-gradient(60rem 40rem at 85% -10%, var(--rose-tint), transparent 60%),
+    radial-gradient(50rem 35rem at 10% 20%, var(--gold-soft), transparent 55%),
+    var(--cream);
+  color: var(--foreground);
+  min-height: 100vh;
+  /* Room for the sticky order bar so the footer is never trapped under it. */
+  padding-bottom: 6.5rem;
+  overflow-x: hidden;
+}
+
+/* ── top bar ─────────────────────────────────────────────────────────── */
+
+.top {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  padding: 0.75rem 1.1rem;
+  background: rgba(255, 247, 244, 0.85);
+  backdrop-filter: blur(10px);
+  border-bottom: 1px solid transparent;
+  transition: border-color 0.3s var(--ease), box-shadow 0.3s var(--ease);
+}
+
+.topScrolled {
+  border-bottom-color: var(--line);
+  box-shadow: var(--shadow);
+}
+
+.brand {
+  font-size: 1.05rem;
+  font-weight: 900;
+  background: linear-gradient(135deg, var(--rose-deep), var(--gold));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.topNote {
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+/* ── shared section furniture ────────────────────────────────────────── */
+
+.wrap {
+  max-width: 68rem;
+  margin: 0 auto;
+  padding: 0 1.1rem;
+}
+
+.sec {
+  padding: 3rem 0 0.5rem;
+}
+
+.label {
+  display: inline-block;
+  font-size: 0.68rem;
+  font-weight: 900;
+  letter-spacing: 0.5px;
+  color: var(--rose-deep);
+  background: var(--rose-tint);
+  border-radius: 100px;
+  padding: 0.3rem 0.85rem;
+  margin-bottom: 0.7rem;
+}
+
+.h2 {
+  font-size: clamp(1.25rem, 4.4vw, 1.7rem);
+  font-weight: 900;
+  line-height: 1.45;
+  margin: 0 0 0.5rem;
+}
+
+.underline {
+  width: 62px;
+  height: 3px;
+  border-radius: 100px;
+  background: linear-gradient(90deg, var(--gold), var(--rose));
+  margin-bottom: 1.1rem;
+}
+
+.sub {
+  color: var(--ink-2);
+  font-size: 0.88rem;
+  line-height: 1.85;
+  margin: 0 0 1.2rem;
+  max-width: 44rem;
+}
+
+/* ── hero ────────────────────────────────────────────────────────────── */
+
+.hero {
+  padding: 2.2rem 0 1.4rem;
+  text-align: center;
+}
+
+.heroKicker {
+  display: inline-block;
+  font-size: 0.7rem;
+  font-weight: 900;
+  color: var(--rose-deep);
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  padding: 0.35rem 0.95rem;
+  box-shadow: var(--shadow);
+}
+
+.heroTitle {
+  font-size: clamp(1.5rem, 6.4vw, 2.5rem);
+  font-weight: 900;
+  line-height: 1.4;
+  margin: 0.9rem 0 0.6rem;
+}
+
+.heroEm {
+  font-style: normal;
+  background: linear-gradient(135deg, var(--rose-deep), var(--gold));
+  -webkit-background-clip: text;
+  background-clip: text;
+  color: transparent;
+}
+
+.heroLead {
+  color: var(--ink-2);
+  font-size: 0.9rem;
+  line-height: 1.9;
+  margin: 0 auto 1.4rem;
+  max-width: 38rem;
+}
+
+/* The jump chips. On a stacked page these are the whole navigation: without
+   them a three-product page is a single long scroll with no way back to the
+   product she actually came for. */
+.chips {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem;
+  margin-bottom: 1.5rem;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  background: var(--bg-2);
+  border: 1px solid var(--line);
+  border-radius: 100px;
+  padding: 0.4rem 0.85rem 0.4rem 0.4rem;
+  font: inherit;
+  font-size: 0.78rem;
+  font-weight: 800;
+  color: var(--foreground);
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
+}
+
+.chip:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+
+.chipImg {
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  object-fit: cover;
+  background: var(--bg-3);
+}
+
+.chipNum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  border-radius: 50%;
+  background: var(--rose-tint);
+  color: var(--rose-deep);
+  font-size: 0.78rem;
+  font-weight: 900;
+}
+
+/* ── buttons ─────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.5rem;
+  border: 0;
+  border-radius: 100px;
+  padding: 1rem 2rem;
+  font: inherit;
+  font-size: 0.98rem;
+  font-weight: 900;
+  color: #fff;
+  background: linear-gradient(135deg, var(--rose), var(--rose-deep));
+  box-shadow: 0 12px 30px rgba(200, 84, 111, 0.28);
+  cursor: pointer;
+  transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+}
+
+.btn:hover {
+  transform: translateY(-3px);
+  box-shadow: 0 18px 40px rgba(200, 84, 111, 0.36);
+}
+
+.btnGold {
+  background: linear-gradient(135deg, var(--gold-light), var(--gold));
+  color: #4a3413;
+  box-shadow: 0 12px 30px rgba(217, 168, 108, 0.32);
+}
+
+.btnGhost {
+  background: var(--bg-2);
+  color: var(--rose-deep);
+  border: 1.5px solid var(--line);
+  box-shadow: var(--shadow);
+}
+
+.btnBlock {
+  width: 100%;
+}
+
+/* ── trust ───────────────────────────────────────────────────────────── */
+
+.trustRow {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem 1.2rem;
+  font-size: 0.76rem;
+  font-weight: 800;
+  color: var(--ink-2);
+}
+
+.trustGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 0.9rem;
+}
+
+.trustCard {
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: 18px;
+  padding: 1.1rem 1.2rem;
+  box-shadow: var(--shadow);
+}
+
+.trustCard span {
+  font-size: 1.5rem;
+  display: block;
+  margin-bottom: 0.45rem;
+}
+
+.trustCard b {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 900;
+  margin-bottom: 0.25rem;
+}
+
+.trustCard p {
+  margin: 0;
+  font-size: 0.79rem;
+  line-height: 1.75;
+  color: var(--ink-2);
+}
+
+/* ── a product block ─────────────────────────────────────────────────── */
+
+.block {
+  padding: 2.4rem 0 1rem;
+  scroll-margin-top: 4.5rem;
+}
+
+/* Every other block sits on a tinted full-bleed band, so a stacked page reads
+   as separate products rather than one endless column. */
+.blockAlt {
+  background: linear-gradient(180deg, transparent, var(--blush) 12%, var(--blush) 88%, transparent);
+}
+
+.blockHead {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  margin-bottom: 0.8rem;
+}
+
+.blockNum {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  background: linear-gradient(135deg, var(--rose-deep), var(--gold));
+  color: #fff;
+  font-size: 0.8rem;
+  font-weight: 900;
+  flex: none;
+}
+
+.pick {
+  font-size: 0.68rem;
+  font-weight: 900;
+  color: #4a3413;
+  background: linear-gradient(135deg, var(--gold-light), var(--gold));
+  border-radius: 100px;
+  padding: 0.25rem 0.7rem;
+}
+
+.blockTitle {
+  font-size: clamp(1.3rem, 5vw, 1.9rem);
+  font-weight: 900;
+  line-height: 1.45;
+  margin: 0 0 0.5rem;
+}
+
+.blockSub {
+  color: var(--ink-2);
+  font-size: 0.9rem;
+  line-height: 1.85;
+  margin: 0 0 1.5rem;
+  max-width: 44rem;
+}
+
+/* product spotlight: photo + price + its own CTA */
+.spot {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 1.4rem;
+  align-items: center;
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: 24px;
+  padding: 1.2rem;
+  box-shadow: var(--shadow-lg);
+}
+
+.spotMedia {
+  position: relative;
+  border-radius: 18px;
+  overflow: hidden;
+  background: var(--bg-3);
+  aspect-ratio: 1 / 1;
+}
+
+.spotMedia img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.spotBody h3 {
+  font-size: 1.1rem;
+  font-weight: 900;
+  line-height: 1.6;
+  margin: 0 0 0.4rem;
+}
+
+.spotBody > p {
+  color: var(--ink-2);
+  font-size: 0.82rem;
+  line-height: 1.8;
+  margin: 0 0 1rem;
+}
+
+.priceRow {
+  display: flex;
+  align-items: baseline;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+}
+
+.price {
+  font-size: 1.55rem;
+  font-weight: 900;
+  color: var(--rose-deep);
+}
+
+.priceNote {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+
+/* extra photos under the spotlight, when the product has any */
+.thumbs {
+  display: flex;
+  gap: 0.5rem;
+  margin-top: 0.8rem;
+  flex-wrap: wrap;
+}
+
+.thumb {
+  width: 58px;
+  height: 58px;
+  border-radius: 12px;
+  object-fit: cover;
+  border: 1px solid var(--line);
+  background: var(--bg-3);
+}
+
+/* ── benefits ────────────────────────────────────────────────────────── */
+
+.benefits {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  gap: 0.9rem;
+}
+
+.benefit {
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: 18px;
+  padding: 1.1rem 1.2rem;
+  box-shadow: var(--shadow);
+}
+
+.benefitIc {
+  font-size: 1.5rem;
+  display: block;
+  margin-bottom: 0.5rem;
+}
+
+.benefit b {
+  display: block;
+  font-size: 0.92rem;
+  font-weight: 900;
+  margin-bottom: 0.3rem;
+}
+
+.benefit p {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.8;
+  color: var(--ink-2);
+}
+
+/* ── ingredients ─────────────────────────────────────────────────────── */
+
+.ingredients {
+  display: grid;
+  gap: 0.7rem;
+}
+
+.ingredient {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-inline-start: 3px solid var(--gold);
+  border-radius: 16px;
+  padding: 0.95rem 1.1rem;
+}
+
+.ingredient b {
+  font-size: 0.9rem;
+  font-weight: 900;
+  flex: none;
+  min-width: 7.5rem;
+}
+
+.ingredient p {
+  margin: 0;
+  font-size: 0.82rem;
+  line-height: 1.8;
+  color: var(--ink-2);
+}
+
+/* ── usage ───────────────────────────────────────────────────────────── */
+
+.usage {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.usageRow {
+  display: flex;
+  gap: 0.85rem;
+  align-items: flex-start;
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: 16px;
+  padding: 0.9rem 1.1rem;
+}
+
+.usageIc {
+  font-size: 1.25rem;
+  flex: none;
+  line-height: 1.5;
+}
+
+.usageRow p {
+  margin: 0;
+  font-size: 0.84rem;
+  line-height: 1.85;
+  color: var(--ink-2);
+}
+
+.usageNote {
+  margin: 0.9rem 0 0;
+  font-size: 0.76rem;
+  line-height: 1.8;
+  color: var(--ink-3);
+}
+
+/* ── before / after ──────────────────────────────────────────────────── */
+
+.baGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 1rem;
+}
+
+.baCard {
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: 22px;
+  padding: 0.9rem 0.9rem 1.2rem;
+  box-shadow: var(--shadow);
+}
+
+.baCard h4 {
+  font-size: 0.98rem;
+  font-weight: 900;
+  margin: 0.9rem 0 0.3rem;
+}
+
+.baCard p {
+  margin: 0;
+  font-size: 0.8rem;
+  line-height: 1.75;
+  color: var(--ink-2);
+}
+
+/* Physical left/right below, not inline-start/end: the wipe is a geometric
+   left-to-right clip and must not flip with the text direction, or the "بعد"
+   layer would reveal from the wrong side of the handle. */
+.baFrame {
+  position: relative;
+  border-radius: 16px;
+  overflow: hidden;
+  aspect-ratio: 3 / 2.4;
+  cursor: ew-resize;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+  background: var(--bg-3);
+  --ba: 50%;
+}
+
+.baImg {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  pointer-events: none;
+  -webkit-user-drag: none;
+}
+
+.baAfter {
+  clip-path: inset(0 calc(100% - var(--ba)) 0 0);
+  transition: clip-path 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.baHandle {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: var(--ba);
+  width: 0;
+  transition: left 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.baFrame.dragging .baHandle,
+.baFrame.dragging .baAfter {
+  transition: none;
+}
+
+.baHandle::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  left: -1.5px;
+  width: 3px;
+  background: #fff;
+  box-shadow: 0 0 14px rgba(0, 0, 0, 0.4);
+}
+
+.baKnob {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  transform: translate(-50%, -50%);
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  background: #fff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
+  color: var(--rose-deep);
+}
+
+.baKnob svg {
+  width: 20px;
+  height: 20px;
+}
+
+.baTag {
+  position: absolute;
+  top: 10px;
+  font-size: 0.66rem;
+  font-weight: 800;
+  padding: 4px 12px;
+  border-radius: 100px;
+  color: #fff;
+  backdrop-filter: blur(4px);
+  pointer-events: none;
+}
+
+.baTagBefore {
+  right: 10px;
+  background: rgba(58, 42, 48, 0.65);
+  border: 1px solid rgba(255, 255, 255, 0.25);
+}
+
+.baTagAfter {
+  left: 10px;
+  background: linear-gradient(135deg, var(--gold-light), var(--gold));
+  color: #4a3413;
+}
+
+.baNote {
+  margin: 1rem 0 0;
+  font-size: 0.75rem;
+  line-height: 1.8;
+  color: var(--ink-3);
+}
+
+/* ── reviews ─────────────────────────────────────────────────────────── */
+
+.reviews {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  gap: 0.9rem;
+}
+
+.review {
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: 18px;
+  padding: 1.1rem 1.2rem;
+  box-shadow: var(--shadow);
+}
+
+.stars {
+  color: var(--gold);
+  font-size: 0.9rem;
+  letter-spacing: 2px;
+  margin-bottom: 0.5rem;
+}
+
+.review p {
+  margin: 0 0 0.9rem;
+  font-size: 0.83rem;
+  line-height: 1.85;
+  color: var(--ink-2);
+}
+
+.who {
+  display: flex;
+  align-items: center;
+  gap: 0.6rem;
+  font-size: 0.76rem;
+}
+
+.avatar {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background: var(--rose-tint);
+  color: var(--rose-deep);
+  font-weight: 900;
+  flex: none;
+}
+
+.whoName {
+  display: block;
+  font-weight: 900;
+}
+
+.whoWhere {
+  display: block;
+  color: var(--ink-3);
+  font-size: 0.72rem;
+}
+
+/* ── faq ─────────────────────────────────────────────────────────────── */
+
+.faq {
+  display: grid;
+  gap: 0.6rem;
+}
+
+.faqItem {
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: 16px;
+  padding: 0 1.1rem;
+  overflow: hidden;
+}
+
+.faqItem summary {
+  cursor: pointer;
+  list-style: none;
+  padding: 1rem 0;
+  font-size: 0.88rem;
+  font-weight: 800;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.8rem;
+}
+
+.faqItem summary::-webkit-details-marker {
+  display: none;
+}
+
+.faqItem summary::after {
+  content: "+";
+  color: var(--rose-deep);
+  font-size: 1.2rem;
+  font-weight: 900;
+  flex: none;
+}
+
+.faqItem[open] summary::after {
+  content: "−";
+}
+
+.faqItem p {
+  margin: 0;
+  padding: 0 0 1rem;
+  font-size: 0.83rem;
+  line-height: 1.9;
+  color: var(--ink-2);
+}
+
+/* ── the order summary ───────────────────────────────────────────────── */
+
+.summary {
+  background: var(--bg-2);
+  border: 1px solid var(--line-2);
+  border-radius: 24px;
+  padding: 1.4rem;
+  box-shadow: var(--shadow-lg);
+}
+
+.sumRow {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 0.7rem 0;
+  border-bottom: 1px solid var(--line);
+}
+
+.sumRow:last-of-type {
+  border-bottom: 0;
+}
+
+.sumImg {
+  width: 52px;
+  height: 52px;
+  border-radius: 12px;
+  object-fit: cover;
+  background: var(--bg-3);
+  flex: none;
+}
+
+.sumBody {
+  flex: 1;
+  min-width: 0;
+}
+
+.sumTitle {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 800;
+  line-height: 1.6;
+}
+
+.sumPrice {
+  display: block;
+  font-size: 0.8rem;
+  font-weight: 900;
+  color: var(--rose-deep);
+}
+
+.totalRow {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin: 1rem 0;
+  padding-top: 1rem;
+  border-top: 2px dashed var(--line);
+}
+
+.totalLabel {
+  font-size: 0.85rem;
+  font-weight: 800;
+  color: var(--ink-2);
+}
+
+.totalValue {
+  font-size: 1.4rem;
+  font-weight: 900;
+  color: var(--rose-deep);
+}
+
+/* ── closing CTA ─────────────────────────────────────────────────────── */
+
+.ctaBanner {
+  margin: 2.5rem 0 0;
+  text-align: center;
+  background: linear-gradient(135deg, var(--rose-tint), var(--gold-soft));
+  border: 1px solid var(--line-2);
+  border-radius: 26px;
+  padding: 2.2rem 1.4rem;
+}
+
+.ctaBanner h2 {
+  font-size: clamp(1.2rem, 4.6vw, 1.65rem);
+  font-weight: 900;
+  line-height: 1.5;
+  margin: 0 0 0.6rem;
+}
+
+.ctaBanner p {
+  color: var(--ink-2);
+  font-size: 0.86rem;
+  line-height: 1.85;
+  margin: 0 auto 1.3rem;
+  max-width: 34rem;
+}
+
+/* ── footer ──────────────────────────────────────────────────────────── */
+
+.footer {
+  margin-top: 2.5rem;
+  padding: 1.6rem 1.1rem 0;
+  border-top: 1px solid var(--line);
+  text-align: center;
+  font-size: 0.76rem;
+  line-height: 1.9;
+  color: var(--ink-3);
+}
+
+.retake {
+  background: none;
+  border: 0;
+  font: inherit;
+  font-size: 0.79rem;
+  font-weight: 800;
+  color: var(--rose-deep);
+  text-decoration: underline;
+  cursor: pointer;
+  padding: 0.4rem;
+}
+
+/* ── sticky order bar ────────────────────────────────────────────────── */
+
+/* On a page that stacks a full section set per product, this is what keeps the
+   ask reachable: without it the CTA is below the fold for the entire scroll. */
+.sticky {
+  position: fixed;
+  inset-inline: 0;
+  bottom: 0;
+  z-index: 50;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.9rem;
+  padding: 0.7rem 1rem calc(0.7rem + env(safe-area-inset-bottom));
+  background: rgba(255, 255, 255, 0.96);
+  backdrop-filter: blur(10px);
+  border-top: 1px solid var(--line);
+  box-shadow: 0 -8px 26px rgba(224, 114, 140, 0.14);
+  transform: translateY(110%);
+  transition: transform 0.35s var(--ease);
+}
+
+.stickyShow {
+  transform: translateY(0);
+}
+
+.stickyTxt {
+  font-size: 0.8rem;
+  font-weight: 900;
+  line-height: 1.5;
+  min-width: 0;
+}
+
+.stickyTxt small {
+  display: block;
+  font-size: 0.72rem;
+  font-weight: 700;
+  color: var(--ink-2);
+}
+
+.stickyBtn {
+  flex: none;
+  padding: 0.75rem 1.3rem;
+  font-size: 0.85rem;
+}
+
+/* ── responsive ──────────────────────────────────────────────────────── */
+
+@media (max-width: 768px) {
+  .spot {
+    grid-template-columns: 1fr;
+  }
+
+  .spotMedia {
+    aspect-ratio: 4 / 3;
+  }
+}
+
+@media (max-width: 560px) {
+  .ingredient {
+    flex-direction: column;
+    gap: 0.3rem;
+  }
+
+  .ingredient b {
+    min-width: 0;
+  }
+
+  .sec {
+    padding-top: 2.2rem;
+  }
+}
+
+/* ── motion ──────────────────────────────────────────────────────────── */
+
+@media (prefers-reduced-motion: reduce) {
+  .offer *,
+  .offer *::before,
+  .offer *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+}

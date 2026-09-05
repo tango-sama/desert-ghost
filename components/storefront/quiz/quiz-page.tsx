@@ -2,8 +2,8 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
-import { priceFmt, type Product, type SiteSettings } from "@/lib/firebase";
-import { useDeliveryData } from "@/hooks/use-delivery-data";
+import { useRouter } from "next/navigation";
+import { priceFmt, type Product } from "@/lib/firebase";
 import { trackPixelEvent } from "@/lib/meta-pixel";
 import { trackFunnel, funnelSessionId } from "@/lib/funnel";
 import {
@@ -16,7 +16,6 @@ import {
   type Answers,
   type Variant,
 } from "@/lib/quiz";
-import { QuizOrderModal } from "./order-modal";
 import styles from "./quiz.module.css";
 
 // The quiz funnel: five questions, then a personalised recommendation and a
@@ -27,6 +26,13 @@ import styles from "./quiz.module.css";
 // campaign that produced the visitor. The whole reason to build a second
 // funnel is to learn which one earns more per dinar of ad spend, and that is
 // only answerable if the drop-off between questions is recorded as it happens.
+
+// THE RESULT IS NO LONGER THE LAST STEP. Its CTA hands off to /offer — a full
+// landing page built from whatever she chose (see components/storefront/offer/
+// and lib/landing-content.ts), which is where the order is actually taken.
+// Asking for the sale off a list of product cards, with no benefits, no usage
+// and no proof on the page, is exactly the ask every other funnel in this repo
+// deliberately does not make.
 
 type Stage = "intro" | "questions" | "thinking" | "result";
 
@@ -63,19 +69,14 @@ function prefersReducedMotion(): boolean {
   );
 }
 
-export function QuizPage({
-  settings,
-  products,
-}: {
-  settings: SiteSettings;
-  products: Product[];
-}) {
-  const cache = useDeliveryData();
+// `settings` is deliberately no longer a prop: it was here only to feed the COD
+// order modal, and the order is now taken on /offer, which fetches its own.
+export function QuizPage({ products }: { products: Product[] }) {
+  const router = useRouter();
   const [stage, setStage] = useState<Stage>("intro");
   const [index, setIndex] = useState(0);
   const [answers, setAnswers] = useState<Answers>({});
   const [chosen, setChosen] = useState<string[]>([]);
-  const [modalOpen, setModalOpen] = useState(false);
   const [blurb, setBlurb] = useState<string | null>(null);
   // The card currently playing its exit, and the one that just landed.
   const [leaving, setLeaving] = useState<Move | null>(null);
@@ -438,9 +439,9 @@ export function QuizPage({
               type="button"
               className={styles.cta}
               disabled={!selected.length}
-              onClick={() => setModalOpen(true)}
+              onClick={() => router.push(offerHref(selected, answers))}
             >
-              {selected.length ? "اطلبيه الآن — الدفع عند الاستلام" : "اختاري منتجاً واحداً على الأقل"}
+              {selected.length ? "تابعي — التفاصيل والطلب" : "اختاري منتجاً واحداً على الأقل"}
             </button>
 
             <div className={styles.trust}>
@@ -463,19 +464,27 @@ export function QuizPage({
         )}
       </div>
 
-      {variant && (
-        <QuizOrderModal
-          open={modalOpen}
-          products={selected}
-          answers={answers}
-          variant={variant}
-          settings={settings}
-          cache={cache}
-          onClose={() => setModalOpen(false)}
-        />
-      )}
     </div>
   );
+}
+
+/**
+ * The /offer URL for a selection.
+ *
+ * Everything the landing page needs travels in the query string rather than in
+ * sessionStorage, so the page server-renders, survives a refresh and a share,
+ * and can be verified by loading an address.
+ *
+ * The A/B variant is deliberately NOT in the URL. /offer derives it from the
+ * funnel session id in localStorage, exactly as this page does, so it matches
+ * by construction; putting it in the link as well would give a shared or
+ * hand-edited URL the power to report a visitor into the wrong arm.
+ */
+function offerHref(products: Product[], a: Answers): string {
+  const q = new URLSearchParams();
+  q.set("ids", products.map((p) => String(p.id)).join(","));
+  for (const [k, v] of Object.entries(a)) if (v) q.set(k, v);
+  return `/offer?${q.toString()}`;
 }
 
 /* Shown immediately, and kept if the personalised wording never arrives. It

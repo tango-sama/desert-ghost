@@ -31,6 +31,48 @@ const firebaseConfig = {
 export const app = getApps().length ? getApp() : initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 
+// Per-product landing content for the templated /offer page.
+//
+// Stored on the product document itself (`products/<id>.landing`), NOT under
+// site_settings like the four hand-built funnels' `landingPages`. Two reasons:
+// site_settings is a single document and 149 products of landing copy would run
+// at the 1 MB document limit, and this content belongs next to the product it
+// describes. Both collections are already public-read/admin-write, so neither
+// placement needs a firestore.rules change.
+//
+// Every field is optional and every blank field means "keep the generated
+// default" — the same convention `LandingPageContent` already uses. Nothing
+// here is ever required for a product to get a landing page; it only makes one
+// richer. See lib/landing-content.ts for how these layer over the category
+// archetypes and the product's own fields.
+export type LandingBenefit = { ic?: string; title?: string; text?: string };
+export type LandingIngredient = { name?: string; text?: string };
+export type LandingUsageStep = { ic?: string; p?: string };
+export type LandingFaqItem = { q?: string; a?: string };
+/** An owner-entered review. `stars` is admin-set, never inferred — this shop
+ *  stores no rating data and inventing one would be a lie shown to every
+ *  visitor (context/ui-context.md). */
+export type LandingReview = {
+  stars?: number;
+  text?: string;
+  name?: string;
+  where?: string;
+};
+
+export type ProductLanding = {
+  headline?: string;
+  subhead?: string;
+  benefits?: LandingBenefit[];
+  ingredients?: LandingIngredient[];
+  usage?: LandingUsageStep[];
+  faq?: LandingFaqItem[];
+  /** Real uploaded photo pairs only. The template NEVER falls back to a
+   *  category default or an illustrative stand-in for these — an invented
+   *  transformation photo is a claim about a customer's body. */
+  beforeAfter?: LandingBaItem[];
+  reviews?: LandingReview[];
+};
+
 export type Product = {
   id: string;
   title?: string;
@@ -50,6 +92,9 @@ export type Product = {
   // profit engine falls back to site_settings.cogsRate (see lib/profit.ts).
   // Only worth filling in for products actually being advertised.
   cost?: number;
+  // Owner-written landing content for /offer. Absent on almost every product —
+  // the template generates a full page without it.
+  landing?: ProductLanding;
   [key: string]: unknown;
 };
 
@@ -130,6 +175,7 @@ export type LandingPagesContent = Partial<Record<LandingPageKey, LandingPageCont
 // so reusing one of these would make that page's content unreachable.
 export const LANDING_RESERVED_SLUGS = [
   "quiz",
+  "offer",
   "sunguard",
   "collagen",
   "glutathione",

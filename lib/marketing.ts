@@ -270,7 +270,7 @@ export type FunnelEventDoc = {
 };
 
 /** The funnel's stages, in order. Mirrors the vocabulary the API route accepts. */
-export const FUNNEL_STEPS = ["view", "start", "answer", "result", "checkout", "order"] as const;
+export const FUNNEL_STEPS = ["view", "start", "answer", "result", "offer", "checkout", "order"] as const;
 
 export async function getFunnelEvents(
   funnel: string,
