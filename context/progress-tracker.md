@@ -4477,3 +4477,67 @@ products' ingredients, and upload before/after pairs where she genuinely has
 them — those two sections are the page's strongest and neither can appear
 without her. An actual successful submit against production Firestore was not
 exercised (same outstanding recommendation as every other landing page here).
+
+### The «النمو» tab took down the whole admin panel — root cause and fix (2026-09-05)
+
+Reported as "«النمو» tab is not accessible": tapping it replaced the entire
+panel with **"This page couldn't load — Reload to try again, or go back."**
+
+That string is **Next.js 16's own built-in error page**
+(`next/dist/client/components/builtin/global-error.js`), not the browser's. It
+shows when an error escapes the React tree, and `find app -name "error.tsx" -o
+-name "global-error.tsx"` returned nothing — **the app had no error boundary of
+any kind**, so one throw in one view replaced the sidebar, every other tab and
+the shell with a page that named no cause. That is why this was reported as
+"inaccessible" rather than as an error: there was nothing to read.
+
+**Root cause — `Number.MAX_SAFE_INTEGER` is not a valid Date.**
+`growth-view.tsx` used it as the "match nothing" sentinel for the window while
+the range's data loads (`const sinceMs = ready ? data.sinceMs :
+Number.MAX_SAFE_INTEGER`). That is 9.007e15 ms, past the maximum instant a JS
+Date can hold (±8.64e15), so `new Date(sinceMs)` is an Invalid Date. The
+`cashSpend` memo passes it to `spendInPeriod()` → `ymd()` →
+`.toISOString()`, which throws **"Invalid time value"** — during render, on the
+FIRST render, before any data arrives. The tab had therefore never worked at
+all; it was not a data-dependent or recent regression, and nothing about the
+`/offer` work touched it (those edits were one `STEP_LABELS` entry and one
+`FUNNEL_STEPS` element, both additive).
+
+**The sentinel is subtler than it looks** — it must satisfy three constraints
+at once, and the two obvious candidates each fail one:
+  1. compared numerically (`at >= sinceMs` in `cashInPeriod`);
+  2. **formatted as a date** by `ymd()` — which `MAX_SAFE_INTEGER` fails;
+  3. that string compared **lexicographically** (`i.date < since`) — which the
+     maximum valid Date (8.64e15) also fails, because it stringifies to the
+     expanded-year form `+275760-09-13` and `"+"` sorts BEFORE digits, so
+     `"2026-09-01" < "+275760-0"` is false and the sentinel would match every
+     row instead of none. Caught by an assertion, not by reading the code.
+  Fix: `FAR_FUTURE_MS = 253_402_300_799_999` (`9999-12-31T23:59:59.999Z`) —
+  the largest instant that still stringifies as a plain four-digit year.
+  `ymd()` additionally clamps non-finite and out-of-range input rather than
+  trusting it, so no timestamp can take the panel down again.
+
+**Two error boundaries added, because the missing one is what made a one-line
+bug fatal:**
+- `app/(admin)/error.tsx` (new) — the segment backstop. Arabic/RTL on the admin
+  dark theme, a reset button, and — the point — `error.message` and
+  `error.digest` printed verbatim in a selectable block with a copy button. The
+  text was previously discarded, which is the only reason this was hard to
+  diagnose.
+- `components/admin/view-error-boundary.tsx` (new), wrapping `<ActiveView />` in
+  `admin-shell.tsx`, keyed by the active `ViewKey`. A broken tab now fails
+  *inside the content area* while the sidebar and the other ten tabs stay
+  usable, and switching tabs clears the error.
+
+Verified: `tsc` and `eslint` clean (the one remaining lint error,
+`cart-drawer.tsx`'s `<a href="/checkout">`, pre-dates this work); build clean;
+11 assertions over `spendInPeriod`/`FAR_FUTURE_MS` covering the exact
+first-render call, the "match nothing" semantics, a real window still summing
+correctly, and `MAX_SAFE_INTEGER`/`±Infinity`/`NaN` no longer throwing. Then
+driven in headless Chromium against the built server (with the auth gate
+temporarily bypassed locally, since the sandbox has no Firebase session): before
+the fix the boundary caught the real error and displayed "Invalid time value"
+with the sidebar intact — which is how the root cause was found — and after it,
+«النمو» renders its full dashboard with no page errors. All six routes still
+200. Values read zero in the sandbox because the client Firestore SDK is offline
+here; the fix is to the render path, not to the data.

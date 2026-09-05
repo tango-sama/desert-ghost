@@ -17,6 +17,7 @@ import { IncomeView } from "@/components/admin/views/income-view";
 import { GrowthView } from "@/components/admin/views/growth-view";
 import { SettingsView } from "@/components/admin/views/settings-view";
 import { LandingPagesView } from "@/components/admin/views/landing-pages-view";
+import { ViewErrorBoundary } from "@/components/admin/view-error-boundary";
 
 type ViewKey =
   | "products"
@@ -215,7 +216,12 @@ export function AdminShell() {
           )}
         </div>
         {loaded ? (
-          <ActiveView />
+          /* Keyed by the active tab so switching tabs clears a previous view's
+             error — without the key the boundary would stay latched and every
+             later tab would render its error card instead of itself. */
+          <ViewErrorBoundary key={view} label={TITLES[view]}>
+            <ActiveView />
+          </ViewErrorBoundary>
         ) : (
           <div className="py-20 text-center font-bold text-[var(--ink-3)]">
             ⏳ جاري تحميل البيانات...
