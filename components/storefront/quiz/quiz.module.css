@@ -353,6 +353,42 @@
   background: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='white' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M20 6 9 17l-5-5'/%3E%3C/svg%3E") center / 13px no-repeat;
 }
 
+/* Ticking a card moves it between the two lists. It plays its exit where it
+   stands, and lands in the other list coming from the side it travelled — so
+   the eye follows it across instead of finding it teleported. "up" is the
+   alternates list → the chosen list; translateY is direction-neutral, so this
+   reads the same RTL and LTR. Durations must match MOVE_MS in quiz-page.tsx. */
+@keyframes quizLeaveUp {
+  to { opacity: 0; transform: translateY(-14px) scale(0.95); }
+}
+@keyframes quizLeaveDown {
+  to { opacity: 0; transform: translateY(14px) scale(0.95); }
+}
+@keyframes quizArriveUp {
+  from { opacity: 0; transform: translateY(16px) scale(0.96); }
+}
+@keyframes quizArriveDown {
+  from { opacity: 0; transform: translateY(-16px) scale(0.96); }
+}
+/* A card on its way out must not take a second tap — its state has already
+   been decided, and the tap would land on whatever slid into its place. */
+.moving { pointer-events: none; }
+.leaveUp { animation: quizLeaveUp 0.26s var(--ease) forwards; }
+.leaveDown { animation: quizLeaveDown 0.26s var(--ease) forwards; }
+.arriveUp { animation: quizArriveUp 0.26s var(--ease); }
+.arriveDown { animation: quizArriveDown 0.26s var(--ease); }
+
+/* Reduced motion skips the animation in the component too (the move commits
+   on the click instead of on a timer); this is the belt to that's braces. */
+@media (prefers-reduced-motion: reduce) {
+  .leaveUp,
+  .leaveDown,
+  .arriveUp,
+  .arriveDown {
+    animation: none;
+  }
+}
+
 .totalRow {
   display: flex;
   justify-content: space-between;

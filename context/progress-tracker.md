@@ -3264,6 +3264,39 @@ utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}
   every wilaya instead of the old bug (silently showing communes) — but it
   has no real desks to show yet.
 
+### Quiz result — one selection, two lists, and the move between them
+
+- **`components/storefront/quiz/quiz-page.tsx`** — the result screen used to
+  draw the recommendation and the «قد يناسبكِ أيضاً» alternates as two fixed
+  lists. They are now two views of ONE pool (`[...rec.bundle, ...rec.alternates]`)
+  split by nothing but whether the product is ticked: ticked products render in
+  the upper list, the rest in the lower one, so ticking or unticking moves the
+  card between them.
+- **Bug this fixes**: `selected` filtered `rec.bundle`, so ticking an alternate
+  lit the card up but never added it — it was missing from the total, from the
+  ViewContent value, and from the order the modal submitted. She could tick a
+  product, see it highlighted, and be delivered something else. `selected` now
+  filters the whole pool.
+- **The move is animated** (`MOVE_MS` = 260ms, matching the `.leaveUp`/`.leaveDown`
+  animations in `quiz.module.css`): the card plays its exit where it stands, and
+  the state only flips when that finishes — which is what stops the same product
+  from being drawn in both lists mid-flight. It then arrives in the other list
+  from the side it travelled (`.arriveUp`/`.arriveDown`), so the eye follows it
+  instead of finding it teleported.
+- A tap landing while another card is still animating commits that pending move
+  first rather than dropping it; `prefers-reduced-motion` skips the animation and
+  flips on the click. Both timers are cleared on unmount and on «إعادة الأسئلة».
+- The «الأنسب لكِ» badge now follows the hero product (`rec.bundle[0]`) and shows
+  only while it is ticked, instead of being pinned to whatever sat first in the
+  upper list.
+- Verified in Chromium against real Firestore data: ticking an alternate plays
+  `quizLeaveUp` (opacity 0.11, translateY -12.5px mid-flight), moves the card up,
+  and the total goes 3,600 → 6,400 د.ج; unticking a recommended product plays
+  `quizLeaveDown` and drops it to the lower list; the order modal's summary lists
+  the moved-up products and totals 14,800 د.ج for three. Reduced motion moves the
+  card within 40ms of the tap. No React console errors (the Firestore WebChannel
+  errors in that run are the sandbox's blocked egress, not the page).
+
 ## Open Questions
 
 - **Bulk tracking refresh vs. folded cards** — every order card now starts

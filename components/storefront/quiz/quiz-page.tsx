@@ -44,6 +44,25 @@ const getServerVariant = (): Variant | null => null;
 // feel like waiting.
 const THINKING_MS = 1100;
 
+// How long a card takes to leave one list before it lands in the other. Must
+// match the animation duration of .leaveUp/.leaveDown in quiz.module.css —
+// the class plays the exit, this timer decides when the state actually flips.
+const MOVE_MS = 260;
+
+// Which way a ticked card travels: "up" into the chosen list, "down" out of it.
+type MoveDir = "up" | "down";
+type Move = { id: string; dir: MoveDir };
+
+// Someone who asked their system for less motion gets the move instantly
+// instead. Read at click time, not at mount, so a preference changed mid-visit
+// is honoured without a reload.
+function prefersReducedMotion(): boolean {
+  return (
+    typeof window !== "undefined" &&
+    !!window.matchMedia?.("(prefers-reduced-motion: reduce)").matches
+  );
+}
+
 export function QuizPage({
   settings,
   products,
@@ -58,6 +77,20 @@ export function QuizPage({
   const [chosen, setChosen] = useState<string[]>([]);
   const [modalOpen, setModalOpen] = useState(false);
   const [blurb, setBlurb] = useState<string | null>(null);
+  // The card currently playing its exit, and the one that just landed.
+  const [leaving, setLeaving] = useState<Move | null>(null);
+  const [arriving, setArriving] = useState<Move | null>(null);
+  const moveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const arriveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  // Both timers touch state, so neither may outlive the component.
+  useEffect(
+    () => () => {
+      if (moveTimer.current) clearTimeout(moveTimer.current);
+      if (arriveTimer.current) clearTimeout(arriveTimer.current);
+    },
+    [],
+  );
 
   // The variant is derived from the session id, so it is stable across
   // questions and across a reload without being stored separately.
@@ -86,13 +119,33 @@ export function QuizPage({
     return recommend(products, answers, variantBundleSize(variant));
   }, [products, answers, variant]);
 
+  // Every product the result screen can show, recommendation first. Which of
+  // the two lists a product appears in is decided by nothing but whether it is
+  // ticked, so a product is never in both and never in neither.
+  const pool = useMemo(
+    () => (rec ? [...rec.bundle, ...rec.alternates] : []),
+    [rec],
+  );
+
   // What is actually being ordered: whatever she has left ticked. Starts as
   // the recommendation and stays hers to change — a recommendation she cannot
   // edit is a demand, and converts worse.
+  //
+  // Drawn from the whole pool, not just the recommended bundle: ticking one of
+  // the "قد يناسبكِ أيضاً" products has to actually add it to the order. While
+  // this filtered `rec.bundle`, such a product looked ticked but was silently
+  // left out of the total and out of the order form.
   const selected = useMemo(
-    () => (rec ? rec.bundle.filter((p) => chosen.includes(String(p.id))) : []),
-    [rec, chosen],
+    () => pool.filter((p) => chosen.includes(String(p.id))),
+    [pool, chosen],
   );
+  const alternates = useMemo(
+    () => pool.filter((p) => !chosen.includes(String(p.id))),
+    [pool, chosen],
+  );
+
+  // The hero keeps its badge wherever it goes, and only while it is ticked.
+  const heroId = rec?.bundle.length ? String(rec.bundle[0].id) : null;
 
   function answer(value: string) {
     if (!question) return;
@@ -170,6 +223,12 @@ export function QuizPage({
   }, [stage, rec, answers]);
 
   function retake() {
+    if (moveTimer.current) clearTimeout(moveTimer.current);
+    if (arriveTimer.current) clearTimeout(arriveTimer.current);
+    moveTimer.current = null;
+    arriveTimer.current = null;
+    setLeaving(null);
+    setArriving(null);
     setAnswers({});
     setChosen([]);
     setIndex(0);
@@ -178,8 +237,95 @@ export function QuizPage({
     setStage("questions");
   }
 
-  function toggle(id: string) {
+  // Ticking a card moves it between the two lists, and the move is animated:
+  // the card first plays its exit where it stands, and only when that is done
+  // does `chosen` change and the card reappear in the other list. Committing
+  // on the timer rather than on the click is what keeps a product from being
+  // drawn in both lists at once mid-flight.
+  function flip(id: string) {
     setChosen((c) => (c.includes(id) ? c.filter((x) => x !== id) : [...c, id]));
+  }
+
+  function toggle(id: string) {
+    // "up" is the travel from the alternates list into the chosen one.
+    const dir: MoveDir = chosen.includes(id) ? "down" : "up";
+
+    // A tap that lands while another card is still animating out commits that
+    // one immediately instead of dropping it — a fast tapper never loses a
+    // selection to the animation.
+    if (moveTimer.current) {
+      clearTimeout(moveTimer.current);
+      moveTimer.current = null;
+      const pending = leaving;
+      setLeaving(null);
+      if (pending) {
+        flip(pending.id);
+        // That pending move was this same card's: it is now done, and
+        // toggling again here would undo it under her finger.
+        if (pending.id === id) return;
+      }
+    }
+
+    if (prefersReducedMotion()) {
+      flip(id);
+      return;
+    }
+
+    setLeaving({ id, dir });
+    moveTimer.current = setTimeout(() => {
+      moveTimer.current = null;
+      setLeaving(null);
+      flip(id);
+      setArriving({ id, dir });
+      if (arriveTimer.current) clearTimeout(arriveTimer.current);
+      arriveTimer.current = setTimeout(() => {
+        arriveTimer.current = null;
+        setArriving(null);
+      }, MOVE_MS);
+    }, MOVE_MS);
+  }
+
+  // The class that plays a card's half of the move, if it is the one moving.
+  function moveCls(id: string): string {
+    if (leaving?.id === id)
+      return `${styles.moving} ${leaving.dir === "up" ? styles.leaveUp : styles.leaveDown}`;
+    if (arriving?.id === id)
+      return arriving.dir === "up" ? styles.arriveUp : styles.arriveDown;
+    return "";
+  }
+
+  // One renderer for both lists — a card is the same card wherever it sits,
+  // and only its badge and its move animation differ.
+  function productCard(p: Product) {
+    const id = String(p.id);
+    const on = chosen.includes(id);
+    return (
+      <button
+        key={id}
+        type="button"
+        className={`${styles.card} ${on ? styles.cardOn : ""} ${moveCls(id)}`}
+        onClick={() => toggle(id)}
+      >
+        {p.image ? (
+          <Image
+            className={styles.cardImg}
+            src={p.image}
+            alt=""
+            width={76}
+            height={76}
+            unoptimized
+          />
+        ) : (
+          <span className={styles.cardImg} />
+        )}
+        <span className={styles.cardBody}>
+          {on && id === heroId && <span className={styles.cardTag}>الأنسب لكِ</span>}
+          <span className={styles.cardTitle}>{p.title ?? p.name}</span>
+          <span className={styles.cardPrice}>{priceFmt(p.price)}</span>
+        </span>
+        <span className={styles.cardCheck} />
+      </button>
+    );
   }
 
   const total = bundleTotal(selected);
@@ -277,40 +423,9 @@ export function QuizPage({
               </p>
             </div>
 
-            <div className={styles.cards}>
-              {rec.bundle.map((p, i) => {
-                const id = String(p.id);
-                const on = chosen.includes(id);
-                const img = p.image ?? "";
-                return (
-                  <button
-                    key={id}
-                    type="button"
-                    className={`${styles.card} ${on ? styles.cardOn : ""}`}
-                    onClick={() => toggle(id)}
-                  >
-                    {img ? (
-                      <Image
-                        className={styles.cardImg}
-                        src={img}
-                        alt=""
-                        width={76}
-                        height={76}
-                        unoptimized
-                      />
-                    ) : (
-                      <span className={styles.cardImg} />
-                    )}
-                    <span className={styles.cardBody}>
-                      {i === 0 && <span className={styles.cardTag}>الأنسب لكِ</span>}
-                      <span className={styles.cardTitle}>{p.title ?? p.name}</span>
-                      <span className={styles.cardPrice}>{priceFmt(p.price)}</span>
-                    </span>
-                    <span className={styles.cardCheck} />
-                  </button>
-                );
-              })}
-            </div>
+            {selected.length > 0 && (
+              <div className={styles.cards}>{selected.map(productCard)}</div>
+            )}
 
             <div className={styles.totalRow}>
               <span className={styles.totalLabel}>
@@ -334,41 +449,10 @@ export function QuizPage({
               <span>✓ منتجات أصلية</span>
             </div>
 
-            {rec.alternates.length > 0 && (
+            {alternates.length > 0 && (
               <>
                 <div className={styles.altsHead}>قد يناسبكِ أيضاً</div>
-                <div className={styles.cards}>
-                  {rec.alternates.map((p) => {
-                    const id = String(p.id);
-                    const on = chosen.includes(id);
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        className={`${styles.card} ${on ? styles.cardOn : ""}`}
-                        onClick={() => toggle(id)}
-                      >
-                        {p.image ? (
-                          <Image
-                            className={styles.cardImg}
-                            src={p.image}
-                            alt=""
-                            width={76}
-                            height={76}
-                            unoptimized
-                          />
-                        ) : (
-                          <span className={styles.cardImg} />
-                        )}
-                        <span className={styles.cardBody}>
-                          <span className={styles.cardTitle}>{p.title ?? p.name}</span>
-                          <span className={styles.cardPrice}>{priceFmt(p.price)}</span>
-                        </span>
-                        <span className={styles.cardCheck} />
-                      </button>
-                    );
-                  })}
-                </div>
+                <div className={styles.cards}>{alternates.map(productCard)}</div>
               </>
             )}
 
