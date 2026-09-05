@@ -4242,3 +4242,18 @@ Note for future browser tests: Playwright will not click a moving element,
 and `overflow: hidden` clips the other copies while Playwright still calls
 them "visible" — so click assertions must pick a link whose box is inside
 the nav's box and click its coordinates directly.
+
+## Completed (this session, 2026-09-05)
+
+### Admin → Orders — client info order on the order card
+
+- **`components/admin/views/orders-view.tsx`** — the always-visible summary
+  line of the order card now reads **name → wilaya → phone** instead of
+  name → phone → wilaya. That is the order the admin actually needs it in:
+  the wilaya decides which carrier/desk the call is about, so it belongs
+  next to the name, with the number to dial last.
+- The `📍 wilaya - baladiya` span moved out of the `o.wilaya &&` fragment into
+  its own guard so the phone can sit between them; address (`🏠`) and the
+  delivery-type/fee line (`🚚`) still follow, still gated on `o.wilaya`.
+- No data or schema change — display order only. Orders with no confirmed
+  address still render name + phone with no location spans, as before.

@@ -2047,15 +2047,19 @@ export function OrdersView() {
                 </div>
               </div>
 
-              {/* customer / phone / location stay visible when folded */}
+              {/* customer / location / phone stay visible when folded, in the
+                  order the admin reads them when calling a client: name, then
+                  wilaya, then the number to dial. */}
               <div className="flex flex-wrap gap-5 text-[.82rem] text-[var(--ink-2)]">
                 <span>👤 {o.customer}</span>
+                {o.wilaya && (
+                  <span>
+                    📍 {o.wilaya} - {o.baladiya}
+                  </span>
+                )}
                 <span className="num">📱 {o.phone}</span>
                 {o.wilaya && (
                   <>
-                    <span>
-                      📍 {o.wilaya} - {o.baladiya}
-                    </span>
                     {o.address && <span>🏠 {o.address}</span>}
                     <span>
                       🚚 {o.deliveryType === "office" ? "مكتب (Stop Desk)" : "منزل"}
