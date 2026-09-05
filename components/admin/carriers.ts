@@ -77,16 +77,6 @@ export function isDelivered(o: Order): boolean {
   );
 }
 
-// A card starts folded when the order is old news: placed over 7 days ago
-// or already delivered.
-export function startsFolded(o: Order): boolean {
-  const when = orderDate(o);
-  return (
-    (when !== null && Date.now() - when.getTime() > 7 * 24 * 60 * 60 * 1000) ||
-    isDelivered(o)
-  );
-}
-
 // Once a parcel is confirmed with the carrier, it can no longer be
 // cancelled through their API — "تعليم كجديد" would only fail — so the
 // button should be disabled at that point rather than let the admin

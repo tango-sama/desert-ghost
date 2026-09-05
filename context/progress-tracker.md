@@ -3266,6 +3266,12 @@ utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}
 
 ## Open Questions
 
+- **Bulk tracking refresh vs. folded cards** — now that every order card
+  starts folded, «🔄 تحديث حالة الطرود المفتوحة» has nothing to refresh on a
+  fresh load. Should it keep meaning "open cards" (admin opens what they
+  want refreshed), or switch to "every tracked order that is not delivered"
+  (more carrier API calls per click)? Owner's call — not changed yet.
+
 - `isPastCancelWindow` (`components/admin/carriers.ts`) matches «Prêt à
   expédier» with `/pr[êe]t\s*[àa]\s*exp[ée]dier/`, but `\s` does not match an
   underscore, so ZR's own snake_case spelling `pret_a_expedier` slips past it.
@@ -4257,3 +4263,18 @@ the nav's box and click its coordinates directly.
   delivery-type/fee line (`🚚`) still follow, still gated on `o.wilaya`.
 - No data or schema change — display order only. Orders with no confirmed
   address still render name + phone with no location spans, as before.
+
+### Admin → Orders — every card starts folded
+
+- **`components/admin/views/orders-view.tsx` / `components/admin/carriers.ts`** —
+  order cards now all start folded. `cardOpen` defaults to `false` and the
+  `startsFolded()` heuristic (folded only when the order was over 7 days old
+  or already delivered) is gone, since every card is folded regardless.
+- `folds` now only ever holds cards the admin opened or closed by hand, so
+  `clearFold()` after a bulk refresh returns a card to folded, and
+  `forceOpen()` after a single-order refresh still keeps that one card open.
+- **Known consequence, not yet decided:** the toolbar's
+  «🔄 تحديث حالة الطرود المفتوحة (N)» button refreshes tracking only for cards
+  that are OPEN, so on a fresh load it now reads (0) and toasts "لا توجد طلبات
+  مفتوحة بها طرود لتحديثها" until the admin opens some cards. Open question
+  below — should it instead target every tracked, not-yet-delivered order?

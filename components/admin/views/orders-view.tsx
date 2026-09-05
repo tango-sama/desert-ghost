@@ -36,7 +36,6 @@ import {
   isPastCancelWindow,
   orderCarrier,
   orderDate,
-  startsFolded,
 } from "@/components/admin/carriers";
 import { nowMs } from "@/lib/time";
 import { useDeliveryData } from "@/hooks/use-delivery-data";
@@ -926,7 +925,11 @@ export function OrdersView() {
     .slice()
     .sort((a, b) => orderStamp(b) - orderStamp(a))
     .filter((o) => !q || orderHaystack(o).includes(q));
-  const cardOpen = (o: Order) => folds[String(o.id)] ?? !startsFolded(o);
+  // Every card starts folded: the summary line (name, wilaya, phone, price)
+  // is what the admin scans down the list, and the details are opened one
+  // order at a time. `folds` only ever holds cards the admin opened or
+  // closed by hand, so clearing an entry returns that card to folded.
+  const cardOpen = (o: Order) => folds[String(o.id)] ?? false;
   const anyTracked = list.some((o) => !!orderCarrier(o));
   const openTracked = list.filter((o) => orderCarrier(o) && cardOpen(o));
   const selectedNoest = Object.keys(noestSel).filter((k) => noestSel[k]);
@@ -949,9 +952,8 @@ export function OrdersView() {
     setBusy((b) => ({ ...b, [key]: on }));
   }
 
-  // After a bulk refresh, drop the order's fold override so the default
-  // folding applies again — a parcel that just turned "delivered" folds
-  // right away, decluttering the list once the batch is done.
+  // After a bulk refresh, drop the order's fold override so the card returns
+  // to folded — the batch leaves the list decluttered once it is done.
   function clearFold(oid: string) {
     setFolds((f) => {
       if (!(oid in f)) return f;
