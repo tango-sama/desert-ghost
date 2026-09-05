@@ -4477,3 +4477,82 @@ products' ingredients, and upload before/after pairs where she genuinely has
 them — those two sections are the page's strongest and neither can appear
 without her. An actual successful submit against production Firestore was not
 exercised (same outstanding recommendation as every other landing page here).
+
+## Completed (this session, 2026-09-05) — `/offer` visual redesign ("Atelier")
+
+The quiz funnel's landing page was **redesigned, not rebuilt**. Every section,
+every honesty rule, the funnel/pixel instrumentation, the A/B variant handling
+and the order modal are untouched; what changed is how the page looks. Branch
+`claude/landing-page-redesign-y5r1dk`.
+
+**What was wrong.** The page was a stack of rounded, rose-shadowed cards with
+emoji icons and gradient-filled headings, at one volume from top to bottom.
+Three rules replace that, and they are documented at the head of
+`offer.module.css`:
+
+1. **Hairlines, not shadows.** Depth is 1px rules and flat ground changes. A
+   drop shadow is spent only where something genuinely floats — the order
+   capsule, the trust rail, the summary panel.
+2. **One accent at a time.** Gold owns the hairlines and the small marks; rose
+   is reserved for the thing you press. The gradient text is gone; it was on
+   the hero, every price and the brand at once.
+3. **Weight down, space up.** Headings sit at 700 rather than 900, larger and
+   tighter; sections breathe at 4.5–5.5rem rather than 3.
+
+**The moves, in order down the page**
+
+- **The emoji are gone.** `components/storefront/offer/icons.tsx` (new) is a
+  1.5-stroke, 24-box, `currentColor` icon set — bag, cash, truck, shield,
+  phone, check, arrow, star. `ui-context.md` already said the storefront does
+  not use emoji as UI icons, and 🛒 💵 🚚 ✅ 📞 were on every CTA and every
+  trust card: the element repeated most often on the page was the one nothing
+  could style, drawn in a different vendor's illustration style at a different
+  apparent weight on every device.
+- **The hero is an ink band**, not a cream one — `--o-ink` ground, the chosen
+  product's photo used twice: once blurred and low purely for the colour it
+  lends, once crisp on a lit plate inside a gold ring. **Deliberately not the
+  photograph full-bleed:** most of the 149 products are packshots on white, and
+  a white packshot stretched to cover is the fastest way to make a page look
+  cheap with white text unreadable over it. Text at the start side, the total
+  set beside the button rather than inside it.
+- **A trust rail overlaps the hero's foot** — cash on delivery, 58 wilayas,
+  the confirmation call. The three reasons someone who has never heard of this
+  store risks a first order, placed at the first thing past the fold.
+- **The jump chips became a product index**: outlined pills, no shadow.
+- **Product blocks are editorial.** A large serif numeral opens each one; the
+  photo sits on a paper plate with a gold hairline drawn *inside* it; the
+  alternating band is flat sand with hairline edges instead of a gradient (a
+  gradient band has no edge, and the edge is the point).
+- **Benefits are a ruled grid**, not floating cards. **Ingredients are a
+  definition list.** **Usage is a numbered timeline** on a connecting rule —
+  and there the numeral means something, since those steps are sequential.
+  `benefit.ic` / `usage.ic` still arrive from `lib/landing-content.ts` and are
+  deliberately not rendered (see the note in `product-block.tsx`).
+- **Reviews read as testimony** — a large faint serif quotation mark, and five
+  drawn stars replacing the `"★".repeat()` / `"☆".repeat()` character run.
+- **FAQ is ruled rows** with a drawn cross that rotates to a minus on open.
+- **The order summary gets the page's one moment of scale**: its own sand band
+  with the real store name set enormous and faint behind the panel.
+- **The page closes on a second ink band** with the hero's gold ring at page
+  scale. A long landing page that ends on the same cream it started on trails
+  off.
+- **The sticky bar is a floating ink capsule**, inset and rounded. The
+  full-width white shelf it replaced is the shape of a cookie banner, and read
+  as something to dismiss.
+
+**Type.** One serif joins Cairo — `Cormorant_Garamond`, loaded in
+`app/offer/page.tsx` rather than the root layout, latin subset, weights 300/400,
+`display: swap`. It is used only for numerals and marks (the product index,
+step numbers, quotation marks, the watermark) and never for prose, so no
+Arabic passes through it and no other route pays for it.
+
+**Palette.** Blush Rose & Gold is unchanged. The page-scoped `--o-*` tokens on
+`.offer` add the ink and ivory surfaces the storefront has no token for; they
+are prefixed because an unprefixed `--ink` would collide with the global
+`--ink-2` / `--ink-3` muted-text tokens the same file uses.
+
+**Verified** — `tsc --noEmit` clean, `next build` clean (the two `eslint`
+errors in the repo are pre-existing, in `cart-drawer.tsx` and unrelated),
+and the live page rendered against the real 149-product catalog at 1280px and
+390px: hero, three product blocks, benefits, usage, summary band, trust grid,
+reviews, FAQ, closing band and footer all check out, RTL correct throughout.

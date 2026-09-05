@@ -149,8 +149,16 @@ export function OfferPage({
         />
       ))}
 
+      {/* Full-bleed on its own sand band — it renders its own wrapper, so it
+          is deliberately outside the one below. */}
+      <SelectionSection
+        products={products}
+        total={total}
+        storeName={storeName}
+        onOrder={openOrder}
+      />
+
       <div className={styles.wrap}>
-        <SelectionSection products={products} total={total} onOrder={openOrder} />
         <TrustStrip />
         {/* Store testimonials, not product ones — see reviews.tsx. */}
         <Reviews items={STORE_REVIEWS} />
@@ -159,6 +167,7 @@ export function OfferPage({
         <Faq items={faq} />
       </div>
 
+      {/* Also full-bleed: the ink band that closes the page. */}
       <CtaBanner total={total} onOrder={openOrder} />
 
       <div className={styles.wrap}>

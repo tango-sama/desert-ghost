@@ -1,4 +1,4 @@
-/* The templated landing page (/offer).
+/* The templated landing page (/offer) — "Atelier" edition.
  *
  * One stylesheet for a page whose content is generated per product, so unlike
  * collagen.module.css or glutathione.module.css nothing here may assume a
@@ -6,181 +6,474 @@
  * — every block has to survive a product with a one-line description and a
  * product with six, and a page with one block or four.
  *
- * Blush Rose & Gold tokens only (context/ui-context.md). RTL-first: the page
- * renders inside dir="rtl", so `inline-start`/`inline-end` do the positioning
- * wherever a side is meant to follow the text direction, and left/right are
- * used only where the geometry is physical (the before/after wipe).
+ * WHAT CHANGED, AND WHY
+ * ---------------------
+ * The page was a stack of rounded, rose-shadowed cards with emoji icons and
+ * gradient-filled headings — every element shouting at the same volume. Three
+ * rules replace that, and they are what the rest of this file is:
+ *
+ *   1. HAIRLINES, NOT SHADOWS. Depth comes from 1px rules and flat ground
+ *      changes. A drop shadow is spent only where something genuinely floats
+ *      (the order capsule, the hero plate).
+ *   2. ONE ACCENT AT A TIME. Gold rules the hairlines and the small marks;
+ *      rose is reserved for the thing you press. Gradient text is gone — it
+ *      was on the hero, every price and the brand at once.
+ *   3. WEIGHT DOWN, SPACE UP. Headings sit at 700, not 900, at larger sizes
+ *      with tighter tracking; sections breathe at 5–7rem rather than 3.
+ *
+ * Brand palette unchanged (Blush Rose & Gold, context/ui-context.md). The
+ * `--o-*` tokens below are page-scoped and prefixed on purpose: the storefront
+ * has no ink-dark surface or ivory ground token, and an unprefixed `--ink`
+ * would collide with the global `--ink-2` / `--ink-3` muted-text tokens this
+ * file also uses.
+ *
+ * RTL-first: the page renders inside dir="rtl", so `inline-start`/`inline-end`
+ * do the positioning wherever a side follows the text direction, and
+ * left/right appear only where the geometry is physical (the before/after
+ * wipe).
  */
 
 .offer {
-  background:
-    radial-gradient(60rem 40rem at 85% -10%, var(--rose-tint), transparent 60%),
-    radial-gradient(50rem 35rem at 10% 20%, var(--gold-soft), transparent 55%),
-    var(--cream);
+  /* page-scoped surfaces */
+  --o-ivory: #fdfaf6;
+  --o-paper: #ffffff;
+  --o-sand: #f7f0ea;
+  --o-ink: #241a1f;
+  --o-ink-2: #33242a;
+  /* hairlines: one neutral, one gold, one for use on the ink bands */
+  --o-hair: rgba(58, 42, 48, 0.13);
+  --o-hair-soft: rgba(58, 42, 48, 0.07);
+  --o-hair-gold: rgba(217, 168, 108, 0.55);
+  --o-hair-light: rgba(255, 255, 255, 0.16);
+  /* the one serif in the design, latin-only: numerals and marks, never prose */
+  --o-serif: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
+
+  background: var(--o-ivory);
   color: var(--foreground);
   min-height: 100vh;
-  /* Room for the sticky order bar so the footer is never trapped under it. */
-  padding-bottom: 6.5rem;
+  /* Room for the floating order capsule so the footer is never trapped. */
+  padding-bottom: 7rem;
   overflow-x: hidden;
 }
 
 /* ── top bar ─────────────────────────────────────────────────────────── */
 
+/* Transparent over the ink hero and lit for it; it takes on the page ground
+   and a hairline only once it has left the hero behind. */
 .top {
-  position: sticky;
+  position: fixed;
+  inset-inline: 0;
   top: 0;
   z-index: 40;
   display: flex;
   align-items: center;
   justify-content: space-between;
   gap: 1rem;
-  padding: 0.75rem 1.1rem;
-  background: rgba(255, 247, 244, 0.85);
-  backdrop-filter: blur(10px);
+  padding: 1rem 1.5rem;
+  color: #fff;
   border-bottom: 1px solid transparent;
-  transition: border-color 0.3s var(--ease), box-shadow 0.3s var(--ease);
+  transition: background-color 0.4s var(--ease), color 0.4s var(--ease),
+    border-color 0.4s var(--ease), padding 0.4s var(--ease);
 }
 
 .topScrolled {
-  border-bottom-color: var(--line);
-  box-shadow: var(--shadow);
+  background: rgba(253, 250, 246, 0.88);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border-bottom-color: var(--o-hair);
+  color: var(--foreground);
+  padding-block: 0.7rem;
 }
 
 .brand {
-  font-size: 1.05rem;
-  font-weight: 900;
-  background: linear-gradient(135deg, var(--rose-deep), var(--gold));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .topNote {
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--ink-2);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  font-size: 0.7rem;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  opacity: 0.78;
 }
 
-/* ── shared section furniture ────────────────────────────────────────── */
+/* The gold tick that separates the brand from the promise. */
+.topDot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--gold);
+  flex: none;
+}
+
+/* ── shared furniture ────────────────────────────────────────────────── */
 
 .wrap {
-  max-width: 68rem;
+  max-width: 72rem;
   margin: 0 auto;
-  padding: 0 1.1rem;
+  padding: 0 1.5rem;
 }
 
 .sec {
-  padding: 3rem 0 0.5rem;
+  padding: 4.5rem 0 0;
 }
 
+/* The section mark: a gold rule, then small letterspaced type. Replaces the
+   filled rose pill, which read as a notification badge rather than a label. */
 .label {
-  display: inline-block;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
   font-size: 0.68rem;
-  font-weight: 900;
-  letter-spacing: 0.5px;
-  color: var(--rose-deep);
-  background: var(--rose-tint);
-  border-radius: 100px;
-  padding: 0.3rem 0.85rem;
-  margin-bottom: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: var(--ink-3);
+  margin-bottom: 1.1rem;
+}
+
+.label::before {
+  content: "";
+  width: 28px;
+  height: 1px;
+  background: var(--gold);
+  flex: none;
 }
 
 .h2 {
-  font-size: clamp(1.25rem, 4.4vw, 1.7rem);
-  font-weight: 900;
+  font-size: clamp(1.5rem, 4.6vw, 2.2rem);
+  font-weight: 700;
   line-height: 1.45;
-  margin: 0 0 0.5rem;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.9rem;
+  max-width: 30ch;
 }
 
+/* Kept as a class because before-after.tsx and the section components render
+   it, but it is now a full-width hairline rather than a 62px gradient stub —
+   the gold now lives in `.label::before`. */
 .underline {
-  width: 62px;
-  height: 3px;
-  border-radius: 100px;
-  background: linear-gradient(90deg, var(--gold), var(--rose));
-  margin-bottom: 1.1rem;
+  height: 1px;
+  background: var(--o-hair);
+  margin: 0 0 1.8rem;
 }
 
 .sub {
   color: var(--ink-2);
-  font-size: 0.88rem;
-  line-height: 1.85;
-  margin: 0 0 1.2rem;
-  max-width: 44rem;
+  font-size: 0.92rem;
+  line-height: 2;
+  margin: 0 0 1.8rem;
+  max-width: 46ch;
+}
+
+/* Big faded numeral. The page's counting device — it marks each product block
+   and each benefit without an icon having to mean anything. */
+.numeral {
+  font-family: var(--o-serif);
+  font-weight: 300;
+  line-height: 1;
+  letter-spacing: 0.01em;
+  font-variant-numeric: lining-nums;
+}
+
+/* ── buttons ─────────────────────────────────────────────────────────── */
+
+.btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 0.6rem;
+  border: 0;
+  border-radius: 100px;
+  padding: 1.05rem 2.1rem;
+  font: inherit;
+  font-size: 0.92rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  color: #fff;
+  background: var(--rose-deep);
+  cursor: pointer;
+  transition: background-color 0.35s var(--ease), transform 0.35s var(--ease),
+    box-shadow 0.35s var(--ease);
+}
+
+.btn:hover {
+  background: #b34761;
+  transform: translateY(-2px);
+  box-shadow: 0 14px 32px rgba(200, 84, 111, 0.26);
+}
+
+.btn:active {
+  transform: translateY(0);
+}
+
+.btn svg {
+  width: 18px;
+  height: 18px;
+  flex: none;
+}
+
+/* Ivory on ink — the hero and the closing band, where rose would fight the
+   photograph behind it. */
+.btnLight {
+  background: var(--o-ivory);
+  color: var(--o-ink);
+}
+
+.btnLight:hover {
+  background: #fff;
+  box-shadow: 0 16px 36px rgba(0, 0, 0, 0.28);
+}
+
+/* The quiet CTA: outlined, for the repeat ask at the foot of a product block,
+   where a third solid rose pill in one screen stops meaning anything. */
+.btnQuiet {
+  background: transparent;
+  color: var(--foreground);
+  border: 1px solid var(--o-hair);
+}
+
+.btnQuiet:hover {
+  background: var(--o-paper);
+  border-color: var(--gold);
+  box-shadow: none;
+}
+
+.btnBlock {
+  width: 100%;
 }
 
 /* ── hero ────────────────────────────────────────────────────────────── */
 
+/* An ink ground rather than the product photograph full-bleed: the catalog is
+   mostly packshots on white, and a white packshot stretched to cover is the
+   fastest way to make a page look cheap. The photo is used twice instead —
+   blurred and low, purely for its colour, and again crisp on a lit plate. */
 .hero {
-  padding: 2.2rem 0 1.4rem;
-  text-align: center;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--o-ink);
+  color: #fff;
+  padding: 8.5rem 0 5.5rem;
+}
+
+.heroBg {
+  position: absolute;
+  inset: -12%;
+  z-index: -2;
+  background-image: var(--hero-img);
+  background-size: cover;
+  background-position: center;
+  filter: blur(60px) saturate(1.5);
+  opacity: 0.5;
+  transform: scale(1.12);
+}
+
+.heroScrim {
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(70% 60% at 78% 18%, rgba(217, 168, 108, 0.24), transparent 65%),
+    radial-gradient(60% 55% at 12% 88%, rgba(224, 114, 140, 0.22), transparent 62%),
+    linear-gradient(180deg, rgba(36, 26, 31, 0.82), rgba(36, 26, 31, 0.94));
+}
+
+.heroGrid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
+  gap: 3rem;
+  align-items: center;
 }
 
 .heroKicker {
-  display: inline-block;
-  font-size: 0.7rem;
-  font-weight: 900;
-  color: var(--rose-deep);
-  background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: 100px;
-  padding: 0.35rem 0.95rem;
-  box-shadow: var(--shadow);
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 0.68rem;
+  font-weight: 700;
+  letter-spacing: 0.22em;
+  color: var(--gold-light);
+  margin-bottom: 1.6rem;
+}
+
+.heroKicker::before {
+  content: "";
+  width: 30px;
+  height: 1px;
+  background: var(--gold);
+  flex: none;
 }
 
 .heroTitle {
-  font-size: clamp(1.5rem, 6.4vw, 2.5rem);
-  font-weight: 900;
-  line-height: 1.4;
-  margin: 0.9rem 0 0.6rem;
-}
-
-.heroEm {
-  font-style: normal;
-  background: linear-gradient(135deg, var(--rose-deep), var(--gold));
-  -webkit-background-clip: text;
-  background-clip: text;
-  color: transparent;
+  font-size: clamp(2.1rem, 6.6vw, 3.6rem);
+  font-weight: 700;
+  line-height: 1.3;
+  letter-spacing: -0.015em;
+  margin: 0 0 1.2rem;
+  max-width: 16ch;
 }
 
 .heroLead {
-  color: var(--ink-2);
-  font-size: 0.9rem;
-  line-height: 1.9;
-  margin: 0 auto 1.4rem;
-  max-width: 38rem;
+  color: rgba(255, 255, 255, 0.76);
+  font-size: 1rem;
+  line-height: 2;
+  margin: 0 0 2.2rem;
+  max-width: 42ch;
 }
 
-/* The jump chips. On a stacked page these are the whole navigation: without
-   them a three-product page is a single long scroll with no way back to the
-   product she actually came for. */
-.chips {
+.heroCta {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 1.4rem;
+}
+
+/* The total sits beside the button rather than inside it: a price is a fact,
+   not part of the label, and reading it separately is what lets the button
+   keep one short verb. */
+.heroPrice {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+}
+
+.heroPriceLabel {
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  color: rgba(255, 255, 255, 0.55);
+}
+
+.heroPriceValue {
+  font-size: 1.3rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
+}
+
+/* the lit plate */
+.heroPlate {
+  position: relative;
+  aspect-ratio: 1 / 1;
+  display: grid;
+  place-items: center;
+}
+
+/* A single soft light behind the packshot. Does the work a studio backdrop
+   would, and works for a bottle, a jar or a sachet alike. */
+.heroPlate::before {
+  content: "";
+  position: absolute;
+  inset: 8%;
+  border-radius: 50%;
+  background: radial-gradient(circle, rgba(255, 243, 235, 0.22), transparent 68%);
+}
+
+/* The thin gold ring is the page's signature: it returns on every product
+   plate and on the closing band. */
+.heroRing {
+  position: absolute;
+  inset: 6%;
+  border: 1px solid var(--o-hair-gold);
+  border-radius: 50%;
+  opacity: 0.55;
+}
+
+.heroImg {
+  position: relative;
+  width: 76%;
+  max-width: 340px;
+  aspect-ratio: 1 / 1;
+  object-fit: contain;
+  filter: drop-shadow(0 30px 45px rgba(0, 0, 0, 0.45));
+}
+
+/* ── the trust rail, overlapping the hero's foot ─────────────────────── */
+
+.railWrap {
+  position: relative;
+  z-index: 5;
+  margin-top: -3.25rem;
+}
+
+.rail {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  background: var(--o-paper);
+  border: 1px solid var(--o-hair);
+  border-radius: 4px;
+  box-shadow: 0 24px 60px rgba(58, 42, 48, 0.12);
+  overflow: hidden;
+}
+
+.railItem {
+  display: flex;
+  align-items: center;
+  gap: 0.85rem;
+  padding: 1.35rem 1.4rem;
+  border-inline-end: 1px solid var(--o-hair-soft);
+}
+
+.railItem:last-child {
+  border-inline-end: 0;
+}
+
+.railItem svg {
+  width: 22px;
+  height: 22px;
+  color: var(--gold);
+  flex: none;
+}
+
+.railTitle {
+  display: block;
+  font-size: 0.85rem;
+  font-weight: 700;
+  line-height: 1.5;
+}
+
+.railNote {
+  display: block;
+  font-size: 0.72rem;
+  line-height: 1.6;
+  color: var(--ink-3);
+}
+
+/* ── the product index (multi-product pages only) ────────────────────── */
+
+/* The page's only navigation. On a three-product page there is otherwise no
+   way back to the product she actually came for. */
+.index {
   display: flex;
   flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
+  gap: 0.6rem;
+  padding-top: 2.6rem;
 }
 
 .chip {
   display: inline-flex;
   align-items: center;
-  gap: 0.45rem;
-  background: var(--bg-2);
-  border: 1px solid var(--line);
+  gap: 0.7rem;
+  background: transparent;
+  border: 1px solid var(--o-hair);
   border-radius: 100px;
-  padding: 0.4rem 0.85rem 0.4rem 0.4rem;
+  padding: 0.4rem 1rem 0.4rem 0.4rem;
   font: inherit;
-  font-size: 0.78rem;
-  font-weight: 800;
+  font-size: 0.79rem;
+  font-weight: 600;
   color: var(--foreground);
   cursor: pointer;
-  box-shadow: var(--shadow);
-  transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
+  transition: border-color 0.3s var(--ease), background-color 0.3s var(--ease);
 }
 
 .chip:hover {
-  transform: translateY(-3px);
-  box-shadow: var(--shadow-lg);
+  border-color: var(--gold);
+  background: var(--o-paper);
 }
 
 .chipImg {
@@ -188,7 +481,8 @@
   height: 30px;
   border-radius: 50%;
   object-fit: cover;
-  background: var(--bg-3);
+  background: var(--o-sand);
+  flex: none;
 }
 
 .chipNum {
@@ -198,366 +492,335 @@
   width: 30px;
   height: 30px;
   border-radius: 50%;
-  background: var(--rose-tint);
-  color: var(--rose-deep);
-  font-size: 0.78rem;
-  font-weight: 900;
-}
-
-/* ── buttons ─────────────────────────────────────────────────────────── */
-
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.5rem;
-  border: 0;
-  border-radius: 100px;
-  padding: 1rem 2rem;
-  font: inherit;
-  font-size: 0.98rem;
-  font-weight: 900;
-  color: #fff;
-  background: linear-gradient(135deg, var(--rose), var(--rose-deep));
-  box-shadow: 0 12px 30px rgba(200, 84, 111, 0.28);
-  cursor: pointer;
-  transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
-}
-
-.btn:hover {
-  transform: translateY(-3px);
-  box-shadow: 0 18px 40px rgba(200, 84, 111, 0.36);
-}
-
-.btnGold {
-  background: linear-gradient(135deg, var(--gold-light), var(--gold));
-  color: #4a3413;
-  box-shadow: 0 12px 30px rgba(217, 168, 108, 0.32);
-}
-
-.btnGhost {
-  background: var(--bg-2);
-  color: var(--rose-deep);
-  border: 1.5px solid var(--line);
-  box-shadow: var(--shadow);
-}
-
-.btnBlock {
-  width: 100%;
-}
-
-/* ── trust ───────────────────────────────────────────────────────────── */
-
-.trustRow {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.5rem 1.2rem;
-  font-size: 0.76rem;
-  font-weight: 800;
+  background: var(--o-sand);
   color: var(--ink-2);
-}
-
-.trustGrid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
-  gap: 0.9rem;
-}
-
-.trustCard {
-  background: var(--bg-2);
-  border: 1px solid var(--line-2);
-  border-radius: 18px;
-  padding: 1.1rem 1.2rem;
-  box-shadow: var(--shadow);
-}
-
-.trustCard span {
-  font-size: 1.5rem;
-  display: block;
-  margin-bottom: 0.45rem;
-}
-
-.trustCard b {
-  display: block;
-  font-size: 0.92rem;
-  font-weight: 900;
-  margin-bottom: 0.25rem;
-}
-
-.trustCard p {
-  margin: 0;
-  font-size: 0.79rem;
-  line-height: 1.75;
-  color: var(--ink-2);
+  font-size: 0.75rem;
+  flex: none;
 }
 
 /* ── a product block ─────────────────────────────────────────────────── */
 
 .block {
-  padding: 2.4rem 0 1rem;
-  scroll-margin-top: 4.5rem;
+  padding: 5.5rem 0 1rem;
+  scroll-margin-top: 5rem;
 }
 
-/* Every other block sits on a tinted full-bleed band, so a stacked page reads
-   as separate products rather than one endless column. */
+/* Every other block sits on a flat sand band with hairlines top and bottom, so
+   a stacked page reads as separate products. Flat, not a gradient: a gradient
+   band has no edge, and the edge is the whole point. */
 .blockAlt {
-  background: linear-gradient(180deg, transparent, var(--blush) 12%, var(--blush) 88%, transparent);
+  background: var(--o-sand);
+  border-block: 1px solid var(--o-hair-soft);
 }
 
+/* the block's opening: numeral, name, then the product itself */
 .blockHead {
   display: flex;
-  align-items: center;
-  gap: 0.6rem;
-  margin-bottom: 0.8rem;
+  align-items: baseline;
+  gap: 1.1rem;
+  margin-bottom: 1.4rem;
 }
 
 .blockNum {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  background: linear-gradient(135deg, var(--rose-deep), var(--gold));
-  color: #fff;
-  font-size: 0.8rem;
-  font-weight: 900;
+  font-size: clamp(2.6rem, 8vw, 4rem);
+  color: var(--gold);
+  opacity: 0.42;
   flex: none;
 }
 
 .pick {
-  font-size: 0.68rem;
-  font-weight: 900;
-  color: #4a3413;
-  background: linear-gradient(135deg, var(--gold-light), var(--gold));
+  display: inline-flex;
+  align-items: center;
+  gap: 0.45rem;
+  font-size: 0.66rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--rose-deep);
+  border: 1px solid var(--rose-soft);
   border-radius: 100px;
-  padding: 0.25rem 0.7rem;
+  padding: 0.3rem 0.85rem;
 }
 
+.pick svg {
+  width: 13px;
+  height: 13px;
+}
+
+/* 26ch, not 20: the headline is the product's own title plus an angle, and
+   catalog titles run long ("مكمّل أوسافي زنك + نحاس لعلاج الشيب 120 كبسولة – Osavi
+   Zinc + Copper"). At 20ch that set five lines deep and pushed the product
+   photo itself under the fold. */
 .blockTitle {
-  font-size: clamp(1.3rem, 5vw, 1.9rem);
-  font-weight: 900;
-  line-height: 1.45;
-  margin: 0 0 0.5rem;
+  font-size: clamp(1.5rem, 5vw, 2.3rem);
+  font-weight: 700;
+  line-height: 1.35;
+  letter-spacing: -0.015em;
+  margin: 0 0 0.7rem;
+  max-width: 26ch;
 }
 
 .blockSub {
   color: var(--ink-2);
-  font-size: 0.9rem;
-  line-height: 1.85;
-  margin: 0 0 1.5rem;
-  max-width: 44rem;
+  font-size: 0.95rem;
+  line-height: 2;
+  margin: 0 0 2.6rem;
+  max-width: 48ch;
 }
 
-/* product spotlight: photo + price + its own CTA */
+/* product spotlight: photo plate + price + its own CTA */
 .spot {
   display: grid;
   grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
-  gap: 1.4rem;
+  gap: clamp(1.5rem, 5vw, 4rem);
   align-items: center;
-  background: var(--bg-2);
-  border: 1px solid var(--line-2);
-  border-radius: 24px;
-  padding: 1.2rem;
-  box-shadow: var(--shadow-lg);
 }
 
+/* The offset frame: a gold hairline drawn outside the photograph rather than
+   around it. Costs nothing and is the difference between a product photo and
+   a plate. */
 .spotMedia {
   position: relative;
-  border-radius: 18px;
-  overflow: hidden;
-  background: var(--bg-3);
-  aspect-ratio: 1 / 1;
+  aspect-ratio: 4 / 5;
+  background: var(--o-paper);
+  border: 1px solid var(--o-hair);
+  display: grid;
+  place-items: center;
+  padding: 2.2rem;
+}
+
+.spotMedia::after {
+  content: "";
+  position: absolute;
+  inset: 12px;
+  border: 1px solid var(--o-hair-gold);
+  opacity: 0.5;
+  pointer-events: none;
+}
+
+.blockAlt .spotMedia {
+  background: var(--o-paper);
 }
 
 .spotMedia img {
   width: 100%;
   height: 100%;
-  object-fit: cover;
+  object-fit: contain;
+  mix-blend-mode: multiply;
 }
 
 .spotBody h3 {
-  font-size: 1.1rem;
-  font-weight: 900;
-  line-height: 1.6;
-  margin: 0 0 0.4rem;
+  font-size: clamp(1.15rem, 3vw, 1.45rem);
+  font-weight: 700;
+  line-height: 1.55;
+  letter-spacing: -0.01em;
+  margin: 0 0 0.6rem;
 }
 
 .spotBody > p {
   color: var(--ink-2);
-  font-size: 0.82rem;
-  line-height: 1.8;
-  margin: 0 0 1rem;
+  font-size: 0.88rem;
+  line-height: 1.95;
+  margin: 0 0 1.6rem;
+  max-width: 42ch;
 }
 
 .priceRow {
   display: flex;
   align-items: baseline;
-  gap: 0.5rem;
-  margin-bottom: 1rem;
+  gap: 0.75rem;
+  flex-wrap: wrap;
+  padding-top: 1.4rem;
+  margin-bottom: 1.6rem;
+  border-top: 1px solid var(--o-hair);
 }
 
 .price {
-  font-size: 1.55rem;
-  font-weight: 900;
-  color: var(--rose-deep);
+  font-size: clamp(1.5rem, 4vw, 1.9rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
 }
 
 .priceNote {
-  font-size: 0.74rem;
-  font-weight: 700;
+  font-size: 0.75rem;
+  font-weight: 600;
   color: var(--ink-3);
 }
 
 /* extra photos under the spotlight, when the product has any */
 .thumbs {
   display: flex;
-  gap: 0.5rem;
-  margin-top: 0.8rem;
+  gap: 0.6rem;
+  margin-top: 1.4rem;
   flex-wrap: wrap;
 }
 
 .thumb {
   width: 58px;
   height: 58px;
-  border-radius: 12px;
   object-fit: cover;
-  border: 1px solid var(--line);
-  background: var(--bg-3);
+  border: 1px solid var(--o-hair);
+  background: var(--o-paper);
+  opacity: 0.75;
+  transition: opacity 0.3s var(--ease), border-color 0.3s var(--ease);
+}
+
+.thumb:hover {
+  opacity: 1;
+  border-color: var(--gold);
 }
 
 /* ── benefits ────────────────────────────────────────────────────────── */
 
+/* A ruled row, not three floating cards: one hairline grid, columns divided by
+   the same 1px as everything else. */
 .benefits {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+  border-top: 1px solid var(--o-hair);
+  border-inline-start: 1px solid var(--o-hair);
 }
 
 .benefit {
-  background: var(--bg-2);
-  border: 1px solid var(--line-2);
-  border-radius: 18px;
-  padding: 1.1rem 1.2rem;
-  box-shadow: var(--shadow);
+  padding: 1.8rem 1.6rem;
+  border-block-end: 1px solid var(--o-hair);
+  border-inline-end: 1px solid var(--o-hair);
 }
 
-.benefitIc {
-  font-size: 1.5rem;
+/* The emoji that used to sit here came from lib/landing-content.ts and was
+   decorative — a counted numeral says the same nothing, in the page's own
+   voice, and renders identically on every device. */
+.benefitNum {
   display: block;
-  margin-bottom: 0.5rem;
+  font-size: 1.6rem;
+  color: var(--gold);
+  margin-bottom: 0.9rem;
 }
 
 .benefit b {
   display: block;
-  font-size: 0.92rem;
-  font-weight: 900;
-  margin-bottom: 0.3rem;
+  font-size: 0.95rem;
+  font-weight: 700;
+  line-height: 1.6;
+  margin-bottom: 0.5rem;
 }
 
 .benefit p {
   margin: 0;
-  font-size: 0.82rem;
-  line-height: 1.8;
+  font-size: 0.85rem;
+  line-height: 1.95;
   color: var(--ink-2);
 }
 
 /* ── ingredients ─────────────────────────────────────────────────────── */
 
+/* An editorial definition list: name in its own column, hairline between
+   rows. The old version boxed each one and hung a gold bar off it. */
 .ingredients {
-  display: grid;
-  gap: 0.7rem;
+  border-top: 1px solid var(--o-hair);
 }
 
 .ingredient {
-  display: flex;
-  gap: 0.85rem;
-  align-items: flex-start;
-  background: var(--bg-2);
-  border: 1px solid var(--line-2);
-  border-inline-start: 3px solid var(--gold);
-  border-radius: 16px;
-  padding: 0.95rem 1.1rem;
+  display: grid;
+  grid-template-columns: minmax(8rem, 12rem) minmax(0, 1fr);
+  gap: 1.6rem;
+  padding: 1.5rem 0;
+  border-bottom: 1px solid var(--o-hair);
 }
 
 .ingredient b {
-  font-size: 0.9rem;
-  font-weight: 900;
-  flex: none;
-  min-width: 7.5rem;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.7;
 }
 
 .ingredient p {
   margin: 0;
-  font-size: 0.82rem;
-  line-height: 1.8;
+  font-size: 0.86rem;
+  line-height: 1.95;
   color: var(--ink-2);
 }
 
 /* ── usage ───────────────────────────────────────────────────────────── */
 
+/* Numbered steps on a connecting rule. These are sequential by nature, so the
+   numeral carries real meaning here — unlike the emoji it replaces. */
 .usage {
-  display: grid;
-  gap: 0.6rem;
+  position: relative;
+  /* An <ol>: the browser's own marker and indent are cleared, because the
+     numerals below are positioned against the rule, not against a list box. */
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  padding-inline-start: 1.6rem;
+  border-inline-start: 1px solid var(--o-hair);
 }
 
 .usageRow {
-  display: flex;
-  gap: 0.85rem;
-  align-items: flex-start;
-  background: var(--bg-2);
-  border: 1px solid var(--line-2);
-  border-radius: 16px;
-  padding: 0.9rem 1.1rem;
+  position: relative;
+  padding: 0 0 1.9rem;
 }
 
-.usageIc {
-  font-size: 1.25rem;
-  flex: none;
-  line-height: 1.5;
+.usageRow:last-child {
+  padding-bottom: 0;
+}
+
+.usageNum {
+  position: absolute;
+  inset-inline-start: -2.35rem;
+  top: -0.15rem;
+  width: 1.5rem;
+  text-align: center;
+  font-size: 1.15rem;
+  color: var(--gold);
+  background: var(--o-ivory);
+  padding-block: 0.15rem;
+}
+
+.blockAlt .usageNum {
+  background: var(--o-sand);
 }
 
 .usageRow p {
   margin: 0;
-  font-size: 0.84rem;
-  line-height: 1.85;
+  font-size: 0.9rem;
+  line-height: 2;
   color: var(--ink-2);
 }
 
 .usageNote {
-  margin: 0.9rem 0 0;
-  font-size: 0.76rem;
-  line-height: 1.8;
+  margin: 1.8rem 0 0;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--o-hair);
+  font-size: 0.78rem;
+  line-height: 1.95;
   color: var(--ink-3);
+  max-width: 56ch;
 }
 
 /* ── before / after ──────────────────────────────────────────────────── */
 
 .baGrid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 1rem;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+  gap: 1.6rem;
 }
 
 .baCard {
-  background: var(--bg-2);
-  border: 1px solid var(--line-2);
-  border-radius: 22px;
-  padding: 0.9rem 0.9rem 1.2rem;
-  box-shadow: var(--shadow);
+  background: var(--o-paper);
+  border: 1px solid var(--o-hair);
+  padding: 1rem 1rem 1.5rem;
 }
 
 .baCard h4 {
   font-size: 0.98rem;
-  font-weight: 900;
-  margin: 0.9rem 0 0.3rem;
+  font-weight: 700;
+  margin: 1.2rem 0 0.4rem;
 }
 
 .baCard p {
   margin: 0;
-  font-size: 0.8rem;
-  line-height: 1.75;
+  font-size: 0.83rem;
+  line-height: 1.9;
   color: var(--ink-2);
 }
 
@@ -566,14 +829,13 @@
    layer would reveal from the wrong side of the handle. */
 .baFrame {
   position: relative;
-  border-radius: 16px;
   overflow: hidden;
   aspect-ratio: 3 / 2.4;
   cursor: ew-resize;
   touch-action: pan-y;
   user-select: none;
   -webkit-user-select: none;
-  background: var(--bg-3);
+  background: var(--o-sand);
   --ba: 50%;
 }
 
@@ -611,8 +873,8 @@
   position: absolute;
   top: 0;
   bottom: 0;
-  left: -1.5px;
-  width: 3px;
+  left: -1px;
+  width: 2px;
   background: #fff;
   box-shadow: 0 0 14px rgba(0, 0, 0, 0.4);
 }
@@ -622,28 +884,29 @@
   top: 50%;
   left: 0;
   transform: translate(-50%, -50%);
-  width: 40px;
-  height: 40px;
+  width: 42px;
+  height: 42px;
   border-radius: 50%;
   background: #fff;
   display: flex;
   align-items: center;
   justify-content: center;
   box-shadow: 0 6px 18px rgba(0, 0, 0, 0.3);
-  color: var(--rose-deep);
+  color: var(--o-ink);
 }
 
 .baKnob svg {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
 }
 
 .baTag {
   position: absolute;
-  top: 10px;
-  font-size: 0.66rem;
-  font-weight: 800;
-  padding: 4px 12px;
+  top: 12px;
+  font-size: 0.64rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  padding: 5px 13px;
   border-radius: 100px;
   color: #fff;
   backdrop-filter: blur(4px);
@@ -651,305 +914,566 @@
 }
 
 .baTagBefore {
-  right: 10px;
-  background: rgba(58, 42, 48, 0.65);
-  border: 1px solid rgba(255, 255, 255, 0.25);
+  right: 12px;
+  background: rgba(36, 26, 31, 0.6);
+  border: 1px solid rgba(255, 255, 255, 0.28);
 }
 
 .baTagAfter {
-  left: 10px;
-  background: linear-gradient(135deg, var(--gold-light), var(--gold));
-  color: #4a3413;
+  left: 12px;
+  background: rgba(36, 26, 31, 0.6);
+  border: 1px solid var(--o-hair-gold);
+  color: var(--gold-light);
 }
 
 .baNote {
-  margin: 1rem 0 0;
-  font-size: 0.75rem;
-  line-height: 1.8;
+  margin: 1.6rem 0 0;
+  font-size: 0.78rem;
+  line-height: 1.95;
   color: var(--ink-3);
+  max-width: 56ch;
 }
 
 /* ── reviews ─────────────────────────────────────────────────────────── */
 
 .reviews {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-  gap: 0.9rem;
+  grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
+  gap: 1.6rem;
 }
 
 .review {
-  background: var(--bg-2);
-  border: 1px solid var(--line-2);
-  border-radius: 18px;
-  padding: 1.1rem 1.2rem;
-  box-shadow: var(--shadow);
+  display: flex;
+  flex-direction: column;
+  background: var(--o-paper);
+  border: 1px solid var(--o-hair);
+  padding: 1.9rem 1.7rem 1.6rem;
+}
+
+/* A serif quotation mark, set large and faint — the one ornament on the page,
+   and the reason these read as testimony rather than as cards. */
+.quote {
+  font-family: var(--o-serif);
+  font-size: 3.4rem;
+  line-height: 0.5;
+  color: var(--gold);
+  opacity: 0.35;
+  margin-bottom: 1.1rem;
 }
 
 .stars {
+  display: flex;
+  gap: 3px;
   color: var(--gold);
-  font-size: 0.9rem;
-  letter-spacing: 2px;
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.9rem;
+}
+
+.stars svg {
+  width: 13px;
+  height: 13px;
 }
 
 .review p {
-  margin: 0 0 0.9rem;
-  font-size: 0.83rem;
-  line-height: 1.85;
+  flex: 1;
+  margin: 0 0 1.5rem;
+  font-size: 0.89rem;
+  line-height: 2;
   color: var(--ink-2);
 }
 
 .who {
   display: flex;
   align-items: center;
-  gap: 0.6rem;
-  font-size: 0.76rem;
+  gap: 0.7rem;
+  font-size: 0.78rem;
+  padding-top: 1.2rem;
+  border-top: 1px solid var(--o-hair);
 }
 
 .avatar {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 32px;
+  width: 34px;
+  height: 34px;
   border-radius: 50%;
-  background: var(--rose-tint);
-  color: var(--rose-deep);
-  font-weight: 900;
+  border: 1px solid var(--o-hair-gold);
+  color: var(--gold);
+  font-weight: 700;
   flex: none;
 }
 
 .whoName {
   display: block;
-  font-weight: 900;
+  font-weight: 700;
 }
 
 .whoWhere {
   display: block;
   color: var(--ink-3);
-  font-size: 0.72rem;
+  font-size: 0.73rem;
+}
+
+/* ── trust ───────────────────────────────────────────────────────────── */
+
+.trustGrid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+  border-top: 1px solid var(--o-hair);
+  border-inline-start: 1px solid var(--o-hair);
+}
+
+.trustCard {
+  padding: 1.9rem 1.6rem;
+  border-block-end: 1px solid var(--o-hair);
+  border-inline-end: 1px solid var(--o-hair);
+}
+
+.trustCard svg {
+  width: 26px;
+  height: 26px;
+  color: var(--gold);
+  margin-bottom: 1.1rem;
+}
+
+.trustCard b {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 700;
+  margin-bottom: 0.45rem;
+}
+
+.trustCard p {
+  margin: 0;
+  font-size: 0.83rem;
+  line-height: 1.95;
+  color: var(--ink-2);
+}
+
+/* The inline promise row under the hero CTA and elsewhere. */
+.trustRow {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.5rem 1.6rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: var(--ink-2);
+}
+
+.trustRow span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.trustRow svg {
+  width: 14px;
+  height: 14px;
+  color: var(--gold);
 }
 
 /* ── faq ─────────────────────────────────────────────────────────────── */
 
 .faq {
-  display: grid;
-  gap: 0.6rem;
+  border-top: 1px solid var(--o-hair);
 }
 
 .faqItem {
-  background: var(--bg-2);
-  border: 1px solid var(--line-2);
-  border-radius: 16px;
-  padding: 0 1.1rem;
-  overflow: hidden;
+  border-bottom: 1px solid var(--o-hair);
 }
 
 .faqItem summary {
   cursor: pointer;
   list-style: none;
-  padding: 1rem 0;
-  font-size: 0.88rem;
-  font-weight: 800;
+  padding: 1.3rem 0;
+  font-size: 0.92rem;
+  font-weight: 700;
+  line-height: 1.7;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  gap: 0.8rem;
+  gap: 1.2rem;
+  transition: color 0.3s var(--ease);
+}
+
+.faqItem summary:hover {
+  color: var(--rose-deep);
 }
 
 .faqItem summary::-webkit-details-marker {
   display: none;
 }
 
-.faqItem summary::after {
-  content: "+";
-  color: var(--rose-deep);
-  font-size: 1.2rem;
-  font-weight: 900;
+/* A drawn cross rather than a "+" glyph: the vertical bar rotates away on
+   open, which the typographic character cannot do. */
+.faqSign {
+  position: relative;
+  width: 13px;
+  height: 13px;
   flex: none;
+  color: var(--gold);
 }
 
-.faqItem[open] summary::after {
-  content: "−";
+.faqSign::before,
+.faqSign::after {
+  content: "";
+  position: absolute;
+  inset: 50% 0 auto;
+  height: 1.5px;
+  background: currentColor;
+  transition: transform 0.35s var(--ease);
+}
+
+.faqSign::after {
+  transform: rotate(90deg);
+}
+
+.faqItem[open] .faqSign::after {
+  transform: rotate(0deg);
 }
 
 .faqItem p {
   margin: 0;
-  padding: 0 0 1rem;
-  font-size: 0.83rem;
-  line-height: 1.9;
+  padding: 0 0 1.4rem;
+  font-size: 0.87rem;
+  line-height: 2.05;
   color: var(--ink-2);
+  max-width: 62ch;
 }
 
 /* ── the order summary ───────────────────────────────────────────────── */
 
+/* Sits on its own band with the store's name set enormous and faint behind
+   it — the page's one moment of scale, and the place it is worth spending,
+   because this is the section that turns three separate reads into one order. */
+.summaryBand {
+  position: relative;
+  overflow: hidden;
+  background: var(--o-sand);
+  border-block: 1px solid var(--o-hair-soft);
+  margin-top: 5rem;
+  padding-bottom: 4.5rem;
+}
+
+.watermark {
+  position: absolute;
+  inset-inline: 0;
+  bottom: -0.18em;
+  text-align: center;
+  font-family: var(--o-serif);
+  font-weight: 300;
+  font-size: clamp(5rem, 20vw, 15rem);
+  line-height: 0.8;
+  letter-spacing: 0.02em;
+  color: var(--gold);
+  opacity: 0.11;
+  pointer-events: none;
+  user-select: none;
+  white-space: nowrap;
+}
+
 .summary {
-  background: var(--bg-2);
-  border: 1px solid var(--line-2);
-  border-radius: 24px;
-  padding: 1.4rem;
-  box-shadow: var(--shadow-lg);
+  position: relative;
+  background: var(--o-paper);
+  border: 1px solid var(--o-hair);
+  padding: 2rem;
+  max-width: 40rem;
+  box-shadow: 0 24px 60px rgba(58, 42, 48, 0.1);
 }
 
 .sumRow {
   display: flex;
   align-items: center;
-  gap: 0.85rem;
-  padding: 0.7rem 0;
-  border-bottom: 1px solid var(--line);
+  gap: 1rem;
+  padding: 1rem 0;
+  border-bottom: 1px solid var(--o-hair-soft);
 }
 
-.sumRow:last-of-type {
-  border-bottom: 0;
+.sumRow:first-child {
+  padding-top: 0;
 }
 
 .sumImg {
-  width: 52px;
-  height: 52px;
-  border-radius: 12px;
-  object-fit: cover;
-  background: var(--bg-3);
+  width: 56px;
+  height: 56px;
+  object-fit: contain;
+  background: var(--o-sand);
+  border: 1px solid var(--o-hair-soft);
   flex: none;
 }
 
 .sumBody {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 1rem;
 }
 
 .sumTitle {
-  display: block;
-  font-size: 0.85rem;
-  font-weight: 800;
-  line-height: 1.6;
+  font-size: 0.88rem;
+  font-weight: 600;
+  line-height: 1.7;
 }
 
 .sumPrice {
-  display: block;
-  font-size: 0.8rem;
-  font-weight: 900;
-  color: var(--rose-deep);
+  font-size: 0.88rem;
+  font-weight: 700;
+  white-space: nowrap;
 }
 
 .totalRow {
   display: flex;
-  align-items: center;
+  align-items: baseline;
   justify-content: space-between;
   gap: 1rem;
-  margin: 1rem 0;
-  padding-top: 1rem;
-  border-top: 2px dashed var(--line);
+  margin: 1.4rem 0 1.6rem;
+  padding-top: 1.4rem;
+  border-top: 1px solid var(--o-hair);
 }
 
 .totalLabel {
-  font-size: 0.85rem;
-  font-weight: 800;
-  color: var(--ink-2);
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  color: var(--ink-3);
 }
 
 .totalValue {
-  font-size: 1.4rem;
-  font-weight: 900;
-  color: var(--rose-deep);
+  font-size: clamp(1.5rem, 5vw, 2rem);
+  font-weight: 700;
+  letter-spacing: -0.02em;
+}
+
+.summaryNote {
+  margin: 1.1rem 0 0;
+  font-size: 0.76rem;
+  line-height: 1.9;
+  color: var(--ink-3);
+  text-align: center;
 }
 
 /* ── closing CTA ─────────────────────────────────────────────────────── */
 
+/* The page's second ink band, and its last word. A dark full-bleed close is
+   what stops a long landing page from simply trailing off. */
 .ctaBanner {
-  margin: 2.5rem 0 0;
+  margin-top: 5rem;
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background: var(--o-ink);
+  color: #fff;
   text-align: center;
-  background: linear-gradient(135deg, var(--rose-tint), var(--gold-soft));
-  border: 1px solid var(--line-2);
-  border-radius: 26px;
-  padding: 2.2rem 1.4rem;
+  padding: 5.5rem 1.5rem;
+}
+
+.ctaBanner::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background:
+    radial-gradient(60% 70% at 20% 10%, rgba(217, 168, 108, 0.2), transparent 62%),
+    radial-gradient(55% 65% at 82% 90%, rgba(224, 114, 140, 0.18), transparent 60%);
+}
+
+/* The gold ring from the hero plate, returning at page scale. */
+.ctaRing {
+  position: absolute;
+  z-index: -1;
+  top: 50%;
+  left: 50%;
+  width: min(46rem, 120vw);
+  aspect-ratio: 1;
+  transform: translate(-50%, -50%);
+  border: 1px solid var(--o-hair-gold);
+  border-radius: 50%;
+  opacity: 0.28;
+  pointer-events: none;
 }
 
 .ctaBanner h2 {
-  font-size: clamp(1.2rem, 4.6vw, 1.65rem);
-  font-weight: 900;
-  line-height: 1.5;
-  margin: 0 0 0.6rem;
+  font-size: clamp(1.5rem, 5vw, 2.4rem);
+  font-weight: 700;
+  line-height: 1.42;
+  letter-spacing: -0.015em;
+  margin: 0 auto 1rem;
+  max-width: 20ch;
 }
 
 .ctaBanner p {
-  color: var(--ink-2);
-  font-size: 0.86rem;
-  line-height: 1.85;
-  margin: 0 auto 1.3rem;
-  max-width: 34rem;
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.92rem;
+  line-height: 2;
+  margin: 0 auto 2.2rem;
+  max-width: 44ch;
+}
+
+.ctaTrust {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: center;
+  gap: 0.5rem 1.6rem;
+  margin-top: 1.8rem;
+  font-size: 0.76rem;
+  font-weight: 600;
+  color: rgba(255, 255, 255, 0.62);
+}
+
+.ctaTrust span {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.4rem;
+}
+
+.ctaTrust svg {
+  width: 14px;
+  height: 14px;
+  color: var(--gold);
 }
 
 /* ── footer ──────────────────────────────────────────────────────────── */
 
 .footer {
-  margin-top: 2.5rem;
-  padding: 1.6rem 1.1rem 0;
-  border-top: 1px solid var(--line);
+  padding: 3rem 0 0;
   text-align: center;
-  font-size: 0.76rem;
-  line-height: 1.9;
+  font-size: 0.78rem;
+  line-height: 2;
   color: var(--ink-3);
 }
 
-.retake {
-  background: none;
-  border: 0;
-  font: inherit;
-  font-size: 0.79rem;
-  font-weight: 800;
-  color: var(--rose-deep);
-  text-decoration: underline;
-  cursor: pointer;
-  padding: 0.4rem;
+.footerMark {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.7rem;
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--foreground);
+  margin-bottom: 1.2rem;
 }
 
-/* ── sticky order bar ────────────────────────────────────────────────── */
+.footerMark::before,
+.footerMark::after {
+  content: "";
+  width: 26px;
+  height: 1px;
+  background: var(--gold);
+}
 
-/* On a page that stacks a full section set per product, this is what keeps the
-   ask reachable: without it the CTA is below the fold for the entire scroll. */
+.footer p {
+  margin: 0 auto 0.7rem;
+  max-width: 58ch;
+}
+
+/* ── the floating order capsule ──────────────────────────────────────── */
+
+/* Inset from the edges and rounded rather than a full-width white shelf: a bar
+   welded to the bottom of the viewport reads as a cookie banner. On a page
+   that stacks a full section set per product this is what keeps the ask
+   reachable — without it the CTA is below the fold for the entire scroll. */
 .sticky {
   position: fixed;
   inset-inline: 0;
   bottom: 0;
   z-index: 50;
   display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.9rem;
-  padding: 0.7rem 1rem calc(0.7rem + env(safe-area-inset-bottom));
-  background: rgba(255, 255, 255, 0.96);
-  backdrop-filter: blur(10px);
-  border-top: 1px solid var(--line);
-  box-shadow: 0 -8px 26px rgba(224, 114, 140, 0.14);
-  transform: translateY(110%);
-  transition: transform 0.35s var(--ease);
+  justify-content: center;
+  padding: 0 1rem calc(1rem + env(safe-area-inset-bottom));
+  pointer-events: none;
+  transform: translateY(140%);
+  transition: transform 0.45s var(--ease);
 }
 
 .stickyShow {
   transform: translateY(0);
 }
 
+.stickyInner {
+  pointer-events: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1.2rem;
+  width: 100%;
+  max-width: 34rem;
+  padding: 0.55rem 0.55rem 0.55rem 0.55rem;
+  padding-inline-start: 1.4rem;
+  background: rgba(36, 26, 31, 0.94);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
+  border: 1px solid var(--o-hair-light);
+  border-radius: 100px;
+  box-shadow: 0 18px 44px rgba(36, 26, 31, 0.34);
+  color: #fff;
+}
+
 .stickyTxt {
-  font-size: 0.8rem;
-  font-weight: 900;
-  line-height: 1.5;
   min-width: 0;
+  line-height: 1.4;
+}
+
+.stickyTotal {
+  display: block;
+  font-size: 0.95rem;
+  font-weight: 700;
+  letter-spacing: -0.01em;
 }
 
 .stickyTxt small {
   display: block;
-  font-size: 0.72rem;
-  font-weight: 700;
-  color: var(--ink-2);
+  font-size: 0.7rem;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.6);
 }
 
 .stickyBtn {
   flex: none;
-  padding: 0.75rem 1.3rem;
+  padding: 0.8rem 1.5rem;
   font-size: 0.85rem;
 }
 
 /* ── responsive ──────────────────────────────────────────────────────── */
+
+@media (max-width: 900px) {
+  .heroGrid {
+    grid-template-columns: 1fr;
+    gap: 2.5rem;
+  }
+
+  /* Plate first, words under it: on a phone the photograph is what stops the
+     scroll, and a headline above a 100vw-wide image pushes it off screen. */
+  .heroPlate {
+    order: -1;
+    aspect-ratio: 4 / 3;
+  }
+
+  .heroImg {
+    width: auto;
+    height: 100%;
+  }
+
+  .hero {
+    padding: 7rem 0 4.5rem;
+    text-align: start;
+  }
+
+  .rail {
+    grid-template-columns: 1fr;
+  }
+
+  .railItem {
+    border-inline-end: 0;
+    border-bottom: 1px solid var(--o-hair-soft);
+  }
+
+  .railItem:last-child {
+    border-bottom: 0;
+  }
+}
 
 @media (max-width: 768px) {
   .spot {
@@ -957,22 +1481,39 @@
   }
 
   .spotMedia {
-    aspect-ratio: 4 / 3;
+    aspect-ratio: 1 / 1;
+    padding: 1.6rem;
+  }
+
+  .block {
+    padding-top: 4rem;
+  }
+
+  .sec {
+    padding-top: 3.5rem;
   }
 }
 
 @media (max-width: 560px) {
+  .wrap {
+    padding: 0 1.15rem;
+  }
+
   .ingredient {
-    flex-direction: column;
-    gap: 0.3rem;
+    grid-template-columns: 1fr;
+    gap: 0.4rem;
   }
 
-  .ingredient b {
-    min-width: 0;
+  .summary {
+    padding: 1.4rem;
   }
 
-  .sec {
-    padding-top: 2.2rem;
+  .stickyInner {
+    padding-inline-start: 1.15rem;
+  }
+
+  .stickyBtn {
+    padding: 0.75rem 1.15rem;
   }
 }
 
@@ -984,5 +1525,45 @@
   .offer *::after {
     animation-duration: 0.01ms !important;
     transition-duration: 0.01ms !important;
+  }
+}
+
+/* ── hero entrance ───────────────────────────────────────────────────── */
+
+/* Staggered, and only on the hero. Everything below the fold already arrives
+   through the shared `.reveal` observer; animating the hero on the observer
+   too would mean it starts hidden and flashes in after hydration, on the one
+   screen a paid visitor sees first. This runs from the CSS alone.
+   The reduced-motion block above wins over these — it is !important. */
+.heroKicker,
+.heroTitle,
+.heroLead,
+.heroCta,
+.heroPlate {
+  animation: offerRise 0.85s var(--ease) both;
+}
+
+.heroTitle {
+  animation-delay: 0.06s;
+}
+.heroLead {
+  animation-delay: 0.12s;
+}
+.heroCta {
+  animation-delay: 0.18s;
+}
+.heroPlate {
+  animation-delay: 0.1s;
+  animation-duration: 1.1s;
+}
+
+@keyframes offerRise {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
   }
 }
