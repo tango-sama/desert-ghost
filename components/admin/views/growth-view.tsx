@@ -16,6 +16,7 @@ import {
   goalStats,
   goalsByCampaign,
   campaignNames,
+  FAR_FUTURE_MS,
   type Insight,
   type Group,
   type FunnelEventDoc,
@@ -142,7 +143,12 @@ export function GrowthView() {
   const ready = data !== null && data.days === days;
   const insights = ready ? data.rows : EMPTY_INSIGHTS;
   const funnelEvents = ready ? data.funnel : EMPTY_EVENTS;
-  const sinceMs = ready ? data.sinceMs : Number.MAX_SAFE_INTEGER;
+  // FAR_FUTURE_MS, not Number.MAX_SAFE_INTEGER: the sentinel is compared
+  // numerically here but is also handed to spendInPeriod(), which formats it as
+  // a date. MAX_SAFE_INTEGER is past the maximum instant a Date can hold, so
+  // that formatting threw "Invalid time value" on every first render of this
+  // tab — see FAR_FUTURE_MS in lib/marketing.ts.
+  const sinceMs = ready ? data.sinceMs : FAR_FUTURE_MS;
   const loading = !ready;
 
   // Real per-product costs where the owner has entered them; the global rate

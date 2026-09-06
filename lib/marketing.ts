@@ -34,8 +34,40 @@ export type Insight = {
   purchases?: number;
 };
 
+/**
+ * "Later than anything real" — the sentinel for a window that has not loaded
+ * yet, meaning match nothing. `9999-12-31T23:59:59.999Z`.
+ *
+ * It has to satisfy THREE constraints at once, and the obvious candidates each
+ * fail one of them:
+ *
+ *   1. It is compared numerically (`at >= sinceMs` in cashInPeriod).
+ *   2. It is FORMATTED AS A DATE by ymd() below, for spendInPeriod. This is
+ *      what `Number.MAX_SAFE_INTEGER` — what the growth dashboard used — broke
+ *      on: 9.007e15 is past the maximum instant a Date can hold (±8.64e15), so
+ *      `new Date(...)` is Invalid and `toISOString()` throws "Invalid time
+ *      value". That threw on every first render of the growth tab and, with no
+ *      error boundary at the time, replaced the whole admin panel with Next's
+ *      built-in error page.
+ *   3. That formatted string is compared LEXICOGRAPHICALLY (`i.date < since`),
+ *      so it must also sort after a real `YYYY-MM-DD`. This is why the fix is
+ *      not simply the maximum valid Date either: `new Date(8.64e15)`
+ *      stringifies to the expanded-year form `+275760-09-13`, and `"+"` sorts
+ *      BEFORE digits — so `"2026-09-01" < "+275760-0"` is false and the
+ *      sentinel would match every row instead of none.
+ *
+ * Year 9999 is the largest instant that still stringifies as a plain four-digit
+ * year, which is the only form that compares correctly against real rows.
+ */
+export const FAR_FUTURE_MS = 253_402_300_799_999;
+
 function ymd(ms: number): string {
-  return new Date(ms).toISOString().slice(0, 10);
+  // Clamped rather than trusted: this is a formatting helper on an admin
+  // dashboard, and no reading of a nonsensical timestamp is worth taking the
+  // panel down for. Clamping to FAR_FUTURE_MS also keeps the result in the
+  // plain four-digit-year form that the caller's string comparison needs.
+  const safe = Number.isFinite(ms) ? Math.max(0, Math.min(FAR_FUTURE_MS, ms)) : 0;
+  return new Date(safe).toISOString().slice(0, 10);
 }
 
 /** Read spend rows from `since` (inclusive, YYYY-MM-DD) onward. */
