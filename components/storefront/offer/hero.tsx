@@ -5,6 +5,7 @@ import { priceFmt } from "@/lib/firebase";
 import type { LandingBlock } from "@/lib/landing-content";
 import { pageHeadline, pageSubhead } from "@/lib/landing-content";
 import type { Answers } from "@/lib/quiz";
+import { HeroGallery } from "./hero-gallery";
 import styles from "./offer.module.css";
 
 // The hero speaks to the ANSWERS, not to the catalog: she has just told us her
@@ -12,9 +13,13 @@ import styles from "./offer.module.css";
 // so the page reads as the continuation of her quiz rather than as a product
 // listing she happened to land on.
 //
-// The chips under it are the page's only navigation. On a stacked page they
-// are not a nicety — without them a three-product page is one long scroll with
-// no way back to the product she actually came for.
+// Under it, the swipeable gallery — one slide per product she chose (see
+// hero-gallery.tsx). It replaced a row of small jump chips: a slide does
+// everything a chip did, jumping to that product's section on tap, plus the
+// thing a chip could not, which is showing her the product at the top of the
+// page instead of three section stacks down. On a stacked page that navigation
+// is not a nicety; without it a three-product page is one long scroll with no
+// way back to the product she actually came for.
 export const Hero = forwardRef<
   HTMLElement,
   {
@@ -34,26 +39,10 @@ export const Hero = forwardRef<
       </h1>
       <p className={styles.heroLead}>{pageSubhead(answers, count)}</p>
 
-      {count > 1 && (
-        <div className={styles.chips}>
-          {blocks.map((b, i) => (
-            <button
-              type="button"
-              className={styles.chip}
-              key={b.anchor}
-              onClick={() => onJump(b.anchor)}
-            >
-              {b.images[0] ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img className={styles.chipImg} src={b.images[0]} alt="" loading="lazy" />
-              ) : (
-                <span className={styles.chipNum}>{i + 1}</span>
-              )}
-              {b.product.title ?? b.product.name}
-            </button>
-          ))}
-        </div>
-      )}
+      {/* Rendered for a single product too: one slide is still a hero image,
+          and the hero had none at all before. The gallery hides its own dots
+          and arrows when there is nothing to swipe to. */}
+      <HeroGallery blocks={blocks} onJump={onJump} />
 
       <button type="button" className={styles.btn} onClick={onOrder}>
         🛒 اطلبي الآن — <span className="num">{priceFmt(total)}</span>

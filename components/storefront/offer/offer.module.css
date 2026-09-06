@@ -150,58 +150,196 @@
   max-width: 38rem;
 }
 
-/* The jump chips. On a stacked page these are the whole navigation: without
-   them a three-product page is a single long scroll with no way back to the
-   product she actually came for. */
-.chips {
-  display: flex;
-  flex-wrap: wrap;
-  justify-content: center;
-  gap: 0.5rem;
-  margin-bottom: 1.5rem;
+/* The hero gallery — one swipeable slide per chosen product.
+ *
+ * Replaces the row of jump chips that used to sit here: a slide shows the
+ * product's photo, name and price and jumps to its section on tap, which is
+ * everything a chip did and the thing a chip could not do — show her what she
+ * is buying, at the top of the page.
+ *
+ * The peek is deliberate. Slides are narrower than the track so the next one
+ * shows at the edge, and that sliver is the entire swipe affordance on a
+ * phone. The track's inline padding is the other half of it: it is what lets a
+ * centre-snapped first and last slide sit centred instead of jammed against an
+ * edge.
+ */
+.gallery {
+  position: relative;
+  margin-bottom: 1.6rem;
 }
 
-.chip {
-  display: inline-flex;
-  align-items: center;
-  gap: 0.45rem;
+.galleryTrack {
+  display: flex;
+  gap: 0.8rem;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  scroll-behavior: smooth;
+  /* NO `touch-action` here, deliberately. `pan-y` reads like "let vertical
+     swipes fall through to the page", but it means the opposite of what a
+     horizontal carousel needs: it tells the browser only vertical panning is
+     allowed on this element, which kills the horizontal swipe outright. The
+     arrows still worked, which is exactly how it nearly shipped. The default
+     `auto` lets the browser pick the axis from the gesture — a mostly-sideways
+     drag scrolls the track, a mostly-downward one scrolls the page — which is
+     what the home banner does too.
+     `overscroll-behavior-x` still stops a swipe past the last slide from
+     turning into a browser back-navigation. */
+  overscroll-behavior-x: contain;
+  padding-block: 0.4rem 0.2rem;
+  padding-inline: calc((100% - var(--slide-w)) / 2);
+  --slide-w: min(86%, 22rem);
+}
+
+.slide {
+  flex: 0 0 var(--slide-w);
+  scroll-snap-align: center;
+  display: flex;
+  flex-direction: column;
+  gap: 0.35rem;
   background: var(--bg-2);
-  border: 1px solid var(--line);
-  border-radius: 100px;
-  padding: 0.4rem 0.85rem 0.4rem 0.4rem;
+  border: 1px solid var(--line-2);
+  border-radius: 22px;
+  padding: 0.8rem 0.8rem 1rem;
   font: inherit;
-  font-size: 0.78rem;
+  color: inherit;
+  text-align: center;
+  cursor: pointer;
+  box-shadow: var(--shadow);
+  transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease);
+}
+
+.slide:hover {
+  transform: translateY(-3px);
+  box-shadow: var(--shadow-lg);
+}
+
+.slideMedia {
+  position: relative;
+  display: block;
+  aspect-ratio: 1 / 1;
+  border-radius: 16px;
+  overflow: hidden;
+  background: var(--bg-3);
+  margin-bottom: 0.55rem;
+}
+
+.slideMedia img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+  /* A drag on the photo must scroll the track, not start an image drag. */
+  -webkit-user-drag: none;
+  user-select: none;
+}
+
+.slideNoImg {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 100%;
+  font-size: 3.4rem;
+  background: linear-gradient(135deg, var(--rose-tint), var(--gold-soft));
+}
+
+.slideTag {
+  position: absolute;
+  top: 10px;
+  inset-inline-start: 10px;
+  font-size: 0.66rem;
+  font-weight: 900;
+  color: #4a3413;
+  background: linear-gradient(135deg, var(--gold-light), var(--gold));
+  border-radius: 100px;
+  padding: 0.25rem 0.7rem;
+}
+
+.slideName {
+  font-size: 0.88rem;
   font-weight: 800;
-  color: var(--foreground);
+  line-height: 1.6;
+}
+
+.slidePrice {
+  font-size: 1.05rem;
+  font-weight: 900;
+  color: var(--rose-deep);
+}
+
+.slideMore {
+  font-size: 0.74rem;
+  font-weight: 700;
+  color: var(--ink-3);
+}
+
+/* Pointer affordance only — on a phone the swipe is the interaction, and two
+   arrows over a 22rem card would cover the product. */
+.galleryArrow {
+  position: absolute;
+  top: 38%;
+  z-index: 2;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  border: 1px solid var(--line);
+  background: rgba(255, 255, 255, 0.92);
+  color: var(--rose-deep);
   cursor: pointer;
   box-shadow: var(--shadow);
   transition: transform 0.25s var(--ease), box-shadow 0.25s var(--ease);
 }
 
-.chip:hover {
-  transform: translateY(-3px);
+.galleryArrow svg {
+  width: 20px;
+  height: 20px;
+}
+
+.galleryArrow:hover {
+  transform: scale(1.06);
   box-shadow: var(--shadow-lg);
 }
 
-.chipImg {
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  object-fit: cover;
-  background: var(--bg-3);
+/* Physical sides: «السابق» is the right-hand arrow in RTL, and these must not
+   flip with the writing direction or the chevrons would point the wrong way. */
+.galleryPrev {
+  right: 0.25rem;
 }
 
-.chipNum {
-  display: inline-flex;
+.galleryNext {
+  left: 0.25rem;
+}
+
+@media (min-width: 760px) {
+  .galleryArrow {
+    display: flex;
+  }
+}
+
+.dots {
+  display: flex;
   align-items: center;
   justify-content: center;
-  width: 30px;
-  height: 30px;
-  border-radius: 50%;
-  background: var(--rose-tint);
-  color: var(--rose-deep);
-  font-size: 0.78rem;
-  font-weight: 900;
+  gap: 0.4rem;
+  margin-top: 0.9rem;
+}
+
+.dot {
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 100px;
+  background: var(--rose-soft);
+  cursor: pointer;
+  transition: width 0.3s var(--ease), background-color 0.3s var(--ease);
+}
+
+.dot[data-active="true"] {
+  width: 24px;
+  background: var(--rose-deep);
 }
 
 /* ── buttons ─────────────────────────────────────────────────────────── */

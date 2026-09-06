@@ -4541,3 +4541,48 @@ with the sidebar intact — which is how the root cause was found — and after 
 «النمو» renders its full dashboard with no page errors. All six routes still
 200. Values read zero in the sandbox because the client Firestore SDK is offline
 here; the fix is to the render path, not to the data.
+
+### `/offer` hero — a swipeable gallery of the chosen products (2026-09-06)
+
+Owner request: "in the hero section of the chosen products, user can swipe the
+image to see the other chosen products."
+
+- **`components/storefront/offer/hero-gallery.tsx` (new)** — one slide per
+  product she chose, swipeable. Replaces the row of small jump chips that used
+  to sit in the hero: a slide does everything a chip did (tap jumps to that
+  product's section) plus the thing a chip could not — show her the product at
+  the top of the page rather than three full section stacks down. The hero had
+  no image at all before, so the gallery renders for a single product too, and
+  hides its dots and arrows when there is nothing to swipe to.
+- **Swipe is CSS, not JavaScript** — a scroll-snap track, the same choice
+  `hero-banner.tsx` and `category-carousel.tsx` already made: real native
+  inertia, works with touch, trackpad, wheel and keyboard, no drag library, no
+  bundle cost. Slides are `min(86%, 22rem)` so the neighbours PEEK at both
+  edges, and that sliver is the whole swipe affordance on a phone. The track's
+  `padding-inline: calc((100% - var(--slide-w)) / 2)` is what lets a
+  centre-snapped first and last slide sit centred rather than jammed to an edge.
+- Scroll does not re-render React: the active dot is painted imperatively from
+  a rAF-throttled passive scroll listener, the pattern the repo's other two
+  carousels established. Slide step is *measured* (`offsetWidth + columnGap`)
+  rather than assumed, so the responsive width change needs no second source of
+  truth. `goTo` derives the scroll sign from the live computed `direction`, as
+  an RTL track scrolls into negative `scrollLeft`.
+- **A `touch-action: pan-y` bug was caught before it shipped.** It reads like
+  "let vertical swipes fall through to the page" and means the opposite: only
+  vertical panning is allowed on the element, which kills the horizontal swipe
+  outright. The arrows kept working because they scroll programmatically —
+  which is exactly how it would have shipped unnoticed. Removed; the default
+  `auto` lets the browser pick the axis from the gesture.
+  `overscroll-behavior-x: contain` stays, so a swipe past the last slide cannot
+  become a browser back-navigation.
+
+Verified: `tsc`/`eslint`/build clean (the one lint error, `cart-drawer.tsx`,
+pre-dates this work). Driven in headless Chromium at 390px and 1280px: three
+slides and three dots render, arrows and dots step 0→1→2→1→0 correctly in RTL,
+a partial scroll settles ON a slide (1px off), tapping the third slide scrolls
+0→5288 and lands that block 72px from the top, a single-product page renders one
+slide with no dots or arrows, and neither viewport has horizontal overflow.
+Confirmed the track is genuinely scrollable by real input (computed
+`touch-action: auto`, `scrollWidth` 946 > `clientWidth` 390, and a wheel event
+scrolled it and moved the dot) — CDP's `synthesizeScrollGesture` does not reach
+it, which is a harness limitation, not a page one.
