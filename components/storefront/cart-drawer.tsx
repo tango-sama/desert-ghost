@@ -1,5 +1,6 @@
 "use client";
 
+import Link from "next/link";
 import { Minus, Plus, ShoppingBag, Trash2 } from "lucide-react";
 import {
   Sheet,
@@ -91,7 +92,15 @@ export function CartDrawer() {
               <span>المجموع</span>
               <span className="text-[var(--rose-deep)]">{priceFmt(total)}</span>
             </div>
-            <Button render={<a href="/checkout" />} className="rounded-full" size="lg">
+            {/* `close` is load-bearing: navigation is client-side now, and
+                `isOpen` is not persisted, so nothing else would shut the
+                drawer — it would sit on top of the checkout form. */}
+            <Button
+              render={<Link href="/checkout" />}
+              onClick={close}
+              className="rounded-full"
+              size="lg"
+            >
               إتمام الطلب
             </Button>
           </SheetFooter>

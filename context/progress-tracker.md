@@ -6,13 +6,19 @@ not the intended state (see `development-workflow.md`).
 
 ## Current Phase
 
-- Live static site (`tango-sama/trinkl`) still in production and working —
-  its local working copy is at `C:\Users\Tango\Desktop\desert shop` on this
-  machine; use that as the reference implementation whenever a `trinkl/...`
-  path is mentioned in this file. In parallel, `ghost` is a from-scratch
-  Next.js 16 + Tailwind v4 + shadcn/ui rebuild of the same product, being
-  built phase by phase (see approved plan). Not yet deployed anywhere —
-  local only.
+- `ghost` is a from-scratch Next.js 16 + Tailwind v4 + shadcn/ui rebuild of
+  the product, and **it is what customers see**: the Vercel `desert-ghost`
+  project is Git-connected to this repo's `main` and serves
+  `www.desertshop.fit` (see Deployment). The line that used to stand here —
+  "Not yet deployed anywhere — local only" — was written before the
+  2026-08-07 cutover was discovered and was contradicted by the Deployment
+  section immediately below it; corrected 2026-09-06.
+- The static site (`tango-sama/trinkl`) is still live at
+  `desert-shop-24af9.web.app` and still owns **all Cloud Functions, Firestore
+  rules and hosting config** — including the carrier integrations and the
+  Meta ad-spend sync. Its local working copy is at
+  `C:\Users\Tango\Desktop\desert shop`; use that as the reference
+  implementation whenever a `trinkl/...` path is mentioned in this file.
 
 ## Current Goal
 
@@ -96,6 +102,79 @@ not the intended state (see `development-workflow.md`).
   re-linked it (`vercel link --project desert-ghost`). Always run
   `cat .vercel/project.json` and confirm `projectName: "desert-ghost"`
   before trusting any `vercel` CLI output against this repo.
+
+## Completed (2026-09-06) — checkout link from the cart drawer
+
+- `components/storefront/cart-drawer.tsx` used a raw `<a href="/checkout">`
+  inside the `Button`'s `render` prop. That was the repo's last standing
+  `eslint` **error** (`@next/next/no-html-link-for-pages`) — the one earlier
+  entries in this file keep describing as "pre-existing and unrelated".
+  `npx eslint .` is now error-clean (2 `<img>` warnings remain, in the
+  carnitine and sunguard product sections).
+- **The obvious fix is a bug.** Swapping `<a>` for `<Link>` turns the
+  navigation client-side, and `isOpen` is deliberately *not* in the cart
+  store's `partialize` (only `items` is) — so the full page load was the only
+  thing closing the drawer. With `<Link>` alone the drawer stays mounted and
+  sits on top of the checkout form. Verified in a real browser, both ways:
+  without `onClick={close}` the dialog is still present after arriving at
+  `/checkout`; with it, it is detached. The handler has a comment on it
+  saying so.
+- Note it must go on the `Button`, not on the rendered `<Link>` — Base UI's
+  `render` prop does not preserve the element's own `onClick`.
+- Verified: `tsc --noEmit` clean, `next build` clean, `eslint` error-free,
+  and a headless-Chromium walk of add-to-cart → drawer → «إتمام الطلب» →
+  `/checkout` against the real catalog (cart contents survive the
+  navigation, 6 form inputs render, no page errors).
+
+## Completed (2026-09-06) — first Meta campaign for the quiz funnel, and where it stuck
+
+- **Campaign created and verified, PAUSED, zero spend.** Ad account
+  `839446010997263` (the only usable one — «أمال حجاج» is still DISABLED, and
+  this account is shared with an unrelated pizza business, so name everything
+  with a `DS —` prefix). Page **Desert Shop 1.0** (`119017787791239`), pixel
+  **"amel"** (`1742198836647450`, confirmed firing browser *and* server on
+  2026-09-05).
+  - id `120249802677080789`, name `DS — Quiz Funnel — Sales — Sept 2026`
+  - `OUTCOME_SALES`, CBO **€10/day** (1000 cents),
+    `LOWEST_COST_WITHOUT_CAP`, **PAUSED**.
+  - This is a clean slate on purpose — the owner asked for new ads "not using
+    the old data at all", so no existing audience, campaign or creative was
+    reused. Note that every pre-existing Desert Shop sales ad is
+    `ADSET_PAUSED`, i.e. the account has been sending zero traffic; that is
+    why the growth dashboard has nothing to read yet.
+
+- **Ad set creation is blocked by a Meta-side fault — 7 attempts, all
+  identical**: `{"error_category":"INTERNAL","error_message":"An internal
+  error occurred. Please try again later.","is_retryable":true}`. Attempts
+  spanned the full intended config, a **minimal** geo-only targeting spec
+  (`{"geo_locations":{"countries":["DZ"]}}`), and a `LINK_CLICKS` variant with
+  no `promoted_object` at all — hours apart. **Because it fails identically
+  for a payload with almost nothing in it, this is not a payload problem**;
+  it is account- or campaign-side and no amount of retrying from the API will
+  clear it. `ads_get_errors` reported nothing about this campaign (only
+  pre-existing errors on old campaigns). After every attempt the campaign was
+  re-read and the ad set list re-queried: the campaign is intact and **no
+  orphan ad sets were created**, so there is nothing to clean up.
+
+- **Finish it in Ads Manager**, under the existing campaign. The intended ad
+  set config, kept here so it does not have to be re-derived:
+  - Billing `IMPRESSIONS`, performance goal **Purchases**
+    (`OFFSITE_CONVERSIONS`), destination Website,
+    `promoted_object = {"pixel_id":"1742198836647450","custom_event_type":"PURCHASE"}`
+  - Targeting: Algeria, women, 22–55, otherwise broad (no interests — do not
+    invent interest ids).
+  - **Destination URL — this is the part that must not be typed by hand**,
+    since the whole attribution spine reads these params:
+    `https://www.desertshop.fit/quiz?utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.name}}&campaignId={{campaign.id}}&adsetId={{adset.id}}&adId={{ad.id}}`
+  - Arabic copy drafted for it: headline «ما المنتج المناسب لكِ؟»,
+    description «4 أسئلة · أقل من دقيقة», CTA "Get Started".
+
+- **Deliberately not done, and why.** (a) No creative image was attached: the
+  account's image library is 30+ files all named "untitled" on a shared
+  account, and picking one sight-unseen risks putting another business's
+  creative on this store's ad. (b) Meta's AI-content disclosure declaration is
+  the owner's to make, not the agent's. (c) The campaign was left **PAUSED** —
+  nothing spends until the owner reviews it.
 
 ## Completed
 
