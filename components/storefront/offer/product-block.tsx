@@ -6,6 +6,7 @@ import { RevealRoot } from "@/components/storefront/reveal-root";
 import { cn } from "@/lib/utils";
 import { BeforeAfter } from "./before-after";
 import { Reviews } from "./reviews";
+import { BagIcon, CheckIcon } from "./icons";
 import styles from "./offer.module.css";
 
 // One product's full section stack — the piece that repeats. Every section
@@ -18,8 +19,24 @@ import styles from "./offer.module.css";
 // Section order is the order a shopper's questions arrive in: what is it, why
 // would it help me, what is in it, how do I use it, does it work, and only
 // then — buy. The CTA repeats at the end of every block so that on a stacked
-// page the ask is never more than one block away (the sticky bar carries it
-// the rest of the time).
+// page the ask is never more than one block away (the floating capsule carries
+// it the rest of the time).
+//
+// WHERE THE EMOJI WENT
+// --------------------
+// `benefit.ic` and `usage.ic` still arrive from lib/landing-content.ts and are
+// deliberately not rendered. They were decorative — a category archetype
+// cannot know which emoji describes a particular bottle — and they were the
+// one element on the page that no stylesheet could touch, since every device
+// draws them in its own typeface at its own weight. A counted numeral says the
+// same nothing in the page's own voice, and on the usage steps it says
+// something true: those steps are sequential.
+
+/** Two-digit index, the page's counting device. */
+function n2(i: number): string {
+  return String(i + 1).padStart(2, "0");
+}
+
 export function ProductBlock({
   block,
   index,
@@ -33,7 +50,7 @@ export function ProductBlock({
 }) {
   const p = block.product;
   const name = p.title ?? p.name ?? "";
-  // The main photo is shown large in the spotlight; the rest become thumbs.
+  // The main photo is shown large on the plate; the rest become thumbs.
   const [main, ...rest] = block.images;
 
   return (
@@ -42,8 +59,15 @@ export function ProductBlock({
         <RevealRoot>
           <div className="reveal">
             <div className={styles.blockHead}>
-              <span className={styles.blockNum}>{index + 1}</span>
-              {isHero && <span className={styles.pick}>الأنسب لكِ</span>}
+              <span className={cn(styles.blockNum, styles.numeral)} aria-hidden>
+                {n2(index)}
+              </span>
+              {isHero && (
+                <span className={styles.pick}>
+                  <CheckIcon />
+                  الأنسب لكِ
+                </span>
+              )}
             </div>
             <h2 className={styles.blockTitle}>{block.headline}</h2>
             <p className={styles.blockSub}>{block.subhead}</p>
@@ -64,7 +88,8 @@ export function ProductBlock({
                   <span className={styles.priceNote}>+ التوصيل حسب ولايتكِ</span>
                 </div>
                 <button type="button" className={cn(styles.btn, styles.btnBlock)} onClick={onOrder}>
-                  🛒 اطلبيه الآن — الدفع عند الاستلام
+                  <BagIcon />
+                  اطلبيه الآن — الدفع عند الاستلام
                 </button>
                 {rest.length > 0 && (
                   <div className={styles.thumbs}>
@@ -89,8 +114,8 @@ export function ProductBlock({
               <div className={styles.benefits}>
                 {block.benefits.map((b, i) => (
                   <div className={styles.benefit} key={`${b.title}-${i}`}>
-                    <span className={styles.benefitIc} aria-hidden>
-                      {b.ic}
+                    <span className={cn(styles.benefitNum, styles.numeral)} aria-hidden>
+                      {n2(i)}
                     </span>
                     {b.title && <b>{b.title}</b>}
                     <p>{b.text}</p>
@@ -131,16 +156,16 @@ export function ProductBlock({
               <span className={styles.label}>طريقة الاستعمال</span>
               <h2 className={styles.h2}>كيف تستعملينه</h2>
               <div className={styles.underline} />
-              <div className={styles.usage}>
+              <ol className={styles.usage}>
                 {block.usage.map((u, i) => (
-                  <div className={styles.usageRow} key={i}>
-                    <span className={styles.usageIc} aria-hidden>
-                      {u.ic}
+                  <li className={styles.usageRow} key={i}>
+                    <span className={cn(styles.usageNum, styles.numeral)} aria-hidden>
+                      {n2(i)}
                     </span>
                     <p>{u.p}</p>
-                  </div>
+                  </li>
                 ))}
-              </div>
+              </ol>
               <p className={styles.usageNote}>
                 الإرشادات المكتوبة على العبوة هي المرجع دائماً. إن كنتِ حاملاً أو
                 مرضعاً أو تتناولين دواءً بوصفة، استشيري طبيبكِ قبل البدء.
@@ -158,10 +183,14 @@ export function ProductBlock({
           sub="تجارب زبونات طلبن هذا المنتج تحديداً."
         />
 
-        {/* ── ask again, at the end of the block ── */}
+        {/* ── ask again, at the end of the block ──
+            Outlined, not a third solid rose pill in one screen: the spotlight
+            above already made the ask in full colour, and a page where every
+            button shouts equally has no primary action at all. */}
         <div className={styles.sec}>
-          <button type="button" className={cn(styles.btn, styles.btnGold)} onClick={onOrder}>
-            🛒 أضيفيه لطلبكِ — الدفع عند الاستلام
+          <button type="button" className={cn(styles.btn, styles.btnQuiet)} onClick={onOrder}>
+            <BagIcon />
+            أضيفيه لطلبكِ — الدفع عند الاستلام
           </button>
         </div>
       </div>

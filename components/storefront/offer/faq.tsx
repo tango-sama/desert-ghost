@@ -6,6 +6,10 @@ import styles from "./offer.module.css";
 // keyboard- and screen-reader-correct for free, and on a page whose length
 // varies with the number of products chosen there is no layout measurement to
 // get wrong.
+//
+// Ruled rows rather than a stack of bordered boxes — a question is a line in a
+// list, not a card — and the marker is drawn from two spans so the vertical
+// bar can rotate away on open. A typographic "+" swapped for a "−" cannot.
 export function Faq({ items }: { items: FaqItem[] }) {
   if (!items.length) return null;
   return (
@@ -17,7 +21,10 @@ export function Faq({ items }: { items: FaqItem[] }) {
         <div className={styles.faq}>
           {items.map((f, i) => (
             <details className={styles.faqItem} key={`${f.q}-${i}`}>
-              <summary>{f.q}</summary>
+              <summary>
+                {f.q}
+                <span className={styles.faqSign} aria-hidden />
+              </summary>
               <p>{f.a}</p>
             </details>
           ))}

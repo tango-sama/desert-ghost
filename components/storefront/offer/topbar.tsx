@@ -6,11 +6,19 @@ import styles from "./offer.module.css";
 // Minimal bar, same job as the other funnels' topbars: identify the shop and
 // state the one thing that removes the risk of ordering, and nothing else. No
 // nav links — every link out of a landing page is a way to leave it.
+//
+// It now starts transparent and lit for the ink hero it sits over, and only
+// takes on the page ground once it has scrolled past it. A solid cream bar
+// pinned above a dark hero cuts the page's one full-bleed image in half.
 export function Topbar({ scrolled, storeName }: { scrolled: boolean; storeName: string }) {
   return (
     <header className={cn(styles.top, scrolled && styles.topScrolled)}>
       <span className={styles.brand}>{storeName}</span>
-      <span className={styles.topNote}>الدفع عند الاستلام · 58 ولاية</span>
+      <span className={styles.topNote}>
+        الدفع عند الاستلام
+        <i className={styles.topDot} aria-hidden />
+        58 ولاية
+      </span>
     </header>
   );
 }

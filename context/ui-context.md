@@ -116,6 +116,32 @@ All buttons are pills with `translateY(-3px)` lift + stronger tinted shadow on h
   `/categories` grid and the home carousel — restyle it in one place only.
 - **Category tile `.cat-tile`** (old static site) — square image tile with
   per-category accent color and a color dot.
+- **Quiz-funnel landing page `/offer` — the "Atelier" treatment (Next)** —
+  `components/storefront/offer/*` + `offer.module.css`. Same Blush Rose & Gold
+  palette, deliberately different register from the rest of the storefront: it
+  is a paid-traffic landing page, not a shop aisle. Four rules, and they are
+  the house style for any future funnel page:
+  1. **Hairlines, not shadows.** Depth is 1px rules (`--o-hair`) and flat
+     ground changes. A shadow is spent only on something that genuinely floats.
+  2. **One accent at a time.** Gold owns hairlines, section marks and numerals;
+     rose is reserved for the thing you press. **No gradient text** — the page
+     had it on the hero, every price and the brand at once.
+  3. **Weight down, space up.** Headings at 700, not 900; sections at
+     4.5–5.5rem.
+  4. **Two ink bands** (`--o-ink`) — the hero and the close — carry the page's
+     contrast. Everything between them is ivory and sand.
+  Page-scoped `--o-*` tokens on `.offer` supply the ink/ivory/sand surfaces the
+  storefront palette has no token for. The prefix is required: an unprefixed
+  `--ink` collides with the global `--ink-2` / `--ink-3` muted-text tokens.
+  One serif, `--o-serif` (Cormorant Garamond, loaded per-route in
+  `app/offer/page.tsx`, latin subset), for **numerals and marks only** — the
+  product index, step numbers, quotation marks, the store-name watermark.
+  Never for prose, so no Arabic is ever set in it.
+- **Funnel icons (Next)** — `components/storefront/offer/icons.tsx`: inline
+  stroke SVGs, 24-box, stroke 1.5, round caps, `currentColor`. This is the
+  concrete form of the no-emoji rule below. Product-photo plates carry a gold
+  hairline drawn *inside* the frame, and that ring is the funnel's signature —
+  it returns around the hero packshot and behind the closing band.
 - **`.luxury-card` / `.feature`** — white surfaces with `--line-2` tinted borders and `--shadow`.
 - **Floating elements** — `.wa-float` (bottom-left circle, hidden under `html.no-wa`) and `.tiktok-live` (pill, shown only during a live window).
 - **Cart** — slide-over drawer with `.cart-item` rows (64px thumb, qty steppers); toasts are dark pills.

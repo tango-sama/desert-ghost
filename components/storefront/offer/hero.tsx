@@ -5,6 +5,7 @@ import { priceFmt } from "@/lib/firebase";
 import type { LandingBlock } from "@/lib/landing-content";
 import { pageHeadline, pageSubhead } from "@/lib/landing-content";
 import type { Answers } from "@/lib/quiz";
+import { BagIcon, CashIcon, PhoneIcon, TruckIcon } from "./icons";
 import styles from "./offer.module.css";
 
 // The hero speaks to the ANSWERS, not to the catalog: she has just told us her
@@ -12,9 +13,20 @@ import styles from "./offer.module.css";
 // so the page reads as the continuation of her quiz rather than as a product
 // listing she happened to land on.
 //
-// The chips under it are the page's only navigation. On a stacked page they
-// are not a nicety — without them a three-product page is one long scroll with
-// no way back to the product she actually came for.
+// WHY THE PHOTOGRAPH IS NOT THE BACKGROUND
+// ----------------------------------------
+// The obvious premium move — the recommended product full-bleed behind the
+// headline — does not survive this catalog. Most of the 149 products are
+// packshots on a white studio background, and a white packshot stretched to
+// cover is the single fastest way to make a page look cheap, with white text
+// unreadable over it. So the photo is used twice instead: once blurred and
+// low, purely for the colour it lends the ink ground, and once crisp and whole
+// on a lit plate. That works for a bottle, a jar or a sachet alike, and needs
+// nothing of the photo that the catalog cannot promise.
+//
+// The rail beneath overlaps the hero's foot on purpose. It is the first thing
+// past the fold on a cash-on-delivery shop, and the three facts on it are the
+// three reasons someone who has never heard of this store will risk an order.
 export const Hero = forwardRef<
   HTMLElement,
   {
@@ -26,43 +38,107 @@ export const Hero = forwardRef<
   }
 >(function Hero({ answers, blocks, total, onOrder, onJump }, ref) {
   const count = blocks.length;
+  const hero = blocks[0];
+  const img = hero?.images[0] ?? "";
+  const heroName = hero ? (hero.product.title ?? hero.product.name ?? "") : "";
+
+  // The blurred backdrop is set through a custom property, so the URL is
+  // interpolated into CSS rather than into an attribute. Firebase Storage URLs
+  // are percent-encoded and cannot contain either of these, but an owner-typed
+  // image URL in the admin panel can — and a stray quote there would end the
+  // url() token and let the rest of the string be parsed as CSS.
+  const bgUrl = img.replace(/[\\"]/g, "\\$&");
+
   return (
-    <section className={`${styles.wrap} ${styles.hero}`} ref={ref}>
-      <span className={styles.heroKicker}>نتيجة أسئلتكِ</span>
-      <h1 className={styles.heroTitle}>
-        <em className={styles.heroEm}>{pageHeadline(answers, count)}</em>
-      </h1>
-      <p className={styles.heroLead}>{pageSubhead(answers, count)}</p>
+    <>
+      <section className={styles.hero} ref={ref}>
+        {img && (
+          <div
+            className={styles.heroBg}
+            style={{ "--hero-img": `url("${bgUrl}")` } as React.CSSProperties}
+            aria-hidden
+          />
+        )}
+        <div className={styles.heroScrim} aria-hidden />
 
-      {count > 1 && (
-        <div className={styles.chips}>
-          {blocks.map((b, i) => (
-            <button
-              type="button"
-              className={styles.chip}
-              key={b.anchor}
-              onClick={() => onJump(b.anchor)}
-            >
-              {b.images[0] ? (
-                /* eslint-disable-next-line @next/next/no-img-element */
-                <img className={styles.chipImg} src={b.images[0]} alt="" loading="lazy" />
-              ) : (
-                <span className={styles.chipNum}>{i + 1}</span>
-              )}
-              {b.product.title ?? b.product.name}
-            </button>
-          ))}
+        <div className={`${styles.wrap} ${styles.heroGrid}`}>
+          <div>
+            <span className={styles.heroKicker}>نتيجة أسئلتكِ</span>
+            <h1 className={styles.heroTitle}>{pageHeadline(answers, count)}</h1>
+            <p className={styles.heroLead}>{pageSubhead(answers, count)}</p>
+
+            <div className={styles.heroCta}>
+              <button type="button" className={`${styles.btn} ${styles.btnLight}`} onClick={onOrder}>
+                <BagIcon />
+                اطلبي الآن
+              </button>
+              <span className={styles.heroPrice}>
+                <span className={styles.heroPriceLabel}>المجموع</span>
+                <span className={`${styles.heroPriceValue} num`}>{priceFmt(total)}</span>
+              </span>
+            </div>
+          </div>
+
+          <div className={styles.heroPlate}>
+            <span className={styles.heroRing} aria-hidden />
+            {img ? (
+              /* eslint-disable-next-line @next/next/no-img-element */
+              <img className={styles.heroImg} src={img} alt={heroName} />
+            ) : null}
+          </div>
         </div>
-      )}
+      </section>
 
-      <button type="button" className={styles.btn} onClick={onOrder}>
-        🛒 اطلبي الآن — <span className="num">{priceFmt(total)}</span>
-      </button>
-      <div className={styles.trustRow} style={{ marginTop: "1.1rem" }}>
-        <span>✓ الدفع عند الاستلام</span>
-        <span>✓ توصيل 58 ولاية</span>
-        <span>✓ منتجات أصلية</span>
+      <div className={styles.wrap}>
+        <div className={styles.railWrap}>
+          <div className={styles.rail}>
+            <div className={styles.railItem}>
+              <CashIcon />
+              <span>
+                <b className={styles.railTitle}>الدفع عند الاستلام</b>
+                <span className={styles.railNote}>لا تدفعين شيئاً قبل أن يصلكِ الطرد</span>
+              </span>
+            </div>
+            <div className={styles.railItem}>
+              <TruckIcon />
+              <span>
+                <b className={styles.railTitle}>توصيل 58 ولاية</b>
+                <span className={styles.railNote}>للمنزل أو لمكتب التوصيل</span>
+              </span>
+            </div>
+            <div className={styles.railItem}>
+              <PhoneIcon />
+              <span>
+                <b className={styles.railTitle}>تأكيد قبل الإرسال</b>
+                <span className={styles.railNote}>نتصل بكِ قبل أن يخرج الطرد</span>
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* The page's only navigation, and only when there is more than one
+            product to navigate between. */}
+        {count > 1 && (
+          <nav className={styles.index} aria-label="منتجات هذه الصفحة">
+            {blocks.map((b, i) => (
+              <button
+                type="button"
+                className={styles.chip}
+                key={b.anchor}
+                onClick={() => onJump(b.anchor)}
+              >
+                {b.images[0] ? (
+                  /* eslint-disable-next-line @next/next/no-img-element */
+                  <img className={styles.chipImg} src={b.images[0]} alt="" loading="lazy" />
+                ) : (
+                  <span className={`${styles.chipNum} ${styles.numeral}`}>{i + 1}</span>
+                )}
+                {b.product.title ?? b.product.name}
+              </button>
+            ))}
+          </nav>
+        )}
       </div>
-    </section>
+    </>
   );
 });
