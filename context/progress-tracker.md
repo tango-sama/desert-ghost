@@ -99,6 +99,39 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- `/offer` quiz-result landing page redesigned as a hybrid premium
+  botanical/lab funnel (2026-09-06, ghost-only; local change not yet
+  pushed/deployed). The owner chose direction 3 from the references: dark
+  botanical luxury hero plus soft mint/blue scientific supplement panels.
+  Changed only the presentation layer under `components/storefront/offer/*`:
+  `hero.tsx` now adds quiz/result metric cards and glass trust badges around
+  the floating product packshot; `product-block.tsx` adds a selected-formula
+  tag, lab display orbit, and "why this fits" panel while preserving the
+  existing generated content and CTA logic. `offer.module.css` now defines the
+  hybrid visual system (`--o-ink`, `--o-mint`, `--o-blue`, `--o-teal`) and
+  upgrades the hero, product plates, benefit cards, ingredients/usage panels,
+  before-after cards, reviews, trust cards, checkout summary, closing CTA and
+  sticky order capsule. No quiz ranking, URL handoff, Meta/funnel tracking,
+  order modal behavior, Firestore schema, or landing-content honesty rules were
+  changed; ingredients/before-after/product reviews remain owner-entered only.
+  Updated `context/ui-context.md` to replace the old `/offer` "Atelier" house
+  style with the new hybrid premium botanical/lab rules. Verification: targeted
+  ESLint on the changed TSX files (`hero.tsx`, `product-block.tsx`) passed;
+  `offer.module.css` is ignored by this repo's ESLint config. Full
+  `npx tsc --noEmit` and `npm run build` are currently blocked by an unrelated
+  workspace dependency resolution failure: `@anthropic-ai/sdk` cannot be
+  resolved from `app/api/quiz-blurb/route.ts` and `lib/whatsapp-ai.ts`. Full
+  `npx eslint` is also blocked by pre-existing lint scanning under `venv/`.
+
+- Quiz funnel now asks for approximate weight (2026-09-06, ghost-only; local
+  change not yet pushed/deployed). Added a fifth single-select question in
+  `lib/quiz.ts`: «كم وزنكِ تقريباً؟» with four answer bands (`w50`, `w60`,
+  `w70`, `w80`). Because quiz answers are carried and validated by iterating
+  `QUESTIONS`, the new `weight` key automatically flows into funnel events,
+  `/api/quiz-blurb`, `/offer?…`, and the order's quiz summary without changing
+  each call site. Updated `context/architecture-context.md`'s `/offer` handoff
+  contract to include `weight`.
+
 - Orders now record the chosen stop desk's own ID, not just its name
   (2026-09-01, Phase A of the ZR fix — see the plan in the same session).
   Context: the owner pasted ZR's «Developpement» page, which documents an API
@@ -4542,47 +4575,133 @@ with the sidebar intact — which is how the root cause was found — and after 
 200. Values read zero in the sandbox because the client Firestore SDK is offline
 here; the fix is to the render path, not to the data.
 
-### `/offer` hero — a swipeable gallery of the chosen products (2026-09-06)
+## Completed (this session, 2026-09-05) — `/offer` visual redesign ("Atelier")
+
+The quiz funnel's landing page was **redesigned, not rebuilt**. Every section,
+every honesty rule, the funnel/pixel instrumentation, the A/B variant handling
+and the order modal are untouched; what changed is how the page looks. Branch
+`claude/landing-page-redesign-y5r1dk`.
+
+**What was wrong.** The page was a stack of rounded, rose-shadowed cards with
+emoji icons and gradient-filled headings, at one volume from top to bottom.
+Three rules replace that, and they are documented at the head of
+`offer.module.css`:
+
+1. **Hairlines, not shadows.** Depth is 1px rules and flat ground changes. A
+   drop shadow is spent only where something genuinely floats — the order
+   capsule, the trust rail, the summary panel.
+2. **One accent at a time.** Gold owns the hairlines and the small marks; rose
+   is reserved for the thing you press. The gradient text is gone; it was on
+   the hero, every price and the brand at once.
+3. **Weight down, space up.** Headings sit at 700 rather than 900, larger and
+   tighter; sections breathe at 4.5–5.5rem rather than 3.
+
+**The moves, in order down the page**
+
+- **The emoji are gone.** `components/storefront/offer/icons.tsx` (new) is a
+  1.5-stroke, 24-box, `currentColor` icon set — bag, cash, truck, shield,
+  phone, check, arrow, star. `ui-context.md` already said the storefront does
+  not use emoji as UI icons, and 🛒 💵 🚚 ✅ 📞 were on every CTA and every
+  trust card: the element repeated most often on the page was the one nothing
+  could style, drawn in a different vendor's illustration style at a different
+  apparent weight on every device.
+- **The hero is an ink band**, not a cream one — `--o-ink` ground, the chosen
+  product's photo used twice: once blurred and low purely for the colour it
+  lends, once crisp on a lit plate inside a gold ring. **Deliberately not the
+  photograph full-bleed:** most of the 149 products are packshots on white, and
+  a white packshot stretched to cover is the fastest way to make a page look
+  cheap with white text unreadable over it. Text at the start side, the total
+  set beside the button rather than inside it.
+- **A trust rail overlaps the hero's foot** — cash on delivery, 58 wilayas,
+  the confirmation call. The three reasons someone who has never heard of this
+  store risks a first order, placed at the first thing past the fold.
+- **The jump chips became a product index**: outlined pills, no shadow.
+- **Product blocks are editorial.** A large serif numeral opens each one; the
+  photo sits on a paper plate with a gold hairline drawn *inside* it; the
+  alternating band is flat sand with hairline edges instead of a gradient (a
+  gradient band has no edge, and the edge is the point).
+- **Benefits are a ruled grid**, not floating cards. **Ingredients are a
+  definition list.** **Usage is a numbered timeline** on a connecting rule —
+  and there the numeral means something, since those steps are sequential.
+  `benefit.ic` / `usage.ic` still arrive from `lib/landing-content.ts` and are
+  deliberately not rendered (see the note in `product-block.tsx`).
+- **Reviews read as testimony** — a large faint serif quotation mark, and five
+  drawn stars replacing the `"★".repeat()` / `"☆".repeat()` character run.
+- **FAQ is ruled rows** with a drawn cross that rotates to a minus on open.
+- **The order summary gets the page's one moment of scale**: its own sand band
+  with the real store name set enormous and faint behind the panel.
+- **The page closes on a second ink band** with the hero's gold ring at page
+  scale. A long landing page that ends on the same cream it started on trails
+  off.
+- **The sticky bar is a floating ink capsule**, inset and rounded. The
+  full-width white shelf it replaced is the shape of a cookie banner, and read
+  as something to dismiss.
+
+**Type.** One serif joins Cairo — `Cormorant_Garamond`, loaded in
+`app/offer/page.tsx` rather than the root layout, latin subset, weights 300/400,
+`display: swap`. It is used only for numerals and marks (the product index,
+step numbers, quotation marks, the watermark) and never for prose, so no
+Arabic passes through it and no other route pays for it.
+
+**Palette.** Blush Rose & Gold is unchanged. The page-scoped `--o-*` tokens on
+`.offer` add the ink and ivory surfaces the storefront has no token for; they
+are prefixed because an unprefixed `--ink` would collide with the global
+`--ink-2` / `--ink-3` muted-text tokens the same file uses.
+
+**Verified** — `tsc --noEmit` clean, `next build` clean (the two `eslint`
+errors in the repo are pre-existing, in `cart-drawer.tsx` and unrelated),
+and the live page rendered against the real 149-product catalog at 1280px and
+390px: hero, three product blocks, benefits, usage, summary band, trust grid,
+reviews, FAQ, closing band and footer all check out, RTL correct throughout.
+
+### `/offer` hero — the plate is swipeable, one per chosen product (2026-09-06)
 
 Owner request: "in the hero section of the chosen products, user can swipe the
 image to see the other chosen products."
 
-- **`components/storefront/offer/hero-gallery.tsx` (new)** — one slide per
-  product she chose, swipeable. Replaces the row of small jump chips that used
-  to sit in the hero: a slide does everything a chip did (tap jumps to that
-  product's section) plus the thing a chip could not — show her the product at
-  the top of the page rather than three full section stacks down. The hero had
-  no image at all before, so the gallery renders for a single product too, and
-  hides its dots and arrows when there is nothing to swipe to.
-- **Swipe is CSS, not JavaScript** — a scroll-snap track, the same choice
-  `hero-banner.tsx` and `category-carousel.tsx` already made: real native
-  inertia, works with touch, trackpad, wheel and keyboard, no drag library, no
-  bundle cost. Slides are `min(86%, 22rem)` so the neighbours PEEK at both
-  edges, and that sliver is the whole swipe affordance on a phone. The track's
-  `padding-inline: calc((100% - var(--slide-w)) / 2)` is what lets a
-  centre-snapped first and last slide sit centred rather than jammed to an edge.
-- Scroll does not re-render React: the active dot is painted imperatively from
-  a rAF-throttled passive scroll listener, the pattern the repo's other two
-  carousels established. Slide step is *measured* (`offsetWidth + columnGap`)
-  rather than assumed, so the responsive width change needs no second source of
-  truth. `goTo` derives the scroll sign from the live computed `direction`, as
-  an RTL track scrolls into negative `scrollLeft`.
+**Landed across a redesign.** This was first built against the pre-redesign
+hero — a gallery of peeking cards replacing the jump chips — and while it was
+in progress the "Atelier" redesign (#14) landed on `main` and rewrote both
+`hero.tsx` and `offer.module.css`. The merge took the redesign wholesale on
+both files and the swipe was re-applied on top of it, rather than merging the
+older hero back over the new one. The redesigned hero has no carousel of its
+own — it shows `blocks[0]` on a lit plate — so the request still stood.
+
+- **`components/storefront/offer/hero-plates.tsx` (new)** — the hero plate
+  becomes a scroll-snap track of one plate per chosen product. The plate's
+  composition is untouched (same ring, halo, lit backdrop, trust minis, per
+  plate); all this adds is the track around it, so the swipe reads as part of
+  the design rather than as a carousel bolted onto it. On a three-product
+  result the other two products were previously invisible until she had
+  scrolled past a whole section stack.
+- A caption bar under the track names the plate she is looking at (product +
+  price) beside the dots, in the Atelier palette — gold active pill on the
+  hero's dark ground.
+- **Swipe is CSS, not JavaScript** — a scroll-snap track, the choice
+  `hero-banner.tsx` and `category-carousel.tsx` already made: native inertia,
+  touch/trackpad/wheel/keyboard, no drag library, no bundle cost. Scrolling
+  does not re-render React: the active dot and the caption are written straight
+  to the DOM from a rAF-throttled passive listener, the imperative pattern the
+  repo's other carousels established. `goTo` derives its sign from the live
+  computed `direction`, since an RTL track scrolls into negative `scrollLeft`.
 - **A `touch-action: pan-y` bug was caught before it shipped.** It reads like
   "let vertical swipes fall through to the page" and means the opposite: only
   vertical panning is allowed on the element, which kills the horizontal swipe
-  outright. The arrows kept working because they scroll programmatically —
-  which is exactly how it would have shipped unnoticed. Removed; the default
-  `auto` lets the browser pick the axis from the gesture.
-  `overscroll-behavior-x: contain` stays, so a swipe past the last slide cannot
-  become a browser back-navigation.
+  outright. The dots and arrows kept working because they scroll
+  programmatically — which is exactly how it would have shipped unnoticed.
+  Removed; the default `auto` lets the browser pick the axis from the gesture,
+  and `overscroll-behavior-x: contain` still stops a swipe past the last slide
+  becoming a browser back-navigation.
+- Two rules moved with the restructure, because `.plateWrap` — not `.heroPlate`
+  — is now the hero grid's child: the `offerRise` entry animation (otherwise
+  every slide animates, including the off-screen ones) and the mobile
+  `order: -1` that puts the plate above the headline.
 
 Verified: `tsc`/`eslint`/build clean (the one lint error, `cart-drawer.tsx`,
 pre-dates this work). Driven in headless Chromium at 390px and 1280px: three
-slides and three dots render, arrows and dots step 0→1→2→1→0 correctly in RTL,
-a partial scroll settles ON a slide (1px off), tapping the third slide scrolls
-0→5288 and lands that block 72px from the top, a single-product page renders one
-slide with no dots or arrows, and neither viewport has horizontal overflow.
-Confirmed the track is genuinely scrollable by real input (computed
-`touch-action: auto`, `scrollWidth` 946 > `clientWidth` 390, and a wheel event
-scrolled it and moved the dot) — CDP's `synthesizeScrollGesture` does not reach
-it, which is a harness limitation, not a page one.
+plates render in one track (`scrollWidth` 1060 > `clientWidth` 353, computed
+`touch-action: auto`), a real wheel input moves it and both the dot and the
+caption follow (0 → 1 → 2 with the right product name each time), a dot click
+returns to 0, a partial scroll snaps exactly (0px off), a single-product page
+renders one plate with no dots or caption bar, neither viewport has horizontal
+overflow, and there are no page errors.

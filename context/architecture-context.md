@@ -131,7 +131,7 @@ products she ended up with, and the COD form lives there.
   the `(storefront)` group, `force-dynamic`). `noindex`: a page built from one
   visitor's answers has nothing to offer a search index and would compete with
   the real product pages.
-- **Handoff is the URL**: `/offer?ids=<id>,<id>,<id>&goal=…&age=…&form=…&intensity=…`.
+- **Handoff is the URL**: `/offer?ids=<id>,<id>,<id>&goal=…&age=…&weight=…&form=…&intensity=…`.
   Query string rather than sessionStorage, so the page server-renders, survives
   a refresh and a share, and is verifiable by loading an address. `ids` keeps
   the quiz's ranking (hero first), is capped at 4, and unknown ids are dropped

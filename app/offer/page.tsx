@@ -1,4 +1,5 @@
 import type { Metadata } from "next";
+import { Cormorant_Garamond } from "next/font/google";
 import { redirect } from "next/navigation";
 import { getProducts, getSettings, type Product } from "@/lib/firebase";
 import { QUESTIONS, type Answers } from "@/lib/quiz";
@@ -17,6 +18,23 @@ type SearchParams = Promise<{ [key: string]: string | string[] | undefined }>;
 // from the alternates. Four blocks is already a long scroll; more than that
 // and nothing on the page gets read.
 const MAX_PRODUCTS = 4;
+
+/**
+ * The page's one serif, loaded here rather than in the root layout.
+ *
+ * It is used only for numerals and marks — the product index, the step
+ * numbers, the quotation marks, the store-name watermark — never for prose,
+ * and there is no Arabic in any of them, so the latin subset is the whole of
+ * it. Scoping it to this route keeps every other page's font payload exactly
+ * where it was; `display: swap` keeps a slow font from holding up the first
+ * paint on a page reached from a paid ad.
+ */
+const cormorant = Cormorant_Garamond({
+  variable: "--font-cormorant",
+  subsets: ["latin"],
+  weight: ["300", "400"],
+  display: "swap",
+});
 
 function one(v: string | string[] | undefined): string {
   return (Array.isArray(v) ? v[0] : v) ?? "";
@@ -98,5 +116,9 @@ export default async function Page({ searchParams }: { searchParams: SearchParam
   // recommendation rather than showing an empty sales page.
   if (!products.length) redirect("/quiz");
 
-  return <OfferPage products={products} answers={readAnswers(sp)} settings={settings} />;
+  return (
+    <div className={cormorant.variable}>
+      <OfferPage products={products} answers={readAnswers(sp)} settings={settings} />
+    </div>
+  );
 }

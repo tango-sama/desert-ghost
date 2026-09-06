@@ -23,6 +23,7 @@ import { priceNum, type Product } from "@/lib/firebase";
 export type Goal =
   | "skin" | "hair" | "slim" | "gain" | "curves" | "hormones" | "vitality";
 export type Age = "u25" | "a25" | "a35" | "a45";
+export type Weight = "w50" | "w60" | "w70" | "w80";
 export type Form = "caps" | "topical" | "oil" | "any";
 /**
  * How far she wants to go — deliberately NOT a budget question.
@@ -41,6 +42,7 @@ export type Intensity = "gentle" | "serious";
 export type Answers = {
   goal?: Goal;
   age?: Age;
+  weight?: Weight;
   form?: Form;
   intensity?: Intensity;
 };
@@ -52,11 +54,10 @@ export type Question = {
   options: QuestionOption[];
 };
 
-/* Four single-select questions, no branching. Branching would personalise a
+/* Five single-select questions, no branching. Branching would personalise a
    little better and would also make every funnel-step number incomparable
    between visitors, which is worse: the whole point of this funnel is to
-   learn where people drop off. Four rather than five because every extra
-   question is another place to abandon, and none of these is dead weight. */
+   learn where people drop off. */
 export const QUESTIONS: Question[] = [
   {
     key: "goal",
@@ -84,6 +85,16 @@ export const QUESTIONS: Question[] = [
       { value: "a25", label: "من 25 إلى 34" },
       { value: "a35", label: "من 35 إلى 44" },
       { value: "a45", label: "من 45 فأكثر" },
+    ],
+  },
+  {
+    key: "weight",
+    title: "كم وزنكِ تقريباً؟",
+    options: [
+      { value: "w50", label: "أقل من 50 كغ" },
+      { value: "w60", label: "من 50 إلى 64 كغ" },
+      { value: "w70", label: "من 65 إلى 79 كغ" },
+      { value: "w80", label: "80 كغ فأكثر" },
     ],
   },
   {

@@ -116,6 +116,38 @@ All buttons are pills with `translateY(-3px)` lift + stronger tinted shadow on h
   `/categories` grid and the home carousel — restyle it in one place only.
 - **Category tile `.cat-tile`** (old static site) — square image tile with
   per-category accent color and a color dot.
+- **Quiz-funnel landing page `/offer` — hybrid premium botanical/lab treatment
+  (Next)** — `components/storefront/offer/*` + `offer.module.css`. Same Blush
+  Rose & Gold brand base, but with page-scoped supplement-funnel tokens:
+  `--o-ink` deep botanical green for the hero/close, `--o-mint` and `--o-blue`
+  for scientific product panels, `--o-teal` for lab details, gold for luxury
+  hairlines, and rose reserved for primary CTAs. The page is a paid-traffic
+  continuation of the quiz result, not a normal shop aisle, so it deliberately
+  has a more cinematic register: dark botanical hero, floating product packshot,
+  glass metric cards, soft mint/blue product displays, formula-style benefit
+  cards, and a premium checkout summary. Rules for future `/offer` work:
+  1. **Botanical desire first, scientific confidence second.** The hero and
+     closing CTA use the dark green ink band; product evidence lives on soft
+     mint/blue panels.
+  2. **No invented proof.** Ingredients, before/after and product reviews remain
+     owner-entered only. Generated content can explain benefits/usage, but must
+     not fabricate medical claims, ratings, ingredients or transformations.
+  3. **One press color.** Rose is the action color. Teal/gold may decorate
+     labels, rings, lab orbits and hairlines, but must not compete with the CTA.
+  4. **Premium depth is selective.** Use glass, blur and soft shadows for the
+     hero packshot, product lab plates, testimonials and order capsule; avoid
+     making every small element float.
+  Page-scoped `--o-*` tokens on `.offer` are required: the storefront palette
+  has no botanical/mint/lab surface tokens, and unprefixed variables can collide
+  with global muted-text tokens. One serif, `--o-serif` (Cormorant Garamond,
+  loaded per-route in `app/offer/page.tsx`, latin subset), remains for
+  **numerals and marks only** — product index, step numbers, quotation marks,
+  and the store-name watermark. Never for Arabic prose.
+- **Funnel icons (Next)** — `components/storefront/offer/icons.tsx`: inline
+  stroke SVGs, 24-box, stroke 1.5, round caps, `currentColor`. This is the
+  concrete form of the no-emoji rule below. Product-photo plates carry a gold
+  hairline drawn *inside* the frame, and that ring is the funnel's signature —
+  it returns around the hero packshot and behind the closing band.
 - **`.luxury-card` / `.feature`** — white surfaces with `--line-2` tinted borders and `--shadow`.
 - **Floating elements** — `.wa-float` (bottom-left circle, hidden under `html.no-wa`) and `.tiktok-live` (pill, shown only during a live window).
 - **Cart** — slide-over drawer with `.cart-item` rows (64px thumb, qty steppers); toasts are dark pills.
