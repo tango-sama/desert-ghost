@@ -4705,3 +4705,38 @@ caption follow (0 → 1 → 2 with the right product name each time), a dot clic
 returns to 0, a partial scroll snaps exactly (0px off), a single-product page
 renders one plate with no dots or caption bar, neither viewport has horizontal
 overflow, and there are no page errors.
+
+### `/offer` hero — the plate blew out to ~1026px on a phone once photos loaded (2026-09-06)
+
+Found while verifying, at the owner's prompting, that product images actually
+render in the hero. They did not, and the reason was not the swipe track.
+
+**The bug.** `.heroPlate` sits in the hero grid, and a grid item defaults to
+`min-width: auto` — it may grow to its content's min-content width. Once the
+real product photo decodes, that content is wider than the column, so the plate
+stretched to about 1026px inside a 390px viewport: the gold ring filled the
+screen, the photograph was a sliver at the edge, and `overflow-x: hidden` on
+`.hero` hid the damage from any page-level overflow check.
+
+**It is pre-existing, not from the swipe work.** Measured against
+`origin/main`'s own single-plate hero, with the track reverted: the plate
+renders **1026×770 on a 390px phone** there too, the moment real photos load.
+The redesign shipped with it. Fixed here by `min-width: 0` on `.plateWrap`
+(the grid item in the new structure) plus `min-width: 0; width: 100%` on
+`.plateTrack`.
+
+**Why it survived two rounds of checks.** It only reproduces with images
+actually loaded, and this sandbox's Chromium cannot complete TLS to
+`firebasestorage.googleapis.com` through the agent proxy — the tunnel resets
+(`ws_closed_mid_exchange`), so every earlier screenshot showed an empty plate
+and a broken layout was indistinguishable from a blocked network. `curl` to the
+same URLs works (200, `image/webp`), so the images are fetched with curl and
+served to the browser by Playwright request interception. That makes the page's
+rendering of genuine catalog photos testable without depending on the sandbox's
+egress.
+
+Verified with the real photos served: at 390px and 1280px all three decode
+(2048×2048, 453×412, 960×897), each draws into a 340×340 box with
+`object-fit: contain` so nothing is stretched or cropped, none overflows its
+plate, the track is 353px wide on the phone and scrolls, and a swipe advances
+both the dot and the caption to the next product. No page errors.

@@ -409,12 +409,26 @@
    a carousel bolted onto it. */
 .plateWrap {
   position: relative;
+  /* `min-width: 0` is load-bearing. This is the hero grid's item, and a grid
+     item defaults to `min-width: auto` — meaning it may grow to its content's
+     min-content width. Its content is a 3-slide track, so once the product
+     PHOTOS decode the wrapper stretches to roughly three viewports, the track
+     stops scrolling, and on a 390px phone the plate renders ~1026px wide and
+     clipped with the photo a sliver at the edge.
+     This is a PRE-EXISTING fault of the redesign, not of the track: measured
+     against origin/main's own single-plate hero, the plate renders 1026x770 on
+     a 390px phone the moment real photos load. It only ever reproduces with
+     images, which is why it survived review. */
+  min-width: 0;
 }
 
 .plateTrack {
   display: flex;
   overflow-x: auto;
   scroll-snap-type: x mandatory;
+  /* Pinned to the column its wrapper occupies; see the note on .plateWrap. */
+  min-width: 0;
+  width: 100%;
   /* NO `touch-action` here, deliberately. `pan-y` reads like "let vertical
      swipes fall through to the page" and means the opposite: only vertical
      panning is allowed on this element, which kills the horizontal swipe while
