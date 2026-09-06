@@ -99,6 +99,15 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- Quiz funnel now asks for approximate weight (2026-09-06, ghost-only; local
+  change not yet pushed/deployed). Added a fifth single-select question in
+  `lib/quiz.ts`: «كم وزنكِ تقريباً؟» with four answer bands (`w50`, `w60`,
+  `w70`, `w80`). Because quiz answers are carried and validated by iterating
+  `QUESTIONS`, the new `weight` key automatically flows into funnel events,
+  `/api/quiz-blurb`, `/offer?…`, and the order's quiz summary without changing
+  each call site. Updated `context/architecture-context.md`'s `/offer` handoff
+  contract to include `weight`.
+
 - Orders now record the chosen stop desk's own ID, not just its name
   (2026-09-01, Phase A of the ZR fix — see the plan in the same session).
   Context: the owner pasted ZR's «Developpement» page, which documents an API
