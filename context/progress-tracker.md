@@ -99,6 +99,30 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- `/offer` quiz-result landing page redesigned as a hybrid premium
+  botanical/lab funnel (2026-09-06, ghost-only; local change not yet
+  pushed/deployed). The owner chose direction 3 from the references: dark
+  botanical luxury hero plus soft mint/blue scientific supplement panels.
+  Changed only the presentation layer under `components/storefront/offer/*`:
+  `hero.tsx` now adds quiz/result metric cards and glass trust badges around
+  the floating product packshot; `product-block.tsx` adds a selected-formula
+  tag, lab display orbit, and "why this fits" panel while preserving the
+  existing generated content and CTA logic. `offer.module.css` now defines the
+  hybrid visual system (`--o-ink`, `--o-mint`, `--o-blue`, `--o-teal`) and
+  upgrades the hero, product plates, benefit cards, ingredients/usage panels,
+  before-after cards, reviews, trust cards, checkout summary, closing CTA and
+  sticky order capsule. No quiz ranking, URL handoff, Meta/funnel tracking,
+  order modal behavior, Firestore schema, or landing-content honesty rules were
+  changed; ingredients/before-after/product reviews remain owner-entered only.
+  Updated `context/ui-context.md` to replace the old `/offer` "Atelier" house
+  style with the new hybrid premium botanical/lab rules. Verification: targeted
+  ESLint on the changed TSX files (`hero.tsx`, `product-block.tsx`) passed;
+  `offer.module.css` is ignored by this repo's ESLint config. Full
+  `npx tsc --noEmit` and `npm run build` are currently blocked by an unrelated
+  workspace dependency resolution failure: `@anthropic-ai/sdk` cannot be
+  resolved from `app/api/quiz-blurb/route.ts` and `lib/whatsapp-ai.ts`. Full
+  `npx eslint` is also blocked by pre-existing lint scanning under `venv/`.
+
 - Quiz funnel now asks for approximate weight (2026-09-06, ghost-only; local
   change not yet pushed/deployed). Added a fifth single-select question in
   `lib/quiz.ts`: «كم وزنكِ تقريباً؟» with four answer bands (`w50`, `w60`,

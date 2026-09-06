@@ -1,4 +1,4 @@
-/* The templated landing page (/offer) — "Atelier" edition.
+/* The templated landing page (/offer) — hybrid premium edition.
  *
  * One stylesheet for a page whose content is generated per product, so unlike
  * collagen.module.css or glutathione.module.css nothing here may assume a
@@ -6,20 +6,10 @@
  * — every block has to survive a product with a one-line description and a
  * product with six, and a page with one block or four.
  *
- * WHAT CHANGED, AND WHY
- * ---------------------
- * The page was a stack of rounded, rose-shadowed cards with emoji icons and
- * gradient-filled headings — every element shouting at the same volume. Three
- * rules replace that, and they are what the rest of this file is:
- *
- *   1. HAIRLINES, NOT SHADOWS. Depth comes from 1px rules and flat ground
- *      changes. A drop shadow is spent only where something genuinely floats
- *      (the order capsule, the hero plate).
- *   2. ONE ACCENT AT A TIME. Gold rules the hairlines and the small marks;
- *      rose is reserved for the thing you press. Gradient text is gone — it
- *      was on the hero, every price and the brand at once.
- *   3. WEIGHT DOWN, SPACE UP. Headings sit at 700, not 900, at larger sizes
- *      with tighter tracking; sections breathe at 5–7rem rather than 3.
+ * The design mixes two registers from premium supplement brands: a dark
+ * botanical hero for desire, then soft mint/blue scientific panels for the
+ * product evidence. Rose is still reserved for the thing you press; gold and
+ * teal carry the lab/luxury details.
  *
  * Brand palette unchanged (Blush Rose & Gold, context/ui-context.md). The
  * `--o-*` tokens below are page-scoped and prefixed on purpose: the storefront
@@ -35,20 +25,27 @@
 
 .offer {
   /* page-scoped surfaces */
-  --o-ivory: #fdfaf6;
+  --o-ivory: #f8fcf6;
   --o-paper: #ffffff;
-  --o-sand: #f7f0ea;
-  --o-ink: #241a1f;
-  --o-ink-2: #33242a;
+  --o-sand: #edf7ef;
+  --o-mint: #dff0ea;
+  --o-blue: #d9edf5;
+  --o-teal: #0f6b68;
+  --o-teal-2: #174f46;
+  --o-ink: #111f16;
+  --o-ink-2: #1b3025;
   /* hairlines: one neutral, one gold, one for use on the ink bands */
-  --o-hair: rgba(58, 42, 48, 0.13);
-  --o-hair-soft: rgba(58, 42, 48, 0.07);
+  --o-hair: rgba(17, 31, 22, 0.13);
+  --o-hair-soft: rgba(17, 31, 22, 0.07);
   --o-hair-gold: rgba(217, 168, 108, 0.55);
   --o-hair-light: rgba(255, 255, 255, 0.16);
   /* the one serif in the design, latin-only: numerals and marks, never prose */
   --o-serif: var(--font-cormorant), "Cormorant Garamond", Georgia, serif;
 
-  background: var(--o-ivory);
+  background:
+    radial-gradient(50rem 28rem at 88% 8%, rgba(217, 237, 245, 0.7), transparent 62%),
+    radial-gradient(42rem 24rem at 0% 35%, rgba(223, 240, 234, 0.8), transparent 60%),
+    var(--o-ivory);
   color: var(--foreground);
   min-height: 100vh;
   /* Room for the floating order capsule so the footer is never trapped. */
@@ -77,7 +74,7 @@
 }
 
 .topScrolled {
-  background: rgba(253, 250, 246, 0.88);
+  background: rgba(248, 252, 246, 0.9);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border-bottom-color: var(--o-hair);
@@ -114,13 +111,13 @@
 /* ── shared furniture ────────────────────────────────────────────────── */
 
 .wrap {
-  max-width: 72rem;
+  max-width: 76rem;
   margin: 0 auto;
   padding: 0 1.5rem;
 }
 
 .sec {
-  padding: 4.5rem 0 0;
+  padding: 5rem 0 0;
 }
 
 /* The section mark: a gold rule, then small letterspaced type. Replaces the
@@ -132,7 +129,7 @@
   font-size: 0.68rem;
   font-weight: 700;
   letter-spacing: 0.22em;
-  color: var(--ink-3);
+  color: var(--o-teal);
   margin-bottom: 1.1rem;
 }
 
@@ -259,7 +256,19 @@
   overflow: hidden;
   background: var(--o-ink);
   color: #fff;
-  padding: 8.5rem 0 5.5rem;
+  padding: 8.4rem 0 5.8rem;
+}
+
+.hero::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  background-image:
+    linear-gradient(rgba(255, 255, 255, 0.045) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px);
+  background-size: 68px 68px;
+  mask-image: linear-gradient(180deg, rgba(0, 0, 0, 0.75), transparent 78%);
 }
 
 .heroBg {
@@ -279,16 +288,21 @@
   inset: 0;
   z-index: -1;
   background:
-    radial-gradient(70% 60% at 78% 18%, rgba(217, 168, 108, 0.24), transparent 65%),
-    radial-gradient(60% 55% at 12% 88%, rgba(224, 114, 140, 0.22), transparent 62%),
-    linear-gradient(180deg, rgba(36, 26, 31, 0.82), rgba(36, 26, 31, 0.94));
+    radial-gradient(52% 62% at 76% 24%, rgba(29, 109, 77, 0.52), transparent 66%),
+    radial-gradient(42% 46% at 18% 86%, rgba(217, 168, 108, 0.22), transparent 65%),
+    linear-gradient(120deg, rgba(7, 24, 12, 0.95), rgba(17, 47, 31, 0.9) 48%, rgba(5, 15, 8, 0.96));
 }
 
 .heroGrid {
   display: grid;
-  grid-template-columns: minmax(0, 1.05fr) minmax(0, 0.95fr);
-  gap: 3rem;
+  grid-template-columns: minmax(0, 1fr) minmax(18rem, 0.92fr);
+  gap: clamp(2.5rem, 6vw, 5rem);
   align-items: center;
+}
+
+.heroCopy {
+  position: relative;
+  z-index: 1;
 }
 
 .heroKicker {
@@ -311,12 +325,12 @@
 }
 
 .heroTitle {
-  font-size: clamp(2.1rem, 6.6vw, 3.6rem);
+  font-size: clamp(2.35rem, 6.6vw, 4.4rem);
   font-weight: 700;
   line-height: 1.3;
   letter-spacing: -0.015em;
   margin: 0 0 1.2rem;
-  max-width: 16ch;
+  max-width: 17ch;
 }
 
 .heroLead {
@@ -356,12 +370,50 @@
   letter-spacing: -0.01em;
 }
 
+.heroStats {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 0.8rem;
+  margin-top: 2.5rem;
+  max-width: 43rem;
+}
+
+.heroStats span {
+  display: flex;
+  flex-direction: column;
+  gap: 0.45rem;
+  min-height: 6rem;
+  padding: 1rem;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.07);
+  backdrop-filter: blur(16px);
+  -webkit-backdrop-filter: blur(16px);
+  color: rgba(255, 255, 255, 0.72);
+  font-size: 0.72rem;
+  line-height: 1.65;
+}
+
+.heroStats b {
+  font-family: var(--o-serif);
+  color: #fff;
+  font-size: 1.65rem;
+  font-weight: 300;
+  line-height: 1;
+}
+
 /* the lit plate */
 .heroPlate {
   position: relative;
   aspect-ratio: 1 / 1;
   display: grid;
   place-items: center;
+  border-radius: 44px;
+  background:
+    radial-gradient(circle at 50% 42%, rgba(217, 237, 245, 0.42), transparent 48%),
+    linear-gradient(145deg, rgba(255, 255, 255, 0.14), rgba(255, 255, 255, 0.04));
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.16), 0 38px 90px rgba(0, 0, 0, 0.34);
 }
 
 /* A single soft light behind the packshot. Does the work a studio backdrop
@@ -371,14 +423,22 @@
   position: absolute;
   inset: 8%;
   border-radius: 50%;
-  background: radial-gradient(circle, rgba(255, 243, 235, 0.22), transparent 68%);
+  background: radial-gradient(circle, rgba(223, 240, 234, 0.42), transparent 68%);
 }
 
 /* The thin gold ring is the page's signature: it returns on every product
    plate and on the closing band. */
 .heroRing {
   position: absolute;
-  inset: 6%;
+  inset: 8%;
+  border: 1px solid rgba(217, 237, 245, 0.55);
+  border-radius: 40px;
+  opacity: 0.7;
+}
+
+.heroHalo {
+  position: absolute;
+  inset: 20%;
   border: 1px solid var(--o-hair-gold);
   border-radius: 50%;
   opacity: 0.55;
@@ -386,11 +446,46 @@
 
 .heroImg {
   position: relative;
-  width: 76%;
+  width: 74%;
   max-width: 340px;
   aspect-ratio: 1 / 1;
   object-fit: contain;
-  filter: drop-shadow(0 30px 45px rgba(0, 0, 0, 0.45));
+  filter: drop-shadow(0 34px 42px rgba(0, 0, 0, 0.48));
+  z-index: 1;
+}
+
+.heroMini {
+  position: absolute;
+  z-index: 2;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.55rem;
+  padding: 0.7rem 0.9rem;
+  border-radius: 100px;
+  color: #fff;
+  background: rgba(8, 28, 16, 0.66);
+  border: 1px solid rgba(255, 255, 255, 0.16);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  font-size: 0.72rem;
+  font-weight: 700;
+  box-shadow: 0 14px 34px rgba(0, 0, 0, 0.22);
+}
+
+.heroMini svg {
+  width: 15px;
+  height: 15px;
+  color: var(--gold-light);
+}
+
+.heroMiniTop {
+  inset-block-start: 12%;
+  inset-inline-start: 7%;
+}
+
+.heroMiniBottom {
+  inset-block-end: 12%;
+  inset-inline-end: 7%;
 }
 
 /* ── the trust rail, overlapping the hero's foot ─────────────────────── */
@@ -406,7 +501,7 @@
   grid-template-columns: repeat(3, minmax(0, 1fr));
   background: var(--o-paper);
   border: 1px solid var(--o-hair);
-  border-radius: 4px;
+  border-radius: 28px;
   box-shadow: 0 24px 60px rgba(58, 42, 48, 0.12);
   overflow: hidden;
 }
@@ -426,7 +521,7 @@
 .railItem svg {
   width: 22px;
   height: 22px;
-  color: var(--gold);
+  color: var(--o-teal);
   flex: none;
 }
 
@@ -459,7 +554,7 @@
   display: inline-flex;
   align-items: center;
   gap: 0.7rem;
-  background: transparent;
+  background: rgba(255, 255, 255, 0.58);
   border: 1px solid var(--o-hair);
   border-radius: 100px;
   padding: 0.4rem 1rem 0.4rem 0.4rem;
@@ -501,7 +596,7 @@
 /* ── a product block ─────────────────────────────────────────────────── */
 
 .block {
-  padding: 5.5rem 0 1rem;
+  padding: 6rem 0 1rem;
   scroll-margin-top: 5rem;
 }
 
@@ -509,7 +604,9 @@
    a stacked page reads as separate products. Flat, not a gradient: a gradient
    band has no edge, and the edge is the whole point. */
 .blockAlt {
-  background: var(--o-sand);
+  background:
+    radial-gradient(42rem 22rem at 84% 16%, rgba(217, 237, 245, 0.8), transparent 62%),
+    var(--o-sand);
   border-block: 1px solid var(--o-hair-soft);
 }
 
@@ -535,8 +632,9 @@
   font-size: 0.66rem;
   font-weight: 700;
   letter-spacing: 0.16em;
-  color: var(--rose-deep);
-  border: 1px solid var(--rose-soft);
+  color: var(--o-teal);
+  border: 1px solid rgba(15, 107, 104, 0.2);
+  background: rgba(223, 240, 234, 0.72);
   border-radius: 100px;
   padding: 0.3rem 0.85rem;
 }
@@ -570,7 +668,7 @@
 /* product spotlight: photo plate + price + its own CTA */
 .spot {
   display: grid;
-  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  grid-template-columns: minmax(0, 1.02fr) minmax(0, 0.98fr);
   gap: clamp(1.5rem, 5vw, 4rem);
   align-items: center;
 }
@@ -581,20 +679,55 @@
 .spotMedia {
   position: relative;
   aspect-ratio: 4 / 5;
-  background: var(--o-paper);
+  overflow: hidden;
+  background:
+    radial-gradient(70% 58% at 50% 44%, rgba(217, 237, 245, 0.88), transparent 64%),
+    linear-gradient(155deg, #ffffff, var(--o-mint));
   border: 1px solid var(--o-hair);
   display: grid;
   place-items: center;
-  padding: 2.2rem;
+  padding: 2.3rem;
+  border-radius: 34px;
+  box-shadow: 0 26px 70px rgba(15, 79, 70, 0.11);
 }
 
 .spotMedia::after {
   content: "";
   position: absolute;
-  inset: 12px;
+  inset: 14px;
   border: 1px solid var(--o-hair-gold);
+  border-radius: 24px;
   opacity: 0.5;
   pointer-events: none;
+}
+
+.spotOrbit {
+  position: absolute;
+  width: 64%;
+  aspect-ratio: 1;
+  border: 1px solid rgba(15, 107, 104, 0.16);
+  border-radius: 50%;
+}
+
+.spotOrbit::before,
+.spotOrbit::after {
+  content: "";
+  position: absolute;
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  background: var(--o-teal);
+  box-shadow: 0 0 0 6px rgba(15, 107, 104, 0.08);
+}
+
+.spotOrbit::before {
+  top: 13%;
+  inset-inline-start: 5%;
+}
+
+.spotOrbit::after {
+  bottom: 10%;
+  inset-inline-end: 8%;
 }
 
 .blockAlt .spotMedia {
@@ -606,6 +739,24 @@
   height: 100%;
   object-fit: contain;
   mix-blend-mode: multiply;
+  position: relative;
+  z-index: 1;
+  filter: drop-shadow(0 22px 24px rgba(15, 79, 70, 0.16));
+}
+
+.formulaTag {
+  display: inline-flex;
+  width: fit-content;
+  margin-bottom: 1rem;
+  padding: 0.42rem 0.78rem;
+  border-radius: 100px;
+  background: rgba(15, 107, 104, 0.09);
+  border: 1px solid rgba(15, 107, 104, 0.14);
+  color: var(--o-teal);
+  font-size: 0.64rem;
+  font-weight: 800;
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
 }
 
 .spotBody h3 {
@@ -624,6 +775,39 @@
   max-width: 42ch;
 }
 
+.fitPanel {
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  margin: 0 0 1.5rem;
+  padding: 1rem;
+  border: 1px solid rgba(15, 107, 104, 0.14);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.62);
+}
+
+.fitNum {
+  color: var(--o-teal);
+  font-size: 1.7rem;
+  flex: none;
+}
+
+.fitPanel b,
+.fitPanel small {
+  display: block;
+}
+
+.fitPanel b {
+  font-size: 0.84rem;
+  margin-bottom: 0.3rem;
+}
+
+.fitPanel small {
+  color: var(--ink-2);
+  font-size: 0.78rem;
+  line-height: 1.85;
+}
+
 .priceRow {
   display: flex;
   align-items: baseline;
@@ -635,7 +819,7 @@
 }
 
 .price {
-  font-size: clamp(1.5rem, 4vw, 1.9rem);
+  font-size: clamp(1.55rem, 4vw, 2rem);
   font-weight: 700;
   letter-spacing: -0.02em;
 }
@@ -659,6 +843,7 @@
   height: 58px;
   object-fit: cover;
   border: 1px solid var(--o-hair);
+  border-radius: 16px;
   background: var(--o-paper);
   opacity: 0.75;
   transition: opacity 0.3s var(--ease), border-color 0.3s var(--ease);
@@ -676,14 +861,31 @@
 .benefits {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  border-top: 1px solid var(--o-hair);
-  border-inline-start: 1px solid var(--o-hair);
+  gap: 1rem;
+  border: 0;
 }
 
 .benefit {
-  padding: 1.8rem 1.6rem;
-  border-block-end: 1px solid var(--o-hair);
-  border-inline-end: 1px solid var(--o-hair);
+  position: relative;
+  min-height: 13rem;
+  padding: 1.6rem;
+  border: 1px solid rgba(15, 107, 104, 0.13);
+  border-radius: 26px;
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.92), rgba(248, 252, 246, 0.78)),
+    var(--o-paper);
+  overflow: hidden;
+}
+
+.benefit::after {
+  content: "";
+  position: absolute;
+  inset-inline-end: -2rem;
+  inset-block-start: -2rem;
+  width: 7rem;
+  aspect-ratio: 1;
+  border: 1px solid rgba(15, 107, 104, 0.1);
+  border-radius: 50%;
 }
 
 /* The emoji that used to sit here came from lib/landing-content.ts and was
@@ -692,7 +894,7 @@
 .benefitNum {
   display: block;
   font-size: 1.6rem;
-  color: var(--gold);
+  color: var(--o-teal);
   margin-bottom: 0.9rem;
 }
 
@@ -717,6 +919,9 @@
    rows. The old version boxed each one and hung a gold bar off it. */
 .ingredients {
   border-top: 1px solid var(--o-hair);
+  background: rgba(255, 255, 255, 0.54);
+  border-radius: 28px;
+  padding: 0 1.4rem;
 }
 
 .ingredient {
@@ -752,7 +957,11 @@
   margin: 0;
   padding: 0;
   padding-inline-start: 1.6rem;
-  border-inline-start: 1px solid var(--o-hair);
+  border-inline-start: 1px solid rgba(15, 107, 104, 0.2);
+  background: rgba(255, 255, 255, 0.54);
+  border-radius: 28px;
+  padding: 1.6rem;
+  padding-inline-start: 2.2rem;
 }
 
 .usageRow {
@@ -766,13 +975,14 @@
 
 .usageNum {
   position: absolute;
-  inset-inline-start: -2.35rem;
-  top: -0.15rem;
+  inset-inline-start: -2.95rem;
+  top: 0.05rem;
   width: 1.5rem;
   text-align: center;
   font-size: 1.15rem;
   color: var(--gold);
-  background: var(--o-ivory);
+  background: var(--o-mint);
+  border-radius: 50%;
   padding-block: 0.15rem;
 }
 
@@ -808,7 +1018,10 @@
 .baCard {
   background: var(--o-paper);
   border: 1px solid var(--o-hair);
+  border-radius: 30px;
   padding: 1rem 1rem 1.5rem;
+  box-shadow: 0 20px 50px rgba(15, 79, 70, 0.08);
+  overflow: hidden;
 }
 
 .baCard h4 {
@@ -836,6 +1049,7 @@
   user-select: none;
   -webkit-user-select: none;
   background: var(--o-sand);
+  border-radius: 22px;
   --ba: 50%;
 }
 
@@ -939,15 +1153,19 @@
 .reviews {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(270px, 1fr));
-  gap: 1.6rem;
+  gap: 1rem;
 }
 
 .review {
   display: flex;
   flex-direction: column;
-  background: var(--o-paper);
-  border: 1px solid var(--o-hair);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.94), rgba(248, 252, 246, 0.78)),
+    var(--o-paper);
+  border: 1px solid rgba(15, 107, 104, 0.13);
+  border-radius: 28px;
   padding: 1.9rem 1.7rem 1.6rem;
+  box-shadow: 0 18px 46px rgba(15, 79, 70, 0.08);
 }
 
 /* A serif quotation mark, set large and faint — the one ornament on the page,
@@ -956,7 +1174,7 @@
   font-family: var(--o-serif);
   font-size: 3.4rem;
   line-height: 0.5;
-  color: var(--gold);
+  color: var(--o-teal);
   opacity: 0.35;
   margin-bottom: 1.1rem;
 }
@@ -997,8 +1215,9 @@
   width: 34px;
   height: 34px;
   border-radius: 50%;
-  border: 1px solid var(--o-hair-gold);
-  color: var(--gold);
+  border: 1px solid rgba(15, 107, 104, 0.2);
+  color: var(--o-teal);
+  background: var(--o-mint);
   font-weight: 700;
   flex: none;
 }
@@ -1019,20 +1238,22 @@
 .trustGrid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  border-top: 1px solid var(--o-hair);
-  border-inline-start: 1px solid var(--o-hair);
+  gap: 1rem;
+  border: 0;
 }
 
 .trustCard {
-  padding: 1.9rem 1.6rem;
-  border-block-end: 1px solid var(--o-hair);
-  border-inline-end: 1px solid var(--o-hair);
+  padding: 1.8rem 1.55rem;
+  border: 1px solid rgba(15, 107, 104, 0.13);
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.64);
+  box-shadow: 0 16px 40px rgba(15, 79, 70, 0.07);
 }
 
 .trustCard svg {
   width: 26px;
   height: 26px;
-  color: var(--gold);
+  color: var(--o-teal);
   margin-bottom: 1.1rem;
 }
 
@@ -1076,6 +1297,9 @@
 
 .faq {
   border-top: 1px solid var(--o-hair);
+  background: rgba(255, 255, 255, 0.58);
+  border-radius: 28px;
+  padding: 0 1.4rem;
 }
 
 .faqItem {
@@ -1149,7 +1373,10 @@
 .summaryBand {
   position: relative;
   overflow: hidden;
-  background: var(--o-sand);
+  background:
+    radial-gradient(46rem 28rem at 80% 22%, rgba(217, 237, 245, 0.85), transparent 64%),
+    radial-gradient(42rem 26rem at 8% 92%, rgba(223, 240, 234, 0.9), transparent 62%),
+    var(--o-sand);
   border-block: 1px solid var(--o-hair-soft);
   margin-top: 5rem;
   padding-bottom: 4.5rem;
@@ -1165,8 +1392,8 @@
   font-size: clamp(5rem, 20vw, 15rem);
   line-height: 0.8;
   letter-spacing: 0.02em;
-  color: var(--gold);
-  opacity: 0.11;
+  color: var(--o-teal);
+  opacity: 0.08;
   pointer-events: none;
   user-select: none;
   white-space: nowrap;
@@ -1174,11 +1401,14 @@
 
 .summary {
   position: relative;
-  background: var(--o-paper);
-  border: 1px solid var(--o-hair);
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(15, 107, 104, 0.15);
+  border-radius: 34px;
   padding: 2rem;
-  max-width: 40rem;
-  box-shadow: 0 24px 60px rgba(58, 42, 48, 0.1);
+  max-width: 43rem;
+  box-shadow: 0 28px 80px rgba(15, 79, 70, 0.12);
+  backdrop-filter: blur(14px);
+  -webkit-backdrop-filter: blur(14px);
 }
 
 .sumRow {
@@ -1197,8 +1427,9 @@
   width: 56px;
   height: 56px;
   object-fit: contain;
-  background: var(--o-sand);
-  border: 1px solid var(--o-hair-soft);
+  background: var(--o-mint);
+  border: 1px solid rgba(15, 107, 104, 0.1);
+  border-radius: 18px;
   flex: none;
 }
 
@@ -1275,8 +1506,11 @@
   inset: 0;
   z-index: -1;
   background:
+    linear-gradient(rgba(255, 255, 255, 0.04) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.035) 1px, transparent 1px),
     radial-gradient(60% 70% at 20% 10%, rgba(217, 168, 108, 0.2), transparent 62%),
-    radial-gradient(55% 65% at 82% 90%, rgba(224, 114, 140, 0.18), transparent 60%);
+    radial-gradient(55% 65% at 82% 90%, rgba(15, 107, 104, 0.32), transparent 60%);
+  background-size: 70px 70px, 70px 70px, auto, auto;
 }
 
 /* The gold ring from the hero plate, returning at page scale. */
@@ -1288,9 +1522,9 @@
   width: min(46rem, 120vw);
   aspect-ratio: 1;
   transform: translate(-50%, -50%);
-  border: 1px solid var(--o-hair-gold);
-  border-radius: 50%;
-  opacity: 0.28;
+  border: 1px solid rgba(217, 237, 245, 0.34);
+  border-radius: 44px;
+  opacity: 0.46;
   pointer-events: none;
 }
 
@@ -1402,12 +1636,12 @@
   max-width: 34rem;
   padding: 0.55rem 0.55rem 0.55rem 0.55rem;
   padding-inline-start: 1.4rem;
-  background: rgba(36, 26, 31, 0.94);
+  background: rgba(8, 28, 16, 0.94);
   backdrop-filter: blur(14px);
   -webkit-backdrop-filter: blur(14px);
   border: 1px solid var(--o-hair-light);
   border-radius: 100px;
-  box-shadow: 0 18px 44px rgba(36, 26, 31, 0.34);
+  box-shadow: 0 18px 44px rgba(8, 28, 16, 0.34);
   color: #fff;
 }
 
@@ -1449,6 +1683,14 @@
   .heroPlate {
     order: -1;
     aspect-ratio: 4 / 3;
+  }
+
+  .heroStats {
+    grid-template-columns: 1fr;
+  }
+
+  .heroStats span {
+    min-height: auto;
   }
 
   .heroImg {
@@ -1506,6 +1748,26 @@
 
   .summary {
     padding: 1.4rem;
+  }
+
+  .heroMini {
+    position: static;
+    margin: 0.4rem;
+    place-self: end;
+  }
+
+  .heroMiniTop {
+    align-self: start;
+  }
+
+  .fitPanel {
+    border-radius: 18px;
+  }
+
+  .sumBody {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.25rem;
   }
 
   .stickyInner {

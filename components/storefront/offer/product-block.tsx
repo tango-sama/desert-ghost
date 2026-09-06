@@ -75,14 +75,23 @@ export function ProductBlock({
             {/* ── the product itself ── */}
             <div className={styles.spot}>
               <div className={styles.spotMedia}>
+                <span className={styles.spotOrbit} aria-hidden />
                 {main ? (
                   /* eslint-disable-next-line @next/next/no-img-element */
                   <img src={main} alt={name} loading="lazy" />
                 ) : null}
               </div>
               <div className={styles.spotBody}>
+                <span className={styles.formulaTag}>Selected Formula</span>
                 <h3>{name}</h3>
                 {p.subtitle && <p>{p.subtitle}</p>}
+                <div className={styles.fitPanel}>
+                  <span className={cn(styles.fitNum, styles.numeral)}>01</span>
+                  <span>
+                    <b>لماذا ظهر في نتيجتكِ؟</b>
+                    <small>لأنه يطابق الهدف الذي اخترتِه في الاختبار ويكمل روتينكِ الحالي.</small>
+                  </span>
+                </div>
                 <div className={styles.priceRow}>
                   <span className={cn(styles.price, "num")}>{priceFmt(p.price)}</span>
                   <span className={styles.priceNote}>+ التوصيل حسب ولايتكِ</span>

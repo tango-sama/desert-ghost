@@ -5,7 +5,7 @@ import { priceFmt } from "@/lib/firebase";
 import type { LandingBlock } from "@/lib/landing-content";
 import { pageHeadline, pageSubhead } from "@/lib/landing-content";
 import type { Answers } from "@/lib/quiz";
-import { BagIcon, CashIcon, PhoneIcon, TruckIcon } from "./icons";
+import { BagIcon, CashIcon, CheckIcon, PhoneIcon, ShieldIcon, TruckIcon } from "./icons";
 import styles from "./offer.module.css";
 
 // The hero speaks to the ANSWERS, not to the catalog: she has just told us her
@@ -62,7 +62,7 @@ export const Hero = forwardRef<
         <div className={styles.heroScrim} aria-hidden />
 
         <div className={`${styles.wrap} ${styles.heroGrid}`}>
-          <div>
+          <div className={styles.heroCopy}>
             <span className={styles.heroKicker}>نتيجة أسئلتكِ</span>
             <h1 className={styles.heroTitle}>{pageHeadline(answers, count)}</h1>
             <p className={styles.heroLead}>{pageSubhead(answers, count)}</p>
@@ -77,14 +77,38 @@ export const Hero = forwardRef<
                 <span className={`${styles.heroPriceValue} num`}>{priceFmt(total)}</span>
               </span>
             </div>
+
+            <div className={styles.heroStats} aria-label="معلومات الطلب">
+              <span>
+                <b>01</b>
+                توصية حسب إجاباتكِ
+              </span>
+              <span>
+                <b>{count.toString().padStart(2, "0")}</b>
+                {count === 1 ? "منتج مختار" : "منتجات مختارة"}
+              </span>
+              <span>
+                <b>COD</b>
+                الدفع عند الاستلام
+              </span>
+            </div>
           </div>
 
           <div className={styles.heroPlate}>
             <span className={styles.heroRing} aria-hidden />
+            <span className={styles.heroHalo} aria-hidden />
             {img ? (
               /* eslint-disable-next-line @next/next/no-img-element */
               <img className={styles.heroImg} src={img} alt={heroName} />
             ) : null}
+            <div className={`${styles.heroMini} ${styles.heroMiniTop}`}>
+              <ShieldIcon />
+              <span>منتجات أصلية</span>
+            </div>
+            <div className={`${styles.heroMini} ${styles.heroMiniBottom}`}>
+              <CheckIcon />
+              <span>جاهز للتأكيد</span>
+            </div>
           </div>
         </div>
       </section>
