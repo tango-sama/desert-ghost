@@ -4857,3 +4857,57 @@ anti-aging) and تنحيف, with the right anchor card, badge and total; the
 `/offer` hand-off carries the new answer keys and renders "3 منتجات اخترناها
 لهدفكِ في التنحيف". No page errors (the console noise is blocked Firebase
 Storage images — this sandbox cannot reach that host).
+
+### `/offer` — the landing page read as the wrong product for the goal (2026-09-08)
+
+Owner test: answered "شعري" in the quiz, landed on the marine collagen page and
+read it as a skin product. The routing was right — the hero said "اخترناها
+لشعركِ" and the block headline said "العناية بشعركِ" — but the section a shopper
+actually reads to decide, «الفوائد — ما الذي يقدّمه لكِ», was the product's
+description split into lines in catalog order:
+
+| # | before | # | after |
+| --- | --- | --- | --- |
+| 01 | Vital Proteins Marine Collagen بوزن 221 غرام | 01 | تقوية الشعر والأظافر |
+| 02 | الجرعة لكل حصة | 02 | نوع الكولاجين |
+| 03 | النكهة | 03 | يدعم نضارة البشرة |
+| 04 | نوع الكولاجين | 04 | صحة المفاصل والعظام |
+| 05 | يدعم نضارة البشرة | | |
+| 06 | تقوية الشعر والأظافر | | |
+
+Three changes in `lib/landing-content.ts`, all of them about the page only
+saying what the product's own description supports:
+
+- **Benefit cards are ordered by her goal.** `GOAL_KEYWORDS` reads the
+  description against the answer she gave, and a stable sort promotes the lines
+  that speak to it. Nothing is invented and nothing is dropped for being
+  off-goal — the collagen page still says what it says about skin, second.
+- **Spec labels are no longer benefits.** Pack weight, flavour, serving size
+  and "التوفر"/"الشكل" are facts about the packet, and a line that only
+  restates the product's own name is a label the catalog repeats. Both are
+  filtered out of the grid (`SPEC_ITEM_NAME`, `restatesName`); the description
+  they come from is still the block's opening paragraph.
+- **The page may only name her goal when the product's words do.** `speaksTo()`
+  gates two strings: the block headline's angle (`— العناية بشعركِ` becomes
+  `— اختيارنا لكِ` when unsupported) and the new `block.fit`, the line under
+  «لماذا ظهر في نتيجتكِ؟», which was one hardcoded sentence in
+  `product-block.tsx` claiming a match for every product. Unsupported now reads
+  "اخترناه لكِ بناءً على إجاباتكِ في الاختبار" — vaguer, and true.
+
+Also fixed while in there: lines that begin with the previous line's full stop
+("‎.نوع الكولاجين") are a routine artefact of typing RTL text with latin
+punctuation, and now have it stripped like any other leading list mark.
+
+**Verified.** Typecheck, `next build` and ESLint clean (the three pre-existing
+warnings elsewhere untouched). A harness built all **894** pages — every
+product against every goal: no empty benefit list, no spec label or name line
+shown as a benefit, and no page naming a goal its product's own text does not
+support (355 name the goal, 539 fall back to "اخترناه لكِ بناءً على إجاباتكِ").
+The full hair walk driven in Chromium at 390px now reads: نتيجتكِ شعر → "شعركِ
+يحتاج دعماً من الداخل" → block "العناية بشعركِ" → fit "لأنكِ اخترتِ العناية
+بشعركِ، والشعر مذكور ضمن ما يتناوله هذا المنتج في وصفه" → first benefit "تقوية
+الشعر والأظافر", with كبسولات البيوتين in the routine. No page errors.
+
+Open: `hair` still anchors on Marine Collagen (the owner's spec). Its
+description does claim hair and nails, but if the intent is a dedicated hair
+product, changing the `hair` anchor ids in `lib/quiz.ts` is a one-line edit.
