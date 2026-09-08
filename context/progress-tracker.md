@@ -4783,3 +4783,77 @@ document overflow, no tap target under 40px, no page errors. Desktop unchanged
 (523px plate, 340px photo). The two boxes my audit reports as "overflowing"
 (`.heroBg`, `.ctaRing`) are decorative and clipped by `overflow: hidden`
 ancestors; the document itself does not overflow.
+
+## Quiz funnel — six categories, one anchor product each (2026-09-08)
+
+The `/quiz` recommendation was rewritten from "score all 149 products and show
+whoever wins" to "tally six categories, then recommend that category's anchor
+product". The owner sells this funnel per category, so the outcome had to
+become a thing a campaign can be pointed at: `تنحيف` now always ends on the
+same product, whatever the catalog does that week.
+
+**The six categories and their anchors** (`ANCHORS` in `lib/quiz.ts`, ids
+verified against the live `products` collection on 2026-09-08):
+
+| Category | Arabic | Anchor | Firestore id |
+| --- | --- | --- | --- |
+| `skin` | بشرة | كبسولات Glutathione life extension | `1780283875728` |
+| `hair` | شعر | Vital Proteins Marine Collagen | `1780288528206` |
+| `gain` | تسمين | *(Healthy Mass Gainer — not in the catalog)* | — |
+| `slim` | تنحيف | HHS A1 L-Carnitine Lepidium | `1768873325495` |
+| `energy` | طاقة ونشاط | *(standalone L-Carnitine — not in the catalog)* | — |
+| `antiaging` | عناية ومحاربة الشيخوخة | Marine Collagen **+** Glutathione | both of the above |
+
+**Two anchors have no product yet.** "Healthy Mass Gainer" and a standalone
+"L-Carnitine" are not in the `products` collection. Until the owner adds them:
+
+- `gain` resolves into the `fattening` category and recommends the strongest
+  in-stock product there (today: Osavi Fenugreek, 12 600 د.ج).
+- `energy` resolves into the vitamin lines (`AMF`/`NF`/`Fm`; today: Bio
+  Spirulina Premium, 14 500 د.ج). The HHS slimming capsule is *excluded* from
+  this category on purpose even though its title matches "L-Carnitine" —
+  sending a woman who asked about her energy to a product titled "كبسولات
+  تنحيف الجسم" reads as not having been listened to.
+
+Both start resolving to the real product automatically once it is added: the
+resolver tries the named ids, then a title pattern (`/mass\s*gainer/i`,
+`/l[\s-]*carnitin/i`, …), then the catalog category. Adding the ids to
+`ANCHORS` afterwards makes it exact.
+
+**The five questions** (`QUESTIONS`, all copy female-form Arabic): 1 — the
+gateway (which of the six she came for); 2 — how long she has noticed it;
+3 — the form she will actually keep using; 4 — her secondary concern; 5 — what
+her days look like. Each option carries `points` per category and the highest
+tally wins. The gateway is worth 10 and each follow-up at most 3, so
+overturning question one takes all four follow-ups agreeing (12 > 10) — one
+stray answer never does, and a consistent story always does. Ties go to the
+gateway; ties not involving it fall through to the fixed `GOALS` order, so the
+same answers always produce the same result.
+
+`Answers` keys changed with the questions (`goal`, `timeline`, `form`,
+`concern`, `routine` — `age`, `weight` and `intensity` are gone). `/offer`
+validates answers against `QUESTIONS` by key, so it followed automatically;
+`lib/landing-content.ts` gained `energy`/`antiaging` archetypes and headlines
+in place of `curves`/`hormones`/`vitality`.
+
+The winning category is stamped on the funnel `result` event as
+`answers.result`, so "which category does the traffic sort into, and which one
+actually orders" is answerable from `funnels/quiz/events` without a new field
+on `/api/funnel`.
+
+**Verified.** Typecheck and `next build` clean; ESLint clean on the changed
+files (the three pre-existing warnings elsewhere are untouched). A harness ran
+all **2 880** answer combinations against the real 149-product catalog: every
+one resolves to an anchor, the anchor always leads the bundle, nothing is
+duplicated between the bundle and the alternates, `antiaging` always returns
+its pair and every other category exactly one product, and the category
+distribution is even (476–487 per category, so no category is unreachable or
+dominant). Fallbacks were checked by marking anchors sold out — Glutathione
+falls to Liposomal L-Glutathione, Marine Collagen to Marine Kollagen Komplex,
+and with every named anchor gone each category still resolves in-category.
+Driven in Chromium at 390px: the three walks land on بشرة, عناية ومحاربة
+الشيخوخة (the override case — she picks بشرتي, everything else says
+anti-aging) and تنحيف, with the right anchor card, badge and total; the
+`/offer` hand-off carries the new answer keys and renders "3 منتجات اخترناها
+لهدفكِ في التنحيف". No page errors (the console noise is blocked Firebase
+Storage images — this sandbox cannot reach that host).
