@@ -126,6 +126,58 @@ not the intended state (see `development-workflow.md`).
   `/checkout` against the real catalog (cart contents survive the
   navigation, 6 form inputs render, no page errors).
 
+## Completed (2026-09-08) — the quiz ad is LIVE, and attribution is proven end to end
+
+**The `INTERNAL` error had one cause: the parent campaign was CBO.** Eight
+ad-set creates failed against campaign `120249802677080789` (campaign-level
+€10/day budget) across two days and four payload shapes, including a minimal
+geo-only spec. Creating a campaign with **no** campaign budget and putting the
+€10/day on the **ad set** (ABO) succeeded on the first try. The account was
+never at fault — `839446010997263` reads back `ACTIVE`, queryable, payment
+method present. Read that error as "your parent campaign has a budget", not
+as anything about the payload.
+
+**What is live** (all approved, no delivery errors):
+
+- Campaign `DS — Quiz Funnel — Sales — Sept 2026 (ABO)` — `120249828576010789`
+- Ad set `DZ — Women 22-55 — Broad` — `120249828576400789`, €10/day,
+  `OFFSITE_CONVERSIONS` → Purchase on pixel `1742198836647450`, Algeria,
+  women, 22–55 (Advantage+ moved the **ages to suggestions**; gender stayed a
+  hard filter), 7-day click / 1-day view attribution.
+- Two ads, both owner-supplied AI stills, no baked-in text:
+  `Amber — Chosen` (`120249828655900789`) and `Frosted — Gold`
+  (`120249828749360789`).
+
+**Attribution verified end to end on real traffic (2026-09-08).** First day:
+€2.45, 1,100 impressions, 51 link clicks, 16 landing-page views — and the
+owner confirmed funnel events arriving in Firestore **carrying `campaignId`**.
+That closes the chain Meta → URL macros → `/quiz` → `/api/funnel` → Firestore,
+which is the thing every per-campaign profit number depends on. The macro URL
+that works, verbatim:
+`https://www.desertshop.fit/quiz?utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}&utm_content={{ad.name}}&campaignId={{campaign.id}}&adsetId={{adset.id}}&adId={{ad.id}}`
+Note the Marketing API exposes no field carrying an inline creative's link, so
+this could NOT be confirmed by reading the creative back — `link_url` returns
+empty. The only proof available is live funnel events, or the owner opening
+the ad in Ads Manager.
+
+**Day-one placement split, worth revisiting after ~3 days, not before:**
+Instagram feed took **44% of spend (€1.07) for zero landing-page views** at a
+€11.38 CPM; Audience Network produced **65% of all link clicks from 13% of
+impressions** at a 14.29% CTR, of which only 24% became landing-page views —
+the accidental-tap pattern. Facebook Reels was the best value by far (€0.07
+for 4 landing-page views). Not acted on: €2.45 is far too thin a sample, and
+because the ad set optimises for Purchase rather than clicks, Meta should
+discount the junk itself once purchases land.
+
+**Still untested:** the order → profit leg. Nothing has bought yet, so
+`orderAttribution` stamping a real funnel order, and `syncMetaInsights`
+writing actual spend rows, have not been exercised against live data.
+
+**Housekeeping:** `120249802677080789` (the original CBO campaign) is an
+empty paused duplicate with a near-identical name — delete or rename it.
+Tick the **(ABO)** campaign in the growth dashboard's allowlist, not the
+original, or its spend lands as «إنفاق غير مصنَّف».
+
 ## Completed (2026-09-06) — first Meta campaign for the quiz funnel, and where it stuck
 
 - **Campaign created and verified, PAUSED, zero spend.** Ad account
