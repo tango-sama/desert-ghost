@@ -4926,10 +4926,15 @@ per-carrier `{ tracking }`, and the tracker's `outcome` + `trackingStatus`. So
 the search runs against Firestore, and the trackings it prints are what get fed
 to the carrier API (the panel's 🔄) for live status.
 
-Reads only; never writes, never prints credentials. Needs
-`FIREBASE_SERVICE_ACCOUNT_KEY` — the same service-account JSON
-`lib/firebase-admin.ts` uses on Vercel. `firebase-admin` is imported lazily so a
-missing key reports the key rather than a module-resolution stack trace.
+Reads only; never writes, never prints credentials. Takes the credential as
+`--key-file <path>` (the JSON downloaded from Firebase), or
+`FIREBASE_SERVICE_ACCOUNT_KEY` / `GOOGLE_APPLICATION_CREDENTIALS` — the same
+service-account `lib/firebase-admin.ts` uses on Vercel. The file path is offered
+first because the key's `private_key` is multi-line: pasting it into a shell
+variable mangles it, and the failure surfaces as an opaque auth error rather
+than a quoting complaint. A Web-app config pasted in by mistake is rejected by
+name, and a key for another project warns. `firebase-admin` is imported lazily
+so a missing key reports the key rather than a module-resolution stack trace.
 
 Two judgement calls worth keeping:
 

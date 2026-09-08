@@ -15,8 +15,8 @@
 // the carrier API (the 🔄 refresh in the admin panel) for live status.
 //
 // Usage:
-//   FIREBASE_SERVICE_ACCOUNT_KEY='<service-account JSON>' \
-//     node scripts/find-parcel.mjs --amount 18000 --tolerance 1000 --months 12
+//   node scripts/find-parcel.mjs --key-file ~/Downloads/key.json \
+//     --amount 18000 --tolerance 1000 --months 12
 //
 // Options:
 //   --amount N      COD amount to look for            (default 18000)
@@ -25,13 +25,15 @@
 //   --carrier X     yalidine | noest | zr             (default: any)
 //   --all           include delivered orders too      (default: undelivered only)
 //   --json          machine-readable output
+//   --key-file P    path to the service-account JSON downloaded from Firebase
 //
 // Reads only. Never writes, and never prints credentials.
 
 const CARRIERS = ["yalidine", "noest", "zr"];
+const PROJECT_ID = "desert-shop-24af9"; // matches lib/firebase-admin.ts
 
 export function parseArgs(argv) {
-  const out = { amount: 18000, tolerance: 1000, months: 12, carrier: null, all: false, json: false };
+  const out = { amount: 18000, tolerance: 1000, months: 12, carrier: null, all: false, json: false, keyFile: null };
   for (let i = 0; i < argv.length; i++) {
     const a = argv[i];
     if (a === "--all") out.all = true;
@@ -40,6 +42,7 @@ export function parseArgs(argv) {
     else if (a === "--tolerance") out.tolerance = Number(argv[++i]);
     else if (a === "--months") out.months = Number(argv[++i]);
     else if (a === "--carrier") out.carrier = String(argv[++i]).toLowerCase();
+    else if (a === "--key-file") out.keyFile = String(argv[++i]);
   }
   if (!Number.isFinite(out.amount)) throw new Error("--amount must be a number");
   if (!Number.isFinite(out.tolerance) || out.tolerance < 0) throw new Error("--tolerance must be >= 0");
@@ -48,25 +51,64 @@ export function parseArgs(argv) {
   return out;
 }
 
-// firebase-admin is imported lazily so that a missing credential reports the
-// credential — not a module-resolution stack trace from an uninstalled dep.
-async function db() {
-  const key = process.env.FIREBASE_SERVICE_ACCOUNT_KEY;
-  if (!key) {
-    console.error(
-      "FIREBASE_SERVICE_ACCOUNT_KEY is not set.\n" +
-        "This is the same service-account JSON lib/firebase-admin.ts uses on Vercel.\n" +
-        "Without it there is no way to read the orders collection."
+// The service-account credential, from either the downloaded JSON FILE
+// (--key-file, or GOOGLE_APPLICATION_CREDENTIALS) or the JSON STRING in
+// FIREBASE_SERVICE_ACCOUNT_KEY that lib/firebase-admin.ts uses on Vercel.
+//
+// The file path is offered first because the key Firebase hands you is a
+// multi-line JSON blob whose `private_key` contains literal \n escapes —
+// pasting that into a shell variable mangles it in ways that surface as
+// confusing auth errors, not as "your quoting was wrong".
+export function readCredential(env, keyFile, readFile) {
+  const source = keyFile
+    ? { how: `--key-file ${keyFile}`, raw: readFile(keyFile) }
+    : env.FIREBASE_SERVICE_ACCOUNT_KEY
+      ? { how: "FIREBASE_SERVICE_ACCOUNT_KEY", raw: env.FIREBASE_SERVICE_ACCOUNT_KEY }
+      : env.GOOGLE_APPLICATION_CREDENTIALS
+        ? {
+            how: `GOOGLE_APPLICATION_CREDENTIALS (${env.GOOGLE_APPLICATION_CREDENTIALS})`,
+            raw: readFile(env.GOOGLE_APPLICATION_CREDENTIALS),
+          }
+        : null;
+
+  if (!source) {
+    throw new Error(
+      "No service-account credential found.\n\n" +
+        "Get one from the Firebase console:\n" +
+        "  Project settings -> Service accounts -> Generate new private key\n" +
+        "  https://console.firebase.google.com/project/desert-shop-24af9/settings/serviceaccounts/adminsdk\n\n" +
+        "Then point this script at the downloaded file:\n" +
+        "  node scripts/find-parcel.mjs --key-file ~/Downloads/<file>.json --amount 18000\n\n" +
+        "(Or set FIREBASE_SERVICE_ACCOUNT_KEY to the JSON string, as on Vercel.)"
     );
-    process.exit(2);
   }
+
   let parsed;
   try {
-    parsed = JSON.parse(key);
+    parsed = JSON.parse(source.raw);
   } catch {
-    console.error("FIREBASE_SERVICE_ACCOUNT_KEY is set but is not valid JSON.");
-    process.exit(2);
+    throw new Error(`${source.how} is not valid JSON.`);
   }
+  if (parsed.type !== "service_account" || !parsed.private_key || !parsed.client_email) {
+    throw new Error(
+      `${source.how} is JSON, but not a service-account key ` +
+        `(expected type "service_account" with private_key and client_email).\n` +
+        `A Web-app config from "Your apps" is the usual mix-up — that one cannot read Firestore.`
+    );
+  }
+  if (parsed.project_id && parsed.project_id !== PROJECT_ID) {
+    console.error(
+      `Warning: key is for project "${parsed.project_id}", but this app is "${PROJECT_ID}".\n`
+    );
+  }
+  return parsed;
+}
+
+// firebase-admin is imported lazily so that a missing credential reports the
+// credential — not a module-resolution stack trace from an uninstalled dep.
+async function db(keyFile) {
+  const { readFileSync } = await import("node:fs");
+  const parsed = readCredential(process.env, keyFile, (f) => readFileSync(f, "utf8"));
   let app, firestore;
   try {
     app = await import("firebase-admin/app");
@@ -183,7 +225,7 @@ async function main() {
   const lo = args.amount - args.tolerance;
   const hi = args.amount + args.tolerance;
 
-  const snap = await (await db()).collection("orders").get();
+  const snap = await (await db(args.keyFile)).collection("orders").get();
   const hits = selectHits(snap.docs.map((d) => ({ id: d.id, ...d.data() })), args);
 
 
