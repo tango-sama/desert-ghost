@@ -89,7 +89,12 @@ export function ProductBlock({
                   <span className={cn(styles.fitNum, styles.numeral)}>01</span>
                   <span>
                     <b>لماذا ظهر في نتيجتكِ؟</b>
-                    <small>لأنه يطابق الهدف الذي اخترتِه في الاختبار ويكمل روتينكِ الحالي.</small>
+                    {/* Built per product in lib/landing-content.ts. It names
+                        her goal only when this product's own description
+                        speaks to it, and otherwise says plainly that we chose
+                        it from her answers — the page must never tell her a
+                        product is for something its own words never claim. */}
+                    <small>{block.fit}</small>
                   </span>
                 </div>
                 <div className={styles.priceRow}>

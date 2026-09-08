@@ -61,6 +61,10 @@ export type LandingBlock = {
   anchor: string;
   headline: string;
   subhead: string;
+  /** The one line under «لماذا ظهر في نتيجتكِ؟». Says why THIS product is in
+   *  her result, and says nothing the product's own words do not support —
+   *  see `fitLine`. */
+  fit: string;
   benefits: BenefitItem[];
   ingredients: IngredientItem[];
   usage: UsageStep[];
@@ -408,7 +412,11 @@ type ParsedDescription = { intro: string; items: BenefitItem[]; usage: string[] 
 // Bullet glyphs the owner types inline as well as at the start of a line, so
 // they are stripped everywhere rather than only from the front.
 const BULLET_GLYPHS = /[✅✔️✔☑️✓•▪◾●]/g;
-const LEADING_DASH = /^[\s\u200e\u200f]*[-–—*·]+\s*/;
+/* Leading list marks, and also a leading full stop or comma: the catalog's
+   Arabic lines routinely start with the previous line's punctuation ("‎.نوع
+   الكولاجين"), an artefact of typing RTL text with latin punctuation. Digits
+   are excluded so a line that genuinely opens with a decimal is untouched. */
+const LEADING_DASH = /^[\s\u200e\u200f]*[-–—*·.،]+\s*(?![0-9])/;
 const ENDS_IN_COLON = /[:：]\s*$/;
 // No `s` flag: the project targets an older lib than es2018, and it is not
 // needed — lines are split on newlines before they get here, so `.` never has
@@ -495,24 +503,125 @@ function parseDescription(d: Product["description"]): ParsedDescription {
   return { intro, items, usage };
 }
 
+// --------------------------------------------------------------------------
+// Reading a description against the goal she chose
+// --------------------------------------------------------------------------
+
+/**
+ * What each goal looks like in a product's own Arabic text.
+ *
+ * This exists because a quiz answer and a product description are written by
+ * different people about the same bottle. A woman who answers "شعري" and lands
+ * on a marine collagen page was reading a benefits list that opened with the
+ * pack weight, the flavour and "يدعم نضارة البشرة", with "تقوية الشعر
+ * والأظافر" buried last — a hair result that reads as a skin product, which is
+ * exactly the moment a shopper stops trusting the quiz.
+ *
+ * So the description is read against her goal and used two ways: to put the
+ * lines that answer her question first, and to decide whether the page is
+ * allowed to claim the product addresses that goal at all.
+ *
+ * Matched on alef-normalised text, so the patterns need no hamza variants.
+ */
+const GOAL_KEYWORDS: Record<Goal, RegExp> = {
+  skin: /بشرة|الجلد|تفتيح|تبييض|تصبغ|نضارة|مسام|حب الشباب|ترطيب/,
+  hair: /شعر|فروة|كيراتين|تساقط|اظافر|بيوتين/,
+  gain: /تسمين|زيادة الوزن|شهية|سعرات|كتلة|امتلاء|نحافة/,
+  slim: /تنحيف|دهون|حرق|الوزن الزائد|كرش|بطن|ايض|التمثيل الغذائي/,
+  energy: /طاقة|نشاط|ارهاق|تعب|خمول|تركيز|مناعة|حيوية|فيتامين|معادن/,
+  antiaging: /شيخوخة|تجاعيد|خطوط الدقيقة|الخطوط|مرونة|كولاجين|اكسدة|شباب|ترهل/,
+};
+
+/** True when this text speaks to the goal she chose. */
+function speaksTo(text: string, goal: Goal | undefined): boolean {
+  if (!goal || !text) return false;
+  return GOAL_KEYWORDS[goal].test(normalizeAlef(text));
+}
+
+/* Spec labels that are facts about the packet, not benefits: a shopper reading
+   «ما الذي يقدّمه لكِ» should not be told the flavour and the net weight. They
+   stay out of the benefit grid; the description they came from is still shown
+   as the block's opening paragraph. */
+const SPEC_ITEM_NAME =
+  /^(الجرعة|الحصة|النكهة|الوزن|الحجم|العبوة|التعبئة|الكمية|التوفر|الشكل|المقاس|الماركة|العلامة|بلد المنشا|المنشا|التركيز|المحتوى|النكهات|تاريخ الصلاحية|رقم التشغيلة)/;
+
+/** An untitled line that only restates the product's own name (usually with a
+ *  pack size after it) is a label the catalog repeats, not a benefit. */
+function restatesName(text: string, name: string): boolean {
+  const n = normalizeAlef(name).replace(/\s+/g, " ").trim();
+  if (n.length < 10) return false;
+  const t = normalizeAlef(text).replace(/\s+/g, " ").trim();
+  return t.startsWith(n.slice(0, Math.min(n.length, 24)));
+}
+
 /* The benefit cards, in the order a shopper's trust runs: what the owner wrote
    about this exact product, then the product's own description bullets (which
    she also wrote, in the catalog), then what is true of the category. The
-   archetype only tops up a short list — it never displaces the real copy. */
+   archetype only tops up a short list — it never displaces the real copy.
+
+   Within the description's own lines, the ones that answer HER goal come
+   first. The order is otherwise preserved (a stable sort), so this promotes
+   the relevant line without inventing a ranking the owner never wrote. */
 function buildBenefits(
   o: ProductLanding | undefined,
   parsed: ParsedDescription,
   arch: Archetype,
+  name: string,
+  goal: Goal | undefined,
 ): BenefitItem[] {
   const own = ownBenefits(o);
   if (own.length >= 3) return own.slice(0, 6);
 
+  const fromDesc = parsed.items
+    .filter(
+      (b) =>
+        !SPEC_ITEM_NAME.test(normalizeAlef(b.title)) &&
+        !(b.title === "" && restatesName(b.text, name)),
+    )
+    .map((b, i) => ({ b, i }))
+    .sort(
+      (x, y) =>
+        Number(speaksTo(`${y.b.title} ${y.b.text}`, goal)) -
+          Number(speaksTo(`${x.b.title} ${x.b.text}`, goal)) || x.i - y.i,
+    )
+    .map(({ b }) => b);
+
   // The description is the owner's own words about this exact product, so it
   // outranks anything generated. The archetype only tops up a list too short
   // to fill the grid — it never displaces real copy.
-  const merged = [...own, ...parsed.items.slice(0, 6 - own.length)];
+  // `ic` travels with each item and is deliberately not rendered by the
+  // /offer template (see product-block.tsx), so reordering cannot disturb it.
+  const merged = [...own, ...fromDesc.slice(0, 6 - own.length)];
   if (merged.length >= 3) return merged.slice(0, 6);
   return [...merged, ...arch.benefits].slice(0, 6);
+}
+
+/**
+ * The «لماذا ظهر في نتيجتكِ؟» line.
+ *
+ * It may only name her goal when the product's own text actually speaks to it.
+ * Anything else and it says plainly that we chose it from her answers — a
+ * vaguer sentence is a far cheaper price than telling a woman a skin product
+ * is for her hair, which is a claim she can check in the benefits list two
+ * scrolls down.
+ */
+/* Each line says the same two things: what she asked for, and that the
+   product's OWN description is where the match comes from. Nothing here claims
+   a catalog category, a result, or a timeline — the description is the only
+   source, and the benefits list two scrolls down is where she checks it. */
+const GOAL_FIT: Record<Goal, string> = {
+  skin: "لأنكِ اخترتِ العناية ببشرتكِ، والبشرة مذكورة ضمن ما يتناوله هذا المنتج في وصفه.",
+  hair: "لأنكِ اخترتِ العناية بشعركِ، والشعر مذكور ضمن ما يتناوله هذا المنتج في وصفه.",
+  gain: "لأنكِ اخترتِ زيادة وزنكِ، وهو ما يتناوله هذا المنتج ضمن وصفه.",
+  slim: "لأنكِ اخترتِ إنقاص وزنكِ، وهو ما يتناوله هذا المنتج ضمن وصفه.",
+  energy: "لأنكِ ذكرتِ التعب وقلة النشاط، والطاقة مذكورة ضمن ما يتناوله هذا المنتج في وصفه.",
+  antiaging: "لأن إجاباتكِ تشير إلى العناية بعلامات السن، وهو ما يتناوله هذا المنتج ضمن وصفه.",
+};
+
+function fitLine(supported: boolean, goal: Goal | undefined): string {
+  return supported && goal
+    ? GOAL_FIT[goal]
+    : "اخترناه لكِ بناءً على إجاباتكِ في الاختبار — اقرئي فوائده وطريقة استعماله قبل أن تقرري.";
 }
 
 /**
@@ -546,11 +655,23 @@ export function buildBlock(p: Product, a: Answers): LandingBlock {
   const form = productForm(p) ?? "any";
   const parsed = parseDescription(p.description);
 
+  // Does this product's own text speak to the goal she chose? Everything the
+  // page says ABOUT her goal is gated on this: the description is what the
+  // owner wrote about this bottle, and it is the only thing here entitled to
+  // claim what the bottle is for.
+  const supported = speaksTo(`${name} ${descLines(p.description).join(" ")}`, a.goal);
+  // A category archetype describes the product's real catalog category, so it
+  // is always safe. The goal archetype is not: it describes what SHE asked
+  // for, and pinning that to a product whose own words never mention it is how
+  // a hair result ends up headlined as skin care.
+  const hasCategoryAngle = Boolean(CATEGORY_ARCHETYPES[String(p.category ?? "")]);
+  const angle = hasCategoryAngle || supported ? arch.angle : "اختيارنا لكِ";
+
   const headline =
     clean(o?.headline) ||
     // Names the product and the reason she is here, in her own words from the
     // quiz. Falls back to the category/goal angle, which is always set.
-    `${name} — ${arch.angle}`;
+    `${name} — ${angle}`;
 
   const subhead =
     clean(o?.subhead) ||
@@ -566,7 +687,8 @@ export function buildBlock(p: Product, a: Answers): LandingBlock {
     anchor: `p-${String(p.id)}`,
     headline,
     subhead,
-    benefits: buildBenefits(o, parsed, arch),
+    fit: fitLine(supported, a.goal),
+    benefits: buildBenefits(o, parsed, arch, name, a.goal),
     // No layer under this one. See the honesty rules at the top of the file.
     ingredients: ownIngredients(o),
     usage: usage.length ? usage : deriveUsage(parsed, form),
