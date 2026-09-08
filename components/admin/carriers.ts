@@ -1,6 +1,6 @@
 // Shared carrier/order helpers for the admin views (ported from
 // amelhadj.html's CO map, confirmStamp and orderCarrier).
-import type { Order, CarrierKey } from "@/lib/admin";
+import type { Order, CarrierKey, TrackingStatus } from "@/lib/admin";
 
 // Carrier display metadata; the hex colors are the carriers' own brand marks.
 export const CO: Record<
@@ -56,6 +56,21 @@ export function orderCarrier(o: Order): CarrierKey | null {
   if (o.yalidine?.tracking) return "yalidine";
   if (o.zr?.tracking) return "zr";
   return null;
+}
+
+// Merge a fresh getParcelStatus result into the order (the function also
+// persists it server-side; this keeps the open panel in sync instantly).
+export function applyTrackingResult(
+  o: Order,
+  status: TrackingStatus
+): Partial<Order> {
+  const patch: Partial<Order> = { trackingStatus: status };
+  if (status?.carrier === "noest" && status.noestValidated && o.noest)
+    patch.noest = { ...o.noest, validated: true };
+  // ZR can heal a not-yet-resolved tracking number on refresh
+  if (status?.carrier === "zr" && status.tracking && o.zr)
+    patch.zr = { ...o.zr, tracking: status.tracking };
+  return patch;
 }
 
 export function orderDate(o: Order): Date | null {

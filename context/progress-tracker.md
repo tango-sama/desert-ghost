@@ -3364,6 +3364,20 @@ utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}
   its bulk purpose, or be dropped), or switch to "every tracked order that is
   not delivered" (one click = one carrier API call per open parcel, so a real
   jump in call volume)? Owner's call — not changed yet.
+  **RESOLVED (2026-09-08, owner-requested):** neither — the button is gone.
+  The owner asked for the refresh to happen by itself at 00:00 every day over
+  every parcel except the delivered ones, so the bulk refresh is now the
+  `useDailyTrackingSync` hook (see the 2026-09-08 entry at the end of this
+  file) and folding no longer gates what gets refreshed. The higher call
+  volume is accepted, spread one call per 350ms, once a day.
+
+- **Server-side 00:00 job for the daily parcel refresh** — the daily refresh
+  shipped on 2026-09-08 is panel-side: it only runs while the admin panel is
+  open (catching up the day's run when it is opened later). `ghost` has no
+  `functions/` and App Hosting has no cron, so an unattended midnight run
+  needs a scheduled Cloud Function beside `getParcelStatus` in the `trinkl`
+  functions project, over the same "has a carrier, not delivered" set. Does
+  the owner want that added there? Not started.
 
 - `isPastCancelWindow` (`components/admin/carriers.ts`) matches «Prêt à
   expédier» with `/pr[êe]t\s*[àa]\s*exp[ée]dier/`, but `\s` does not match an
@@ -4783,3 +4797,54 @@ document overflow, no tap target under 40px, no page errors. Desktop unchanged
 (523px plate, 340px photo). The two boxes my audit reports as "overflowing"
 (`.heroBg`, `.ctaRing`) are decorative and clipped by `overflow: hidden`
 ancestors; the document itself does not overflow.
+
+## Completed (this session, 2026-09-08) — orders: manual refresh-all replaced by a daily 00:00 auto-update
+
+Owner asked to drop the admin panel's "update all open orders" button and have
+the panel refresh parcels by itself, every day at 00:00, for every order except
+the delivered ones. Branch `claude/admin-orders-auto-update-a8zq9v`.
+
+**Removed.** The `🔄 تحديث حالة الطرود المفتوحة (n)` button in the orders
+toolbar, together with everything that only served it: `refreshAllTracking`,
+the `refreshAllLabel` progress state, the `anyTracked`/`openTracked` derived
+lists, `clearFold` (it folded each card back after the batch), and
+`scrollAllSteppersToCurrent` + its only helper `centerStepper`. The per-order
+🔄 button inside each card is untouched — a single parcel can still be
+refreshed by hand at any time.
+
+**Added.** `hooks/use-daily-tracking-sync.ts`, mounted once by `AdminShell` so
+it ticks on whichever tab the panel is left open on. It refreshes every order
+that has a carrier tracking number and is not `isDelivered(o)` — the old button
+only ever touched cards the admin had expanded, so the auto-run reaches strictly
+more orders — calling `getParcelStatus` one parcel at a time with a 350ms gap,
+exactly as the manual batch did, so carrier rate limits are not burst.
+
+**How "at 00:00" is enforced.** The run is keyed to the local calendar day
+(`ds_track_sync_day` in localStorage, `YYYY-MM-DD`), and a 60s interval checks
+whether that key still matches today. So: a panel left open overnight fires
+within a minute of midnight; a laptop that slept through 00:00 fires on the
+first tick after it wakes; and a panel that was closed at midnight catches the
+day's refresh up when it is next opened. The day is stamped *before* the batch
+runs, not after — a carrier outage must not turn into a retry every minute for
+the rest of the day. Result is toasted as `التحديث اليومي: تم تحديث N طرد`.
+
+**Known limitation — this is a panel-side schedule, not a server-side one.**
+`ghost` has no `functions/` of its own (the carrier callables live in the
+`trinkl` functions project) and Firebase App Hosting has no cron, so nothing
+here can wake at 00:00 with the panel closed. A true unattended 00:00 job needs
+a scheduled Cloud Function next to `getParcelStatus` in `trinkl/functions`,
+iterating the same "has a carrier, not delivered" set server-side. Recorded as
+an open question for the owner; the client-side job above is what is currently
+implemented.
+
+**Also moved.** `applyTrackingResult` (merge a `getParcelStatus` result into an
+order, incl. the Noest `validated` flag and ZR's tracking-number heal) went from
+a local function in `orders-view.tsx` to an export in `components/admin/carriers.ts`,
+so the view and the hook share one copy instead of drifting.
+
+**Verified:** `npx tsc --noEmit` clean, `npm run lint` clean for every file
+touched (the two `<img>` warnings and the `cart-drawer.tsx` `<a>` error are
+pre-existing, in storefront files this change does not touch), `npm run build`
+succeeds. NOT verified end to end: the midnight run against real carrier APIs
+was not exercised in a browser — that needs a credentialed admin session with
+live parcels, which only the owner can drive.

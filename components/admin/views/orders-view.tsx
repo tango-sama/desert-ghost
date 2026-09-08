@@ -32,6 +32,7 @@ import {
   CANCEL_FN,
   CO,
   CREATE_FN,
+  applyTrackingResult,
   isDelivered,
   isPastCancelWindow,
   orderCarrier,
@@ -98,18 +99,6 @@ function patchOrder(id: string, patch: Partial<Order>) {
       String(o.id) === String(id) ? { ...o, ...patch } : o
     ),
   }));
-}
-
-// Merge a fresh getParcelStatus result into the order (the function also
-// persists it server-side; this keeps the open panel in sync instantly).
-function applyTrackingResult(o: Order, status: TrackingStatus): Partial<Order> {
-  const patch: Partial<Order> = { trackingStatus: status };
-  if (status?.carrier === "noest" && status.noestValidated && o.noest)
-    patch.noest = { ...o.noest, validated: true };
-  // ZR can heal a not-yet-resolved tracking number on refresh
-  if (status?.carrier === "zr" && status.tracking && o.zr)
-    patch.zr = { ...o.zr, tracking: status.tracking };
-  return patch;
 }
 
 // `badge-class` from the carrier API is only a colour hint (green=success,
@@ -305,21 +294,6 @@ function TrafficLight({ state }: { state: LightState }) {
   );
 }
 
-// Horizontally centre a stepper on its current/last-reached step by
-// adjusting only the stepper's own scroll — never the page (delta-based,
-// works in RTL too).
-function centerStepper(pstep: Element) {
-  let target: Element | null = pstep.querySelector(".pstep-node.cur");
-  if (!target) {
-    const done = pstep.querySelectorAll(".pstep-node.done");
-    target = done[done.length - 1] ?? null;
-  }
-  if (!target) return;
-  const pr = pstep.getBoundingClientRect();
-  const tr = target.getBoundingClientRect();
-  (pstep as HTMLElement).scrollLeft += tr.left + tr.width / 2 - (pr.left + pr.width / 2);
-}
-
 // After a refresh re-renders, bring this order's tracker into view and
 // scroll its stepper to the current/last-reached step.
 function scrollTrackerToCurrent(orderId: string) {
@@ -338,14 +312,6 @@ function scrollTrackerToCurrent(orderId: string) {
     if (target)
       target.scrollIntoView({ behavior: "smooth", block: "nearest", inline: "center" });
     else ptrack.scrollIntoView({ behavior: "smooth", block: "nearest" });
-  });
-}
-
-// After refresh-all, snap every visible stepper to its own current step
-// without ever scrolling the page (folded cards render no stepper).
-function scrollAllSteppersToCurrent() {
-  requestAnimationFrame(() => {
-    document.querySelectorAll(".pstep").forEach(centerStepper);
   });
 }
 
@@ -870,7 +836,6 @@ export function OrdersView() {
   const ordersSearch = useAdminStore((s) => s.ordersSearch);
 
   const [busy, setBusy] = useState<Record<string, boolean>>({});
-  const [refreshAllLabel, setRefreshAllLabel] = useState<string | null>(null);
   const [noestSel, setNoestSel] = useState<Record<string, boolean>>({});
   const [selected, setSelected] = useState<Record<string, boolean>>({});
   const [drafts, setDrafts] = useState<
@@ -930,8 +895,6 @@ export function OrdersView() {
   // order at a time. `folds` only ever holds cards the admin opened or
   // closed by hand, so clearing an entry returns that card to folded.
   const cardOpen = (o: Order) => folds[String(o.id)] ?? false;
-  const anyTracked = list.some((o) => !!orderCarrier(o));
-  const openTracked = list.filter((o) => orderCarrier(o) && cardOpen(o));
   const selectedNoest = Object.keys(noestSel).filter((k) => noestSel[k]);
   const selectedIds = Object.keys(selected).filter((k) => selected[k]);
   const allSelected = list.length > 0 && list.every((o) => selected[String(o.id)]);
@@ -950,17 +913,6 @@ export function OrdersView() {
 
   function setBusyKey(key: string, on: boolean) {
     setBusy((b) => ({ ...b, [key]: on }));
-  }
-
-  // After a bulk refresh, drop the order's fold override so the card returns
-  // to folded — the batch leaves the list decluttered once it is done.
-  function clearFold(oid: string) {
-    setFolds((f) => {
-      if (!(oid in f)) return f;
-      const n = { ...f };
-      delete n[oid];
-      return n;
-    });
   }
 
   // A single-order refresh is always triggered from inside that order's own
@@ -1092,38 +1044,6 @@ export function OrdersView() {
     } finally {
       setSwapSaving(false);
     }
-  }
-
-  // Refreshes parcels one at a time (not in parallel) so we don't burst
-  // past carrier rate limits. Only orders whose card is expanded are
-  // refreshed — folded ones (old or already delivered) are skipped.
-  async function refreshAllTracking() {
-    const targets = openTracked;
-    if (!targets.length) {
-      toast("لا توجد طلبات مفتوحة بها طرود لتحديثها");
-      return;
-    }
-    let ok = 0;
-    let fail = 0;
-    for (let i = 0; i < targets.length; i++) {
-      const o = targets[i];
-      setRefreshAllLabel(`⏳ جاري التحديث... (${i + 1}/${targets.length})`);
-      try {
-        const status = await callFn<TrackingStatus>("getParcelStatus", {
-          orderId: o.id,
-        });
-        patchOrder(String(o.id), applyTrackingResult(o, status));
-        clearFold(String(o.id));
-        ok++;
-      } catch (err) {
-        console.error("getParcelStatus", o.id, err);
-        fail++;
-      }
-      await new Promise((r) => setTimeout(r, 350));
-    }
-    setRefreshAllLabel(null);
-    scrollAllSteppersToCurrent();
-    toast(`تم تحديث ${ok} طرد` + (fail ? ` — تعذّر تحديث ${fail}` : ""));
   }
 
   // Noest label PDFs require the API token, so the browser can't link to
@@ -1450,17 +1370,6 @@ export function OrdersView() {
         <button type="button" className={btn("blue", true)} onClick={() => setLinkOrderOpen(true)}>
           🔗 ربط طلب
         </button>
-        {anyTracked && (
-          <button
-            type="button"
-            className={btn("blue", true)}
-            disabled={refreshAllLabel != null}
-            onClick={refreshAllTracking}
-          >
-            {refreshAllLabel ??
-              `🔄 تحديث حالة الطرود المفتوحة (${openTracked.length})`}
-          </button>
-        )}
         {list.length > 0 && (
           <button type="button" className={btn("gray", true)} onClick={toggleSelectAll}>
             {allSelected ? "✕ إلغاء تحديد الكل" : `☑️ تحديد الكل (${list.length})`}

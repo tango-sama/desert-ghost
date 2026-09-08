@@ -5,6 +5,7 @@ import { signOut } from "firebase/auth";
 import { auth } from "@/lib/admin";
 import { setStaffFlag } from "@/hooks/use-staff";
 import { useAdminStore } from "@/stores/admin-store";
+import { useDailyTrackingSync } from "@/hooks/use-daily-tracking-sync";
 import { cn } from "@/lib/utils";
 import { ProductsView } from "@/components/admin/views/products-view";
 import { CategoriesView } from "@/components/admin/views/categories-view";
@@ -97,6 +98,10 @@ export function AdminShell() {
     void useAdminStore.getState().loadAll();
     return () => useAdminStore.getState().stopWatchers();
   }, []);
+
+  // Daily 00:00 refresh of every parcel that is not delivered yet. Lives at
+  // the shell so it ticks on whichever tab the panel is left open.
+  useDailyTrackingSync();
 
   const badges: Partial<Record<ViewKey, number>> = {
     products: nProducts,
