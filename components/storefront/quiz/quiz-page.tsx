@@ -8,12 +8,14 @@ import { trackPixelEvent } from "@/lib/meta-pixel";
 import { trackFunnel, funnelSessionId } from "@/lib/funnel";
 import {
   QUESTIONS,
+  answerLabel,
   bundleTotal,
   isComplete,
   recommend,
   variantBundleSize,
   variantFor,
   type Answers,
+  type Recommendation,
   type Variant,
 } from "@/lib/quiz";
 import styles from "./quiz.module.css";
@@ -145,8 +147,10 @@ export function QuizPage({ products }: { products: Product[] }) {
     [pool, chosen],
   );
 
-  // The hero keeps its badge wherever it goes, and only while it is ticked.
-  const heroId = rec?.bundle.length ? String(rec.bundle[0].id) : null;
+  // The anchor keeps its badge wherever it goes, and only while it is ticked.
+  // It is the product the winning category exists to sell, so it is labelled
+  // as such rather than as "first in the list".
+  const anchorId = rec?.anchorProducts.length ? String(rec.anchorProducts[0].id) : null;
 
   function answer(value: string) {
     if (!question) return;
@@ -186,7 +190,12 @@ export function QuizPage({ products }: { products: Product[] }) {
     trackFunnel({
       step: "result",
       variant,
-      answers: answers as Record<string, string | undefined>,
+      // The winning category rides along inside `answers` rather than as a new
+      // top-level field: /api/funnel accepts a fixed set of keys and would
+      // drop anything else, and this is the number the whole rewrite exists to
+      // make answerable — which of the six categories the traffic sorts into,
+      // and which of them actually orders.
+      answers: { ...answers, result: rec.goal } as Record<string, string | undefined>,
       productIds: rec.bundle.map((p) => p.id),
       value: bundleTotal(rec.bundle),
     });
@@ -320,7 +329,9 @@ export function QuizPage({ products }: { products: Product[] }) {
           <span className={styles.cardImg} />
         )}
         <span className={styles.cardBody}>
-          {on && id === heroId && <span className={styles.cardTag}>الأنسب لكِ</span>}
+          {on && id === anchorId && (
+            <span className={styles.cardTag}>{rec?.anchor.tag ?? "الأنسب لكِ"}</span>
+          )}
           <span className={styles.cardTitle}>{p.title ?? p.name}</span>
           <span className={styles.cardPrice}>{priceFmt(p.price)}</span>
         </span>
@@ -344,7 +355,8 @@ export function QuizPage({ products }: { products: Product[] }) {
             </h1>
             <p className={styles.introLead}>
               {products.length} منتجاً على الرف، وواحد أو اثنان فقط يناسبان
-              حالتكِ. أخبرينا عن هدفكِ ونتكفّل بالباقي.
+              حالتكِ. أجيبي على خمسة أسئلة قصيرة، ونختار لكِ ما يناسب هدفكِ
+              وروتينكِ.
             </p>
             <button
               type="button"
@@ -361,7 +373,7 @@ export function QuizPage({ products }: { products: Product[] }) {
               </svg>
             </button>
             <div className={styles.introMeta}>
-              {QUESTIONS.length} أسئلة · أقل من دقيقة · بدون تسجيل
+              {QUESTIONS.length} أسئلة · أقل من دقيقة · بدون تسجيل ولا رقم هاتف
             </div>
           </div>
         )}
@@ -379,6 +391,7 @@ export function QuizPage({ products }: { products: Product[] }) {
               السؤال {index + 1} من {QUESTIONS.length}
             </div>
             <h2 className={styles.qTitle}>{question.title}</h2>
+            {question.lead && <p className={styles.qLead}>{question.lead}</p>}
             <div className={styles.options}>
               {question.options.map((o) => (
                 <button
@@ -408,19 +421,25 @@ export function QuizPage({ products }: { products: Product[] }) {
         {stage === "thinking" && (
           <div className={styles.thinking}>
             <div className={styles.spinner} />
-            <div className={styles.thinkingText}>نختار لكِ الأنسب…</div>
+            <div className={styles.thinkingText}>نحسب إجاباتكِ ونختار لكِ الأنسب…</div>
           </div>
         )}
 
         {stage === "result" && rec && (
           <>
             <div className={styles.resultHead}>
-              <div className={styles.resultKicker}>اختيارنا لكِ</div>
-              <h1 className={styles.resultTitle}>
-                {variant === "single" ? "هذا ما نرشّحه لكِ" : "روتين متكامل يناسب حالتكِ"}
-              </h1>
+              <div className={styles.resultKicker}>{rec.anchor.kicker}</div>
+              {/* The winning category, named. She answered five questions and
+                  the first thing she should read is what they added up to —
+                  a result screen that jumps straight to a product card reads
+                  as a shop window, not as an answer. */}
+              <div className={styles.resultCat}>
+                <span className={styles.resultCatDot} />
+                {rec.anchor.label}
+              </div>
+              <h1 className={styles.resultTitle}>{rec.anchor.headline}</h1>
               <p className={`${styles.resultWhy} ${blurb ? "" : styles.resultWhySkeleton}`}>
-                {blurb ?? fallbackWhy(answers, rec.bundle.length)}
+                {blurb ?? fallbackWhy(rec, answers)}
               </p>
             </div>
 
@@ -441,7 +460,7 @@ export function QuizPage({ products }: { products: Product[] }) {
               disabled={!selected.length}
               onClick={() => router.push(offerHref(selected, answers))}
             >
-              {selected.length ? "تابعي — التفاصيل والطلب" : "اختاري منتجاً واحداً على الأقل"}
+              {selected.length ? "اكتشفي التفاصيل واطلبي" : "اختاري منتجاً واحداً على الأقل"}
             </button>
 
             <div className={styles.trust}>
@@ -487,27 +506,22 @@ function offerHref(products: Product[], a: Answers): string {
   return `/offer?${q.toString()}`;
 }
 
-/* Shown immediately, and kept if the personalised wording never arrives. It
-   has to stand on its own as a real sentence, not read like a placeholder
-   waiting to be replaced.
+/* Shown immediately, and kept if the personalised wording never arrives.
+   It has to stand on its own as a real explanation, not read like a
+   placeholder waiting to be replaced — which is why the category's own
+   supportive message (lib/quiz.ts, ANCHORS) is the body of it and the answers
+   only add a closing line.
 
-   Questions are looked up BY KEY. This used to index into QUESTIONS by
-   position, which meant removing a question left it reading past the end of
-   the array and throwing on `.options` — taking the whole result screen down
-   with it. Nothing here should care where a question sits in the list. */
-function labelFor(key: keyof Answers, value: string | undefined): string | undefined {
-  if (!value) return undefined;
-  return QUESTIONS.find((q) => q.key === key)?.options.find((o) => o.value === value)?.label;
-}
-
-function fallbackWhy(a: Answers, count: number): string {
-  const goal = labelFor("goal", a.goal) ?? "هدفكِ";
-  const intensity = labelFor("intensity", a.intensity);
-  const many = count > 1;
+   Answer labels are looked up BY KEY, never by position: indexing into
+   QUESTIONS by index meant that removing a question left this reading past the
+   end of the array and throwing on `.options`, taking the whole result screen
+   down with it. */
+function fallbackWhy(rec: Recommendation, a: Answers): string {
+  const concern = answerLabel("concern", a.concern);
   return (
-    `اخترنا لكِ ${many ? "هذه المنتجات" : "هذا المنتج"} بناءً على ${goal}` +
-    (intensity ? ` وتفضيلكِ «${intensity}»` : "") +
-    `${many ? "، وهي تعمل معاً لا كبدائل عن بعضها" : ""}. الدفع عند الاستلام، ويمكنكِ تعديل اختياركِ قبل الطلب.`
+    rec.anchor.message +
+    (concern ? ` وأخذنا في الحسبان ما ذكرتِه عن «${concern}».` : "") +
+    " الدفع عند الاستلام، ويمكنكِ تعديل اختياركِ قبل الطلب."
   );
 }
 
