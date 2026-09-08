@@ -4835,6 +4835,13 @@ as carrier-domain logic rather than view-local.
 **Verified:** `npx tsc --noEmit` clean, eslint clean for every file touched (the
 two `<img>` warnings and the `cart-drawer.tsx` `<a>` error are pre-existing, in
 storefront files this change does not touch), `npm run build` succeeds. NOT
-verified end to end: nobody drove the panel in a browser, and the nightly
-function is not deployed yet — see the trinkl entry for what the owner still
-has to do.
+verified end to end: nobody drove either panel in a browser.
+
+**The live panel is trinkl's, not ghost's.** Removing the button here alone
+would have changed nothing the owner sees — `ghost` is not deployed as the
+admin panel; `amelhadj.html` in trinkl is. The button was removed there too
+in the same session, and trinkl's CI shipped it to production on 2026-09-08
+(run #53, hosting + functions + rules all green), together with the
+`refreshAllParcels` schedule. Keep this in mind for any future admin-panel
+request: until the cutover, a panel change is not delivered unless it lands
+in trinkl.
