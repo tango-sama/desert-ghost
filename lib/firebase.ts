@@ -243,10 +243,21 @@ export function productImages(p: Product): string[] {
   return arr;
 }
 
+// Raw catalog read that THROWS, unlike every other reader in this file. It
+// exists for lib/catalog.ts: unstable_cache stores whatever the wrapped
+// function resolves to, so caching getProducts() would pin the swallowed `[]`
+// fallback for the whole TTL and turn a momentary Firestore blip into minutes
+// of an empty funnel on paid traffic. Letting it throw means a failure caches
+// nothing and the next request retries. Everything else should call
+// getProducts(), which keeps the safe-fallback contract.
+export async function fetchProducts(): Promise<Product[]> {
+  const snap = await getDocs(collection(db, "products"));
+  return mapDocs<Product>(snap);
+}
+
 export async function getProducts(): Promise<Product[]> {
   try {
-    const snap = await getDocs(collection(db, "products"));
-    return mapDocs<Product>(snap);
+    return await fetchProducts();
   } catch (e) {
     console.error("[DS] getProducts", e);
     return [];

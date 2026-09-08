@@ -4783,3 +4783,88 @@ document overflow, no tap target under 40px, no page errors. Desktop unchanged
 (523px plate, 340px photo). The two boxes my audit reports as "overflowing"
 (`.heroBg`, `.ctaRing`) are decorative and clipped by `overflow: hidden`
 ancestors; the document itself does not overflow.
+
+## Completed (this session, 2026-09-08)
+
+### /quiz — catalog read moved behind a data cache
+
+Prompted by the Meta ad data for **DS — Quiz Funnel — Sales — Sept 2026 (ABO)**,
+the campaign pointing paid traffic at `/quiz`. Of the link clicks Meta billed,
+only **52%** became a landing-page view (134 → 70). The Glutathione campaign,
+pointing at a lighter page, ran **74%** on the same account. Roughly a third of
+paid clicks were being dropped before the page rendered.
+
+Root cause: `/quiz` is `force-dynamic` and called `getProducts()` directly, so
+**every ad click re-read the whole 149-document `products` collection from
+Firestore before the first byte of HTML went out.** Same pattern on `/offer`,
+`/glutathione` and `/collagen` — not changed here (see Next Up).
+
+- **`lib/catalog.ts` (new, server-only)** — `getCachedProducts()`, the catalog
+  read wrapped in `unstable_cache` with a 300s TTL and a `products` tag.
+  Pulls in `next/cache`, so it must never be imported from a `"use client"`
+  file; client components keep importing `Product`/`priceFmt` from
+  `lib/firebase.ts` as before.
+- **`lib/firebase.ts`** — extracted `fetchProducts()`, a raw catalog read that
+  **throws**, and `getProducts()` now wraps it in the existing try/catch. This
+  matters: `unstable_cache` stores whatever the wrapped function resolves to,
+  so caching `getProducts()` would have pinned its swallowed `[]` fallback for
+  the full TTL and turned a momentary Firestore blip into five minutes of an
+  empty funnel on paid traffic. Letting it throw means a failure caches nothing
+  and the next request retries. `getProducts()`'s contract is unchanged and
+  every other caller is untouched.
+- **`app/quiz/page.tsx`** — reads `getCachedProducts()`.
+
+**`force-dynamic` deliberately kept.** The earlier attempt at static
+prerendering froze a stale/empty catalog into the HTML (see the 2026-07-19
+storefront-layout note above); rendering per request also keeps the A/B variant
+and attribution logic honest. Only the data read is cached, not the render.
+
+**`use cache` was considered and rejected for now.** It is the Next 16
+replacement for `unstable_cache`, but it requires the app-wide
+`cacheComponents` flag, which changes caching semantics for every route in the
+app. That is its own migration, not a rider on a one-page fix.
+
+Verified against a real production build (`npm run build` + `npm run start`,
+real Firestore data, 149 products in the payload):
+
+| | TTFB |
+|---|---|
+| `/quiz` cold (first request, includes cold start) | 2.42s |
+| `/quiz` warm (cached) | **0.015–0.021s** |
+| `/products` — control, still uncached, every request | 0.21–0.38s |
+
+The control is the honest number: the Firestore round trip this removes is
+**~200–380ms on every single ad click**, and `/products` never improves across
+repeated requests while `/quiz` now does. Cold and warm responses were diffed
+and serve the **identical 149-product set** — the byte-level difference between
+them is RSC stream chunking, not data. `npx tsc --noEmit` and `npm run build`
+clean; `/quiz` still builds as `ƒ (Dynamic)`. The one `npm run lint` error
+(`components/storefront/cart-drawer.tsx` — `<a>` instead of `<Link>` for
+`/checkout/`) is pre-existing and untouched by this change.
+
+Not verified in a real browser — no browser automation in this environment.
+HTTP-level only.
+
+### Next Up (from this change)
+
+- **Same fix for `/offer`, `/glutathione`, `/collagen`** — all three are
+  `force-dynamic` and read the catalog per request. `/offer` is the quiz's own
+  next step, so it sits on the same paid path and is the first one worth doing.
+- **On-demand invalidation.** The 300s TTL is currently the *only* thing
+  bounding staleness, because the admin panel writes products straight from the
+  browser to Firestore (`lib/admin.ts`) and there is no server hook to call
+  `revalidateTag(PRODUCTS_TAG)` from. Wiring that needs an authenticated route
+  handler plus an admin-panel call — a storefront + admin-panel change, which
+  `ai-workflow-rules.md` says to split into its own step.
+- **Trim the RSC payload.** `/quiz` ships all 149 full product documents
+  (~281KB of HTML) when `lib/quiz.ts` scores on a handful of fields. Separate
+  change: it touches the `Product` shape the quiz component consumes.
+
+### Note — context docs are stale
+
+`context/architecture-context.md` and `context/code-standards.md` still describe
+the **old static HTML + vanilla ES5 + Firebase Hosting** site, not this Next.js
+16 / React 19 / Tailwind v4 rebuild (they mandate "no build step, no bundler, no
+framework", `js/firebase.js`, `css/theme.css`). Their Firestore rules, schema
+and admin-identity sections are still accurate and were followed. Flagged, not
+rewritten — bringing them in line with the rebuild is its own task.

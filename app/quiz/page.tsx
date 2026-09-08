@@ -1,5 +1,5 @@
 import type { Metadata } from "next";
-import { getProducts } from "@/lib/firebase";
+import { getCachedProducts } from "@/lib/catalog";
 import { QuizPage } from "@/components/storefront/quiz/quiz-page";
 
 // Self-contained funnel, like /collagen and /glutathione — its own layout, no
@@ -25,6 +25,11 @@ export default async function Page() {
   //
   // Settings are no longer read here: the order is taken on /offer now, and
   // that page fetches the carrier and WhatsApp toggles it needs itself.
-  const products = await getProducts();
+  //
+  // Read through the catalog cache rather than hitting Firestore directly: this
+  // is the page every quiz-funnel ad clicks into, and `force-dynamic` above
+  // meant the collection was re-read on every one of those clicks before any
+  // HTML went out. Catalog edits show up within the TTL in lib/catalog.ts.
+  const products = await getCachedProducts();
   return <QuizPage products={products} />;
 }
