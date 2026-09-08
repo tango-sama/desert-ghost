@@ -4911,3 +4911,48 @@ The full hair walk driven in Chromium at 390px now reads: نتيجتكِ شعر 
 Open: `hair` still anchors on Marine Collagen (the owner's spec). Its
 description does claim hair and nails, but if the intent is a dedicated hair
 product, changing the `hair` anchor ids in `lib/quiz.ts` is a one-line edit.
+
+## Lost-parcel lookup by amount (`scripts/find-parcel.mjs`)
+
+Added to answer "find the parcel that cost ~18000 and never arrived".
+
+**Why a script and not a carrier call.** Carrier APIs are keyed by tracking
+number: `getParcelStatus` and `lookupParcel` (`lib/admin.ts:487`) each take one
+tracking and return that one parcel. None of the three carriers exposes "list my
+parcels where the price was X", so an amount on its own cannot be turned into a
+carrier query. The index that maps an amount back to a tracking number is our
+own `orders` collection — it carries `parcelPrice`/`total`/`subtotal`, the
+per-carrier `{ tracking }`, and the tracker's `outcome` + `trackingStatus`. So
+the search runs against Firestore, and the trackings it prints are what get fed
+to the carrier API (the panel's 🔄) for live status.
+
+Reads only; never writes, never prints credentials. Takes the credential as
+`--key-file <path>` (the JSON downloaded from Firebase), or
+`FIREBASE_SERVICE_ACCOUNT_KEY` / `GOOGLE_APPLICATION_CREDENTIALS` — the same
+service-account `lib/firebase-admin.ts` uses on Vercel. The file path is offered
+first because the key's `private_key` is multi-line: pasting it into a shell
+variable mangles it, and the failure surfaces as an opaque auth error rather
+than a quoting complaint. A Web-app config pasted in by mistake is rejected by
+name, and a key for another project warns. `firebase-admin` is imported lazily
+so a missing key reports the key rather than a module-resolution stack trace.
+
+Two judgement calls worth keeping:
+
+- **"Not delivered" is deliberately wider than `outcome === "returned"`.**
+  `outcome` is absent on orders placed before the webhook normalizers landed, so
+  the fallback reads `trackingStatus` (including `notFoundAtCarrier` — the
+  carrier deleted the parcel from their own dashboard) and treats an unknown
+  state as *not* delivered. A lost parcel is exactly the case most likely to
+  have a missing or stale `outcome`; assuming delivered would hide the thing
+  being searched for.
+- **`parcelPrice` is matched first**, since it is the amount actually collected
+  by the carrier after any phone renegotiation (`lib/profit.ts`) — the number a
+  customer would remember. `total` and `subtotal` are still matched and the
+  output says which field hit.
+
+**Verified.** 35 assertions over the pure helpers and `selectHits` against
+fixture orders: amount window, `--tolerance 0` exact match, 12-month cutoff and
+`--months 0`, carrier filter, `--all`, `placedAt`-seconds vs `createdAt`-ms
+dating, linked-parcel dedup, never-shipped and never-tracked orders, and
+Arabic/French delivered labels. Not yet run against real data — needs the
+service-account key, which no sandbox has.
