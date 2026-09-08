@@ -3366,8 +3366,9 @@ utm_source=meta&utm_medium=paid&utm_campaign={{campaign.name}}
   jump in call volume)? Owner's call — not changed yet.
   **RESOLVED (2026-09-08, owner-requested):** neither — the button is gone.
   The owner asked for the refresh to happen by itself at 00:00 every day over
-  every parcel except the delivered ones, so folding no longer gates what gets
-  refreshed and the bulk refresh left the panel entirely: it is now
+  every parcel except the finished ones (delivered, returned, cancelled or
+  deleted at the carrier), so folding no longer gates what gets refreshed and
+  the bulk refresh left the panel entirely: it is now
   `refreshAllParcels`, a scheduled Cloud Function in trinkl
   (`functions/index.js`, 00:00 `Africa/Algiers`), which needs no panel open at
   all. The higher call volume is accepted, paced one call per 350ms, once a
@@ -4797,7 +4798,10 @@ ancestors; the document itself does not overflow.
 
 Owner asked to drop the admin panel's "update all open orders" button and have
 parcels refresh by themselves, every day at 00:00, for every order except the
-delivered ones. Branch `claude/admin-orders-auto-update-a8zq9v` in both repos.
+delivered ones — then, asked whether parcels that are terminal for other
+reasons should be skipped too, said yes: returned, cancelled and deleted-at-
+carrier are also left alone. Branch `claude/admin-orders-auto-update-a8zq9v`
+in both repos.
 
 **Removed from the panel.** The `🔄 تحديث حالة الطرود المفتوحة (n)` button in
 the orders toolbar, together with everything that only served it:
@@ -4815,6 +4819,10 @@ scheduling code at all: the new `refreshAllParcels` scheduled Cloud Function
 (00:00 `Africa/Algiers`) writes `trackingStatus`/`outcome` straight onto each
 order doc, and the panel already watches orders live via `watchOrders`, so an
 open panel shows the night's results with no polling and no new client code.
+What counts as finished is `outcomeFromStatus`'s call there —
+`delivered`/`returned`/`cancelled` — the same normalizer that already stamps
+`outcome`, so the panel's own `isDelivered` and the nightly job cannot
+disagree about a delivered parcel.
 See the trinkl tracker entry of the same date for the function itself.
 
 **Also moved.** `applyTrackingResult` (merge a `getParcelStatus` result into an
