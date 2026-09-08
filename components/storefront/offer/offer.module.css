@@ -403,10 +403,121 @@
 }
 
 /* the lit plate */
+/* The plate is now one slide of a swipeable track — one per chosen product
+   (see hero-plates.tsx). Its composition below is unchanged; only the flex and
+   snap lines are new, so the swipe reads as part of the design rather than as
+   a carousel bolted onto it. */
+.plateWrap {
+  position: relative;
+  /* `min-width: 0` is load-bearing. This is the hero grid's item, and a grid
+     item defaults to `min-width: auto` — meaning it may grow to its content's
+     min-content width. Its content is a 3-slide track, so once the product
+     PHOTOS decode the wrapper stretches to roughly three viewports, the track
+     stops scrolling, and on a 390px phone the plate renders ~1026px wide and
+     clipped with the photo a sliver at the edge.
+     This is a PRE-EXISTING fault of the redesign, not of the track: measured
+     against origin/main's own single-plate hero, the plate renders 1026x770 on
+     a 390px phone the moment real photos load. It only ever reproduces with
+     images, which is why it survived review. */
+  min-width: 0;
+}
+
+.plateTrack {
+  display: flex;
+  overflow-x: auto;
+  scroll-snap-type: x mandatory;
+  /* Pinned to the column its wrapper occupies; see the note on .plateWrap. */
+  min-width: 0;
+  width: 100%;
+  /* NO `touch-action` here, deliberately. `pan-y` reads like "let vertical
+     swipes fall through to the page" and means the opposite: only vertical
+     panning is allowed on this element, which kills the horizontal swipe while
+     leaving the dots working — a silent failure. The default `auto` lets the
+     browser pick the axis from the gesture. */
+  overscroll-behavior-x: contain;
+}
+
+.plateBar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem;
+  margin-top: 1rem;
+}
+
+.plateCap {
+  display: flex;
+  flex-direction: column;
+  gap: 0.15rem;
+  min-width: 0;
+  text-align: start;
+}
+
+.plateName {
+  font-size: 0.82rem;
+  font-weight: 700;
+  color: rgba(255, 255, 255, 0.92);
+  line-height: 1.5;
+}
+
+.platePrice {
+  font-size: 0.9rem;
+  font-weight: 800;
+  color: var(--gold-light);
+}
+
+.plateDots {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  flex: none;
+}
+
+/* 8px of ink, a 40px target. The hit area is an invisible ::before rather than
+   padding on the button: padding with `background-clip: content-box` grows the
+   target but the `border-radius` still follows the BORDER box, so the visible
+   mark clips to a bare rectangle — it rendered as small squares and one blob.
+   An overlaid pseudo-element leaves the mark's geometry completely alone.
+   An 8px target is a miss on a phone, and these sit beside a swipe gesture
+   that will happily swallow an imprecise press. */
+.plateDot {
+  position: relative;
+  width: 8px;
+  height: 8px;
+  padding: 0;
+  border: 0;
+  border-radius: 100px;
+  background: rgba(255, 255, 255, 0.32);
+  cursor: pointer;
+  transition: width 0.3s var(--ease), background-color 0.3s var(--ease);
+}
+
+.plateDot::before {
+  content: "";
+  position: absolute;
+  /* 8 + 2*16 = 40px tall, 8 + 2*6 = 20px wide, with the row's 0.4rem gap
+     between neighbours keeping the targets from overlapping. */
+  inset: -16px -6px;
+}
+
+.plateDot[data-active="true"] {
+  width: 22px;
+  background: var(--gold-light);
+}
+
 .heroPlate {
+  flex: 0 0 100%;
+  scroll-snap-align: center;
   position: relative;
   aspect-ratio: 1 / 1;
   display: grid;
+  /* An explicit track, so `.heroImg`'s `width: 74%` has a definite box to
+     resolve against. Without it the implicit track is content-sized, the
+     percentage cannot resolve, and the photo falls back to its `max-width`
+     (340px) — which on a 353px phone plate is nearly edge to edge: the photo
+     covered the gold ring meant to frame it, forced the plate 115px taller
+     than its own aspect-ratio, and left a dead band under it. */
+  grid-template-columns: minmax(0, 1fr);
   place-items: center;
   border-radius: 44px;
   background:
@@ -1679,10 +1790,24 @@
   }
 
   /* Plate first, words under it: on a phone the photograph is what stops the
-     scroll, and a headline above a 100vw-wide image pushes it off screen. */
-  .heroPlate {
+     scroll, and a headline above a 100vw-wide image pushes it off screen.
+     `order` belongs on the wrapper now — it, not the plate, is the grid
+     child since the plate became a slide inside the swipe track. */
+  .plateWrap {
     order: -1;
-    aspect-ratio: 4 / 3;
+  }
+
+  /* Square rather than 4/3 on a phone. The 4/3 never actually applied: the
+     image below asked for the plate's height while the plate's height came
+     from its content, and the browser broke that loop by falling back to the
+     image's max-width — so the plate shipped at 353x455 (0.78, TALLER than
+     square) with the photo covering the gold ring and a dead band beneath it.
+     A definite square reproduces the desktop composition at phone scale —
+     photo centred, ring clear of it on all four sides, the two trust minis
+     with room top and bottom — and is still ~100px shorter than what rendered
+     before, so the headline sits higher. */
+  .heroPlate {
+    aspect-ratio: 1 / 1;
   }
 
   .heroStats {
@@ -1693,9 +1818,17 @@
     min-height: auto;
   }
 
+  /* Sized from the plate's WIDTH, never its height.
+     `height: 100%` here was circular: the plate's height comes from its
+     aspect-ratio unless content is taller, and the content was this image
+     asking for the plate's height. The browser resolved that by falling back
+     to the image's `max-width` (340px), which on a 353px phone plate covered
+     the gold ring meant to frame it and forced the plate 115px taller than its
+     own ratio, leaving a dead band underneath. A width percentage has no such
+     loop, and matches how the desktop rule already works. */
   .heroImg {
-    width: auto;
-    height: 100%;
+    width: 66%;
+    height: auto;
   }
 
   .hero {
@@ -1750,6 +1883,19 @@
     padding: 1.4rem;
   }
 
+  /* All three in-flow children share ONE cell, so the badges overlay the
+     plate's corners rather than stacking under the photo.
+     `position: static` + `place-self` below says that is the intent, but
+     nothing put them in the same cell: grid auto-placed each into its own row,
+     giving `231.8px 56.7px 56.7px` — the photo pinned to the top with the two
+     badges queued beneath it, which is the "dead band" the plate showed on a
+     phone. Pinning every child to row 1 / column 1 makes the single row
+     stretch to the plate and lets `place-self` mean what it says. */
+  .heroImg,
+  .heroMini {
+    grid-area: 1 / 1;
+  }
+
   .heroMini {
     position: static;
     margin: 0.4rem;
@@ -1801,7 +1947,7 @@
 .heroTitle,
 .heroLead,
 .heroCta,
-.heroPlate {
+.plateWrap {
   animation: offerRise 0.85s var(--ease) both;
 }
 
@@ -1814,7 +1960,7 @@
 .heroCta {
   animation-delay: 0.18s;
 }
-.heroPlate {
+.plateWrap {
   animation-delay: 0.1s;
   animation-duration: 1.1s;
 }

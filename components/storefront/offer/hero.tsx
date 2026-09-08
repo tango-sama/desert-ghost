@@ -5,7 +5,8 @@ import { priceFmt } from "@/lib/firebase";
 import type { LandingBlock } from "@/lib/landing-content";
 import { pageHeadline, pageSubhead } from "@/lib/landing-content";
 import type { Answers } from "@/lib/quiz";
-import { BagIcon, CashIcon, CheckIcon, PhoneIcon, ShieldIcon, TruckIcon } from "./icons";
+import { BagIcon, CashIcon, PhoneIcon, TruckIcon } from "./icons";
+import { HeroPlates } from "./hero-plates";
 import styles from "./offer.module.css";
 
 // The hero speaks to the ANSWERS, not to the catalog: she has just told us her
@@ -24,6 +25,11 @@ import styles from "./offer.module.css";
 // on a lit plate. That works for a bottle, a jar or a sachet alike, and needs
 // nothing of the photo that the catalog cannot promise.
 //
+// The plate is a swipeable track of one plate per chosen product (owner
+// request; see hero-plates.tsx). It shows only `blocks[0]`'s photo otherwise,
+// which on a three-product result leaves the other two invisible until she has
+// scrolled past a whole section stack.
+//
 // The rail beneath overlaps the hero's foot on purpose. It is the first thing
 // past the fold on a cash-on-delivery shop, and the three facts on it are the
 // three reasons someone who has never heard of this store will risk an order.
@@ -40,7 +46,6 @@ export const Hero = forwardRef<
   const count = blocks.length;
   const hero = blocks[0];
   const img = hero?.images[0] ?? "";
-  const heroName = hero ? (hero.product.title ?? hero.product.name ?? "") : "";
 
   // The blurred backdrop is set through a custom property, so the URL is
   // interpolated into CSS rather than into an attribute. Firebase Storage URLs
@@ -94,22 +99,9 @@ export const Hero = forwardRef<
             </div>
           </div>
 
-          <div className={styles.heroPlate}>
-            <span className={styles.heroRing} aria-hidden />
-            <span className={styles.heroHalo} aria-hidden />
-            {img ? (
-              /* eslint-disable-next-line @next/next/no-img-element */
-              <img className={styles.heroImg} src={img} alt={heroName} />
-            ) : null}
-            <div className={`${styles.heroMini} ${styles.heroMiniTop}`}>
-              <ShieldIcon />
-              <span>منتجات أصلية</span>
-            </div>
-            <div className={`${styles.heroMini} ${styles.heroMiniBottom}`}>
-              <CheckIcon />
-              <span>جاهز للتأكيد</span>
-            </div>
-          </div>
+          {/* One plate per chosen product, swipeable. A single-product result
+              renders exactly the one plate this used to, with no dots. */}
+          <HeroPlates blocks={blocks} />
         </div>
       </section>
 

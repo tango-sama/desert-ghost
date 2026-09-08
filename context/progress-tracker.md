@@ -4732,3 +4732,133 @@ errors in the repo are pre-existing, in `cart-drawer.tsx` and unrelated),
 and the live page rendered against the real 149-product catalog at 1280px and
 390px: hero, three product blocks, benefits, usage, summary band, trust grid,
 reviews, FAQ, closing band and footer all check out, RTL correct throughout.
+
+### `/offer` hero — the plate is swipeable, one per chosen product (2026-09-06)
+
+Owner request: "in the hero section of the chosen products, user can swipe the
+image to see the other chosen products."
+
+**Landed across a redesign.** This was first built against the pre-redesign
+hero — a gallery of peeking cards replacing the jump chips — and while it was
+in progress the "Atelier" redesign (#14) landed on `main` and rewrote both
+`hero.tsx` and `offer.module.css`. The merge took the redesign wholesale on
+both files and the swipe was re-applied on top of it, rather than merging the
+older hero back over the new one. The redesigned hero has no carousel of its
+own — it shows `blocks[0]` on a lit plate — so the request still stood.
+
+- **`components/storefront/offer/hero-plates.tsx` (new)** — the hero plate
+  becomes a scroll-snap track of one plate per chosen product. The plate's
+  composition is untouched (same ring, halo, lit backdrop, trust minis, per
+  plate); all this adds is the track around it, so the swipe reads as part of
+  the design rather than as a carousel bolted onto it. On a three-product
+  result the other two products were previously invisible until she had
+  scrolled past a whole section stack.
+- A caption bar under the track names the plate she is looking at (product +
+  price) beside the dots, in the Atelier palette — gold active pill on the
+  hero's dark ground.
+- **Swipe is CSS, not JavaScript** — a scroll-snap track, the choice
+  `hero-banner.tsx` and `category-carousel.tsx` already made: native inertia,
+  touch/trackpad/wheel/keyboard, no drag library, no bundle cost. Scrolling
+  does not re-render React: the active dot and the caption are written straight
+  to the DOM from a rAF-throttled passive listener, the imperative pattern the
+  repo's other carousels established. `goTo` derives its sign from the live
+  computed `direction`, since an RTL track scrolls into negative `scrollLeft`.
+- **A `touch-action: pan-y` bug was caught before it shipped.** It reads like
+  "let vertical swipes fall through to the page" and means the opposite: only
+  vertical panning is allowed on the element, which kills the horizontal swipe
+  outright. The dots and arrows kept working because they scroll
+  programmatically — which is exactly how it would have shipped unnoticed.
+  Removed; the default `auto` lets the browser pick the axis from the gesture,
+  and `overscroll-behavior-x: contain` still stops a swipe past the last slide
+  becoming a browser back-navigation.
+- Two rules moved with the restructure, because `.plateWrap` — not `.heroPlate`
+  — is now the hero grid's child: the `offerRise` entry animation (otherwise
+  every slide animates, including the off-screen ones) and the mobile
+  `order: -1` that puts the plate above the headline.
+
+Verified: `tsc`/`eslint`/build clean (the one lint error, `cart-drawer.tsx`,
+pre-dates this work). Driven in headless Chromium at 390px and 1280px: three
+plates render in one track (`scrollWidth` 1060 > `clientWidth` 353, computed
+`touch-action: auto`), a real wheel input moves it and both the dot and the
+caption follow (0 → 1 → 2 with the right product name each time), a dot click
+returns to 0, a partial scroll snaps exactly (0px off), a single-product page
+renders one plate with no dots or caption bar, neither viewport has horizontal
+overflow, and there are no page errors.
+
+### `/offer` hero — the plate blew out to ~1026px on a phone once photos loaded (2026-09-06)
+
+Found while verifying, at the owner's prompting, that product images actually
+render in the hero. They did not, and the reason was not the swipe track.
+
+**The bug.** `.heroPlate` sits in the hero grid, and a grid item defaults to
+`min-width: auto` — it may grow to its content's min-content width. Once the
+real product photo decodes, that content is wider than the column, so the plate
+stretched to about 1026px inside a 390px viewport: the gold ring filled the
+screen, the photograph was a sliver at the edge, and `overflow-x: hidden` on
+`.hero` hid the damage from any page-level overflow check.
+
+**It is pre-existing, not from the swipe work.** Measured against
+`origin/main`'s own single-plate hero, with the track reverted: the plate
+renders **1026×770 on a 390px phone** there too, the moment real photos load.
+The redesign shipped with it. Fixed here by `min-width: 0` on `.plateWrap`
+(the grid item in the new structure) plus `min-width: 0; width: 100%` on
+`.plateTrack`.
+
+**Why it survived two rounds of checks.** It only reproduces with images
+actually loaded, and this sandbox's Chromium cannot complete TLS to
+`firebasestorage.googleapis.com` through the agent proxy — the tunnel resets
+(`ws_closed_mid_exchange`), so every earlier screenshot showed an empty plate
+and a broken layout was indistinguishable from a blocked network. `curl` to the
+same URLs works (200, `image/webp`), so the images are fetched with curl and
+served to the browser by Playwright request interception. That makes the page's
+rendering of genuine catalog photos testable without depending on the sandbox's
+egress.
+
+Verified with the real photos served: at 390px and 1280px all three decode
+(2048×2048, 453×412, 960×897), each draws into a 340×340 box with
+`object-fit: contain` so nothing is stretched or cropped, none overflows its
+plate, the track is 353px wide on the phone and scrolls, and a swipe advances
+both the dot and the caption to the next product. No page errors.
+
+### `/offer` hero — mobile corrections (2026-09-07)
+
+A mobile pass at 360 / 390 / 430px with the real catalog photos served, after
+the owner asked for the phone layout to be checked. Three faults, all only
+visible once real images load — the reason they survived earlier passes.
+
+- **The plate never honoured its own aspect-ratio.** The mobile rule
+  `.heroImg { width: auto; height: 100% }` asked for the plate's height while
+  the plate's height came from its content — a loop the browser broke by
+  falling back to the image's `max-width: 340px`. On a 353px plate that photo
+  covered the gold ring meant to frame it and forced the plate to 353×455
+  (ratio 0.78, *taller* than square) against a declared `4 / 3`. Replaced with
+  a width percentage (`66%`), which has no such loop and matches how the
+  desktop rule already works, and the mobile plate is now a definite square —
+  the desktop composition at phone scale, and ~100px shorter than what
+  rendered before.
+- **The trust badges stacked under the photo instead of sitting in the
+  corners.** The mobile rule turns them `position: static` with
+  `place-self: end` — which only means anything if they share a cell with the
+  photo, and nothing put them there. Grid auto-placed each into its own row
+  (`231.8px 56.7px 56.7px`), pinning the photo to the top with the badges
+  queued beneath: the "dead band" the plate showed. Fixed by placing every
+  in-flow child at `grid-area: 1 / 1`, so the single row stretches to the plate
+  and `place-self` does what it says. Photo now centres with equal 61px above
+  and below.
+- **Plate dots were an 8px tap target.** Now 8px of ink with a 40px target via
+  an overlaid `::before`. Padding plus `background-clip: content-box` was tried
+  first and is wrong: `border-radius` still follows the border box, so the mark
+  clipped to bare rectangles. Verified by hit-testing a point 14px above the
+  mark — `elementFromPoint` returns the button and the tap changes slide.
+
+Also fixed while measuring: `.heroPlate` had no explicit grid track, so
+`.heroImg`'s `width: 74%` had no definite box to resolve against
+(`grid-template-columns: minmax(0, 1fr)` added).
+
+Verified at 360/390/430px with real photos: plate square at every width
+(323/353/393), photo centred and scaling with it (212/232/258), all three
+decode with `object-fit: contain` and none overflows its plate, no horizontal
+document overflow, no tap target under 40px, no page errors. Desktop unchanged
+(523px plate, 340px photo). The two boxes my audit reports as "overflowing"
+(`.heroBg`, `.ctaRing`) are decorative and clipped by `overflow: hidden`
+ancestors; the document itself does not overflow.
