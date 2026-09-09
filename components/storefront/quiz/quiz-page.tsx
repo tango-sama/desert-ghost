@@ -480,12 +480,15 @@ export function QuizPage({ products }: { products: Product[] }) {
               bottom one, which is what makes the screen read as objects
               standing in a room rather than a picture behind a list. It is
               decoration, so it is hidden from assistive tech and passes every
-              tap through to the card underneath. Icon changes based on the
-              answered goal (Q1), showing category-specific icons. */}
+              tap through to the card underneath. Swaps from the default plant
+              to a category-specific icon once Q1 (the goal question) is
+              answered, and stays that icon for the rest of the quiz — keyed
+              off `answers.goal` alone, not the current question index, so it
+              does not revert the moment `answer()` advances past Q1. */}
           <img
             key={answers.goal ?? "default"}
             className={styles.qPlant}
-            src={question?.key === "goal" && answers.goal ? GOAL_ICON[answers.goal] : DEFAULT_GOAL_ICON}
+            src={answers.goal ? GOAL_ICON[answers.goal] : DEFAULT_GOAL_ICON}
             alt=""
             aria-hidden
           />

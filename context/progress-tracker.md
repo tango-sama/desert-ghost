@@ -5317,3 +5317,30 @@ with a rose border, so selection never depends on the dot alone.
 errors, backdrop covering the viewport and header in view on every question,
 and no horizontal overflow. A synthetic tap at the dead centre of the pot's
 overlap with the bottom card selects that card and advances the quiz.
+
+## Quiz question screens — the pot swaps for a category icon after Q1 (2026-09-09)
+
+The `feat(quiz): optimize category icons with WebP format` commit added
+`GOAL_ICON` (one WebP per `Goal` — skin, hair, gain, slim, energy, antiaging,
+sourced from the store owner's `images/quiz category icons/`, pre-converted to
+WebP alongside the plant itself: 1.6 MB of PNG down to 187 KB) but gated the
+swap on `question?.key === "goal"` — the currently *displayed* question,
+not whether Q1 had been answered. `answer()` calls `setAnswers` and
+`setIndex(index + 1)` in the same handler, both batched into one render, so
+the index had already moved to Q2 by the first paint where `answers.goal`
+was set. The two conditions were never simultaneously true and the pot never
+visibly changed — the feature shipped inert.
+
+Fixed by keying the swap on `answers.goal` alone: the plant while Q1 is
+unanswered, the matching category icon from the moment Q1 is answered through
+the rest of the funnel (Q2–Q5), including on back-navigation to Q1. The
+`key={answers.goal ?? "default"}` remount and the `<img>`-over-`next/image`
+choice (dynamic local `src`, no `next/image` config needed) are unchanged from
+that commit.
+
+**Verified** against the production build (`npm run start`): `next build`,
+ESLint (the pre-existing `@next/next/no-img-element` warning on this element
+is unchanged, not introduced by this fix) and `tsc --noEmit` clean. Drove the
+funnel to Q1, confirmed the default plant renders unanswered, chose "شعري"
+and confirmed the DOM swaps to `hair.webp` immediately and still reads
+`hair.webp` two questions later on Q3.
