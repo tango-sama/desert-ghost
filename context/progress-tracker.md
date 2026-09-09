@@ -121,14 +121,21 @@ not the intended state (see `development-workflow.md`).
   2. **Second headline** «149 منتجاً على الرف، وواحد أو اثنان فقط يناسبان
      حالتكِ. أجيبي على خمسة أسئلة قصيرة، ونختار لكِ ما يناسب هدفكِ
      وروتينكِ.» — a second glass card (`.introSubCard`/`.introSubText`,
-     same visual language as the opening headline) timed to its own
-     `--sub-start` window (rises 0.32→0.40, holds to 0.56, clears by 0.66),
-     positioned to start only after the first headline has fully faded
-     (done by 0.30) and finish well before the CTA starts revealing (0.78) —
-     the three never overlap. Hidden outright under reduced motion
-     (`.introSubCard { opacity: 0 }`) rather than stacking both cards
-     statically, since reduced motion already collapses the intro to one
-     static headline + CTA.
+     same visual language as the opening headline), timed so it starts only
+     after the first headline has fully faded (done by 0.30) and finishes
+     well before the CTA starts revealing (0.78) — the three never overlap.
+     **Entrance was reworked per follow-up feedback** ("appear from the
+     bottom of the screen and slowly, gently move up while scrolling"): it
+     now rises from `55dvh` below its resting spot — genuinely off-screen,
+     clipped by `.introFrame`'s `overflow: hidden` until it arrives — eased
+     with a smoothstep curve (`--sub-rise`, driven by `--sub-in` alone, NOT
+     the fade-out) over a widened 0.32→0.46 window (14% of scroll, vs. the
+     original 8%) so the rise itself reads as slow and deliberate. Once
+     risen it holds position; only opacity (`--sub-start` = min of the in/out
+     ramps) fades it back out from 0.56→0.68 — it does not slide back down.
+     Hidden outright under reduced motion (`.introSubCard { opacity: 0 }`)
+     rather than stacking both cards statically, since reduced motion
+     already collapses the intro to one static headline + CTA.
   3. **Reassurance line** «5 أسئلة · أقل من دقيقة · بدون تسجيل ولا رقم
      هاتف» — a plain `<p className={styles.introReassure}>`, NOT
      scroll-progress-driven, placed as a normal-flow sibling right after

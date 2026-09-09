@@ -68,10 +68,16 @@
   /* Second line: rises in well after the headline is gone (0.32, vs. the
      headline's fade finishing at 0.30), holds, then clears out again with
      room to spare before the CTA starts at 0.78 — the two lines and the CTA
-     never share the same moment of scroll. */
-  --sub-in: max(0, min(1, calc((var(--intro-progress) - 0.32) / 0.08)));
-  --sub-out: max(0, min(1, calc((0.66 - var(--intro-progress)) / 0.1)));
+     never share the same moment of scroll. The rise itself spans 14% of
+     scroll (vs. the headline's snappier fades) so it reads as slow and
+     deliberate rather than a flick. */
+  --sub-in: max(0, min(1, calc((var(--intro-progress) - 0.32) / 0.14)));
+  --sub-out: max(0, min(1, calc((0.68 - var(--intro-progress)) / 0.12)));
   --sub-start: min(var(--sub-in), var(--sub-out));
+  /* Smoothstep ease over --sub-in ALONE (not --sub-start) for the card's
+     position: it should glide up once, ease into place, and then hold there
+     while it fades out at the end — not slide back down as --sub-out falls. */
+  --sub-rise: calc(var(--sub-in) * var(--sub-in) * (3 - 2 * var(--sub-in)));
   --cta-start: max(0, min(1, calc((var(--intro-progress) - 0.78) / 0.16)));
   position: relative;
   height: 460dvh;
@@ -141,10 +147,12 @@
   text-wrap: balance;
   text-shadow: 0 1px 20px rgba(255, 255, 255, 0.42);
 }
-/* Same glass-card language as the headline, timed to its own --sub-start
-   window instead — rises up into place rather than the headline's settle-
-   down-from-above motion, so the handoff between the two reads as a
-   continuation rather than a repeat. */
+/* Same glass-card language as the headline, timed to its own window instead
+   — but rather than the headline's small settle-down-from-above, this one
+   enters from off-screen below and glides up into place (clipped by
+   .introFrame's overflow:hidden until it arrives), eased via --sub-rise so
+   the motion is a gentle ease-in-out rather than a linear slide. Position
+   holds once risen; only opacity (--sub-start) fades it back out. */
 .introSubCard {
   position: absolute;
   inset-inline: 30px;
@@ -157,7 +165,7 @@
   box-shadow: 0 18px 50px rgba(58, 42, 48, 0.13), inset 0 1px 0 rgba(255, 255, 255, 0.48);
   backdrop-filter: blur(14px) saturate(1.08);
   opacity: var(--sub-start);
-  transform: translateY(calc(-50% + (1 - var(--sub-start)) * 20px));
+  transform: translateY(calc(-50% + (1 - var(--sub-rise)) * 55dvh));
   transition: opacity 0.16s linear;
   pointer-events: none;
 }
