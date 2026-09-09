@@ -181,9 +181,15 @@
   text-wrap: balance;
   text-shadow: 0 1px 16px rgba(255, 255, 255, 0.4);
 }
+/* Anchored to the bottom of the frame rather than its middle: the cue is an
+   instruction to scroll down, so it belongs where the gesture starts and where
+   a thumb already is, not level with the headline it was competing with.
+   Sharing the bottom of the screen with .introFinal is safe — the cue is gone
+   by --intro-progress 0.22 and the CTA only begins at 0.78, so the two are
+   never on screen together. */
 .scrollCue {
   position: absolute;
-  top: 50%;
+  bottom: max(26px, env(safe-area-inset-bottom));
   z-index: 4;
   width: 34px;
   height: 128px;
@@ -191,7 +197,6 @@
   align-items: center;
   justify-content: center;
   opacity: calc(var(--cue-start) * 0.86);
-  transform: translateY(-50%);
   pointer-events: none;
 }
 .scrollCueStart { right: 13px; }
@@ -309,12 +314,16 @@
   }
   .introSticky { position: relative; }
   .introTitleCard,
-  .introFinal,
-  .scrollCue {
+  .introFinal {
     opacity: 1;
-    transform: translateY(-50%);
   }
+  .introTitleCard { transform: translateY(-50%); }
   .introFinal { transform: none; }
+  /* Reduced motion collapses the intro to a single screen with the CTA already
+     on it, so there is nothing left to scroll — and now that the cue sits at
+     the bottom it would land on top of that CTA. It was only ever an
+     instruction for the scrub. */
+  .scrollCue { display: none; }
   .scrollCue span,
   .scrollCue i,
   .ctaBig { animation: none; }

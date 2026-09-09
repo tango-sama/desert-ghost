@@ -5067,3 +5067,27 @@ fixture orders: amount window, `--tolerance 0` exact match, 12-month cutoff and
 dating, linked-parcel dedup, never-shipped and never-tracked orders, and
 Arabic/French delivered labels. Not yet run against real data — needs the
 service-account key, which no sandbox has.
+
+## Quiz intro — scroll cues moved to the bottom (2026-09-09)
+
+The two scroll cues flanked the headline at `top: 50%`, level with the one
+thing on the screen meant to be read. They are now anchored to the bottom of
+the frame (`bottom: max(26px, env(safe-area-inset-bottom))`, ~82%–97% down the
+viewport at both 390px and 1280px): a cue that says "scroll down" belongs where
+the gesture starts and where a thumb already is.
+
+Sharing the bottom with `.introFinal` is safe on the scrubbed path — the cue is
+out by `--intro-progress` 0.22 and the CTA only begins at 0.78, so the two are
+never on screen together. Under reduced motion they *would* have collided,
+since that mode collapses the intro to one screen with the CTA already on it,
+so the cues are now `display: none` there — an instruction to scroll, in a mode
+with nothing left to scroll, was noise either way.
+
+**Verified.** Typecheck, `next build` and ESLint clean (same 3 pre-existing
+problems elsewhere). Measured in Chromium at 390px and 1280px: both cues at
+81–97% of viewport height, opacity 0.86 at the top of the intro and 0 by the
+end; reduced motion renders them `display: none`.
+
+Note: the self-scrolling intro tour (49bfff8) was reverted on `main` in
+bedcc68 at the owner's request. It remains recoverable by SHA in main's own
+history if it is ever wanted back.
