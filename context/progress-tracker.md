@@ -122,53 +122,53 @@ not the intended state (see `development-workflow.md`).
      حالتكِ. أجيبي على خمسة أسئلة قصيرة، ونختار لكِ ما يناسب هدفكِ
      وروتينكِ.» — a second glass card (`.introSubCard`/`.introSubText`,
      same visual language as the opening headline), timed so it starts only
-     after the first headline has fully faded (done by 0.30) and finishes
-     well before the CTA starts revealing (0.78) — the three never overlap.
-     **Entrance was reworked per follow-up feedback** ("appear from the
-     bottom of the screen and slowly, gently move up while scrolling"): it
-     now rises from `55dvh` below its resting spot — genuinely off-screen,
-     clipped by `.introFrame`'s `overflow: hidden` until it arrives — eased
-     with a smoothstep curve (`--sub-rise`, driven by `--sub-in` alone, NOT
-     the fade-out) over a widened 0.32→0.46 window (14% of scroll, vs. the
-     original 8%) so the rise itself reads as slow and deliberate. Once
-     risen it holds position; only opacity (`--sub-start` = min of the in/out
-     ramps) fades it back out from 0.56→0.68 — it does not slide back down.
-     Hidden outright under reduced motion (`.introSubCard { opacity: 0 }`)
-     rather than stacking both cards statically, since reduced motion
-     already collapses the intro to one static headline + CTA.
+     after the first headline has fully faded (0.30) and finishes well
+     before the CTA starts revealing (0.78). Entrance: rises from `55dvh`
+     below its resting spot — genuinely off-screen, clipped by
+     `.introFrame`'s `overflow: hidden` until it arrives — eased with a
+     smoothstep curve (`--sub-rise`, driven by `--sub-in` alone, NOT the
+     fade-out, so once risen it holds position and only fades via opacity at
+     the end rather than sliding back down). **The rise window was widened
+     twice on real-device feedback that it still moved too fast** — first
+     0.08 → 0.14 of scroll, then, after the owner tested it live and it
+     still read as fast, 0.14 → a full 0.30 (0.30→0.60), more than
+     quadrupling the original span so covering the distance to center-screen
+     takes a long, deliberate stretch of scroll input. Hold 0.60-0.66, fades
+     out 0.66-0.74. Hidden outright under reduced motion
+     (`.introSubCard { opacity: 0 }`) rather than stacking both cards
+     statically, since reduced motion already collapses the intro to one
+     static headline + CTA.
   3. **Reassurance line** «5 أسئلة · أقل من دقيقة · بدون تسجيل ولا رقم
-     هاتف» — a plain `<p className={styles.introReassure}>`, NOT
-     scroll-progress-driven, placed as a normal-flow sibling right after
-     `<section className={styles.intro}>` (both now wrapped in a fragment).
-     This is the fix for a reported bug: once the CTA fully reveals and the
-     visitor keeps scrolling, the sticky video releases and the intro's
-     460dvh height runs out, leaving a stretch of `.quiz`'s own background
-     (reads as white/cream) with nothing on it. The line now occupies that
-     space instead of leaving it blank. **Sized down over two rounds of
-     follow-up feedback.** Round 1 ("make the height of the white area small
-     and fit it to the line of the text"): it was `line-height: 1.8` with a
-     `1.8rem` top margin sitting on top of `.wrap`'s own `4rem` bottom
-     padding, so the band read as an oversized blank strip rather than a
-     caption — changed to `line-height: 1.4`, `0.9rem` top margin, and a
-     `-3rem` bottom margin eating most (deliberately not all) of `.wrap`'s
-     trailing 4rem, leaving ~1rem. Round 2 ("the padding at the bottom of the
-     screen is too large"): that leftover ~1rem was still too much with
-     nothing below it — bottom margin is now `-4rem`, fully cancelling
-     `.wrap`'s trailing padding. Confirmed via computed style: the
-     paragraph's own box is exactly one line tall (19px at a 375-430px
-     width), ~14px above it, and 0px of space between it and the end of the
-     scrollable page.
-  Verified via the dev server + browser automation (same tooling caveat as
-  before: this environment's automation tab doesn't decode video or run
-  rAF/transitions since it's never the OS-focused tab, so the video itself
-  couldn't be watched playing there — but the served file's byte size/
-  keyframe count were confirmed directly, and both new elements' scroll-
-  progress opacity math were confirmed correct via direct computed-style
-  checks the same way the original intro timing was verified). **Still not
-  verified in a real, foreground browser tab by a human** — the owner
-  should load `/quiz` locally and confirm the scrub actually feels smoother
-  now, the second line's timing reads naturally, and the reassurance line
-  looks right against the page background.
+     هاتف» — **relocated after real-device testing.** It started as a plain
+     `<p>` in normal document flow after `<section className={styles.intro}>`,
+     meant to fill the page-background band a visitor scrolls into once the
+     CTA fully reveals and the sticky section releases. Sized down twice on
+     feedback that the band was too tall (`line-height`/margins tightened,
+     then the bottom margin changed to fully cancel `.wrap`'s trailing 4rem
+     padding). The owner then sent a screenshot from a real phone: at the
+     point the CTA is fully visible, there is a plain, blank-looking strip
+     below it (within the still-sticky video frame, before the section ever
+     releases) with no text on it — the flow-content line further down was
+     never what they were looking at. **Moved into `.introFinal` itself**, as
+     a second child below the button (`.introFinal` is now `flex-direction:
+     column`), riding the exact same `--cta-start` reveal as the CTA so it
+     appears together with it, over the video's own last frame — no separate
+     band, no extra scrolling needed, no ambiguity about which "white area"
+     is meant. Restyled for that placement: dark ink text (matching the
+     CTA's own color) with a soft light text-shadow for legibility over
+     video rather than the page-background-oriented muted tone it had before,
+     no card/background of its own, `font-size: 0.72rem` so it reads as a
+     caption under the button rather than competing with it.
+  Verified via the dev server + browser automation for the DOM structure and
+  every scroll-progress formula (computed-style checks bypassing this
+  environment's frozen-transition/rAF quirk, same technique used throughout
+  this file's intro work) — confirmed correct on every pass. The video
+  playback and real feel of the motion, though, were only ever confirmed by
+  the owner on an actual device (their screenshot after the keyframe re-encode
+  showed the video decoding and playing normally, which this environment's
+  own browser automation cannot do). Continue relying on the owner's own
+  read of `/quiz` for anything about how the scrub or the two reveals
+  actually *feel* — the numbers can be verified here, the feel cannot.
 
 - `/quiz` intro redesigned as a cinematic scroll-scrubbed full-screen video
   experience (2026-09-09, ghost-only; local change not yet pushed/deployed).

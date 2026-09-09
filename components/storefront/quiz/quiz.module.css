@@ -65,14 +65,15 @@
      0.30 — a flat hold followed by the fade, not a fade from scroll zero. */
   --title-start: max(0, min(1, calc((0.3 - var(--intro-progress)) / 0.18)));
   --cue-start: max(0, min(1, calc((0.22 - var(--intro-progress)) / 0.22)));
-  /* Second line: rises in well after the headline is gone (0.32, vs. the
-     headline's fade finishing at 0.30), holds, then clears out again with
-     room to spare before the CTA starts at 0.78 — the two lines and the CTA
-     never share the same moment of scroll. The rise itself spans 14% of
-     scroll (vs. the headline's snappier fades) so it reads as slow and
-     deliberate rather than a flick. */
-  --sub-in: max(0, min(1, calc((var(--intro-progress) - 0.32) / 0.14)));
-  --sub-out: max(0, min(1, calc((0.68 - var(--intro-progress)) / 0.12)));
+  /* Second line: rises in right as the headline finishes fading (0.30),
+     holds, then clears out again with room to spare before the CTA starts at
+     0.78 — the two lines and the CTA never share the same moment of scroll.
+     The rise itself spans a full 30% of scroll — reworked twice, wider each
+     time, on feedback that it moved too fast — so covering the distance to
+     center-screen takes a long, deliberate stretch of scrolling rather than
+     a flick. */
+  --sub-in: max(0, min(1, calc((var(--intro-progress) - 0.3) / 0.3)));
+  --sub-out: max(0, min(1, calc((0.74 - var(--intro-progress)) / 0.08)));
   --sub-start: min(var(--sub-in), var(--sub-out));
   /* Smoothstep ease over --sub-in ALONE (not --sub-start) for the card's
      position: it should glide up once, ease into place, and then hold there
@@ -221,7 +222,9 @@
   bottom: max(30px, env(safe-area-inset-bottom));
   z-index: 4;
   display: flex;
-  justify-content: center;
+  flex-direction: column;
+  align-items: center;
+  gap: 0.6rem;
   opacity: var(--cta-start);
   transform: translateY(calc((1 - var(--cta-start)) * 18px));
   pointer-events: none;
@@ -261,23 +264,22 @@
 }
 .ctaBig:active { transform: translateY(-1px); }
 
-/* Lives right after .intro in normal document flow, on .quiz's own
-   background — the space a visitor scrolls into once the sticky video
-   releases and the CTA has already fully revealed. Not scroll-driven: it is
-   simply the next thing on the page, so it needs no opacity/progress wiring
-   of its own. Sized to hug the single line of text rather than leave a tall
-   blank band: a tight line-height, a small top gap, and a negative bottom
-   margin that fully cancels .wrap's own 4rem bottom padding, which this
-   element would otherwise sit well clear of. */
+/* Sits inside .introFinal, under the CTA, riding the same --cta-start
+   reveal — it appears together with the button, over the video's own last
+   frame, rather than asking for extra scroll past the sticky section to
+   reach a separate band of page background. Kept to a single tight line:
+   no card, no extra margins, just legible text sized well below the CTA's
+   own weight so it reads as a caption, not a second button. */
 .introReassure {
-  margin: 0.9rem auto -4rem;
+  margin: 0;
   max-width: 26em;
-  padding: 0 1.2rem;
-  color: var(--ink-2);
-  font-size: 0.85rem;
+  color: rgba(58, 42, 48, 0.85);
+  font-size: 0.72rem;
   font-weight: 700;
   letter-spacing: 0.01em;
-  line-height: 1.4;
+  line-height: 1.3;
+  text-align: center;
+  text-shadow: 0 1px 10px rgba(255, 255, 255, 0.5);
 }
 
 @keyframes rise {
