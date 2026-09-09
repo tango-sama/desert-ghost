@@ -443,8 +443,42 @@ export function QuizPage({ products }: { products: Product[] }) {
   const onPhoto = stage === "questions" || stage === "thinking";
 
   return (
-    <div className={`${styles.quiz} ${onPhoto ? styles.quizPhoto : ""}`}>
-      {onPhoto && <div className={styles.qBackdrop} aria-hidden />}
+    <div className={styles.quiz}>
+      {onPhoto && (
+        <>
+          {/* Both go through next/image rather than CSS backgrounds so they
+              are served as WebP/AVIF at the size the device actually needs —
+              the source photograph is a 1.1 MB PNG, which is not something to
+              hand a phone on a mobile connection. `priority` on the
+              photograph: it is the screen, so it must not wait behind the
+              lazy-loading heuristic. */}
+          <div className={styles.qBackdrop} aria-hidden>
+            <Image
+              className={styles.qPhoto}
+              src="/assets/quiz/question-background.png"
+              alt=""
+              fill
+              sizes="100vw"
+              priority
+            />
+          </div>
+          {/* Foreground prop, in front of the cards: the pot overlaps the
+              bottom one, which is what makes the screen read as objects
+              standing in a room rather than a picture behind a list. It is
+              decoration, so it is hidden from assistive tech and passes every
+              tap through to the card underneath. */}
+          <Image
+            className={styles.qPlant}
+            src="/assets/quiz/question-plant.png"
+            alt=""
+            width={370}
+            height={801}
+            sizes="(max-width: 700px) 30vw, 200px"
+            priority
+            aria-hidden
+          />
+        </>
+      )}
       <div className={styles.wrap}>
         {stage === "intro" && (
           <section className={styles.intro} ref={introRef} aria-label="مقدمة الاستبيان">

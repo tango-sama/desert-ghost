@@ -5279,3 +5279,41 @@ every question, the header in view on every question, scroll landing at exactly
 0 each time, no horizontal overflow, and the backdrop correctly gone on the
 result. Rendering checked against the mockup with a stand-in photograph and
 again with none.
+
+## Quiz question screens — the real photograph and the potted plant (2026-09-09)
+
+Closes the open item from the section above: the artwork landed, so the
+question screens now ship with the greenhouse photograph behind them and the
+terracotta pot standing in front of the cards.
+
+- `public/assets/quiz/question-background.png` (736×1446) and
+  `question-plant.png` (370×801, transparent).
+- **Both go through `next/image`, not CSS `background-image`.** That was the
+  decision that mattered here: the sources are a 1.11 MB and a 253 KB PNG, and
+  this page has already had one payload-reduction pass. Served through the
+  image route with sharp, a phone downloads **13.5 KB and 14.6 KB of WebP** —
+  ~28 KB against ~1.4 MB, a 98% cut, at the size the device actually asks for.
+  Both carry `priority`: they are the screen, so neither may wait behind the
+  lazy-loading heuristic.
+- The backdrop uses `object-position: center bottom`. The source is portrait
+  and every viewport crops it vertically; anchoring the bottom keeps the floor
+  the pot stands on, and gives away only roof glass at the top.
+- `.qPlant` is fixed bottom-left at `z-index: 2` against `.wrap`'s 1, so the
+  pot overlaps the bottom card as the mockup shows. `pointer-events: none` on
+  it is load-bearing rather than tidiness — the pot covers ~103×88px of that
+  card, and without it those taps would land on a decorative image.
+- The photograph is referenced directly. The `--quiz-photo` variable and its
+  fallback gradient from the previous pass are gone: the image ships with the
+  code and is not meant to be swappable from anywhere.
+
+Worth knowing: the plant is fixed, so it fronts whichever card is at the
+bottom-left of the screen, not one particular card — mid-scroll it can cover a
+card's radio dot. That is fine because a chosen card also goes near-solid white
+with a rose border, so selection never depends on the dot alone.
+
+**Verified** against the production build (`npm run start`, not just dev):
+`next build`, ESLint and `tsc --noEmit` clean; the full funnel driven at
+375×667, 390×664, 412×915, 820×1180 and 1440×900 with no console or page
+errors, backdrop covering the viewport and header in view on every question,
+and no horizontal overflow. A synthetic tap at the dead centre of the pot's
+overlap with the bottom card selects that card and advances the quiz.
