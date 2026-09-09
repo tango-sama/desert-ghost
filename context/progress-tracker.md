@@ -99,19 +99,25 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
-- `/quiz` intro redesigned as a scroll-scrubbed vertical video experience
-  (2026-09-09, ghost-only; local change not yet pushed/deployed). The owner
-  provided `please_add_some_fog_at_the_sta.mp4`, copied into
-  `public/assets/quiz/intro-background.mp4` (H.264, 720x1280, ~10s, ~2.35 MB).
-  Changed only the first intro stage in `components/storefront/quiz/quiz-page.tsx`
-  and page-scoped styles in `quiz.module.css`: the video now sits in a premium
-  rounded 9:16 frame and scrubs against scroll progress; the only opening copy is
-  the transparent-glass headline «ما المنتجات المناسبة لكِ؟», with subtle scroll
-  cues on both sides. The CTA «اكتشفي منتجكِ» appears gently at the end of the
-  scroll scene and still triggers the existing `setStage("questions")` plus
-  `trackFunnel({ step: "start" })`. No quiz questions, scoring, recommendation
-  logic, result selection, analytics view/result events, or `/offer` handoff were
-  changed. Reduced-motion users get a non-scrubbed accessible fallback.
+- `/quiz` intro redesigned as a cinematic scroll-scrubbed full-screen video
+  experience (2026-09-09, ghost-only; local change not yet pushed/deployed).
+  The owner provided `please_add_some_fog_at_the_sta.mp4`, copied into
+  `public/assets/quiz/intro-background.mp4` (H.264, 720x1280 vertical 9:16,
+  ~10s, ~2.35 MB). The video fills the entire viewport edge-to-edge as a
+  sticky background (not in a card or frame), scrubbing against scroll
+  progress through a 460dvh tall intro section. Opening elements: (1) centered
+  glass-background headline «ما المنتجات المناسبة لكِ؟» that fades as the
+  user scrolls (visible at 0%, fading 12-30%), (2) symmetrical animated scroll
+  indicators on both sides (vertical lines + downward chevrons with subtle
+  glow, fading as scroll begins), (3) final CTA «اكتشفي منتجكِ» appearing near
+  bottom at 78-94% progress. Subtle overlay ensures headline readability
+  without hiding the video. Reduced-motion users get a non-scrubbed accessible
+  fallback (auto height, no animations, all elements visible). Changed only
+  the first intro stage in `components/storefront/quiz/quiz-page.tsx` and
+  page-scoped styles in `quiz.module.css`. No quiz questions, scoring,
+  recommendation logic, result selection, analytics events, or `/offer`
+  handoff were changed. Mobile-responsive (375px-430px width, safe-area
+  insets, 100dvh units, touch/keyboard accessible).
 
 - `/offer` quiz-result landing page redesigned as a hybrid premium
   botanical/lab funnel (2026-09-06, ghost-only; local change not yet
