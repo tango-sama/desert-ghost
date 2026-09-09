@@ -5178,3 +5178,54 @@ recommendations and the right goal-specific offer page, with no console or page
 errors. `/`, `/products`, `/categories`, `/collagen`, `/glutathione`,
 `/carnitine`, `/sunguard`, `/checkout` and `/amelhadj` all still 200 after the
 `lib/firebase.ts` re-export change.
+
+## Quiz intro — the background video is locked to the screen on mobile (2026-09-09)
+
+The scrubbed intro video jumped while scrolling on a phone. The cause was
+`dvh`, used for all three of the intro's viewport-sized boxes. `dvh` tracks the
+*dynamic* viewport, so it changes every time a mobile browser collapses or
+expands its toolbar — and each of those changes did three things at once:
+resized the pinned frame, re-cropped the `object-fit: cover` video inside it,
+and (because the section's own height is the denominator of `--intro-progress`)
+remapped the scroll onto a *different frame of the video*. So the picture moved
+under a visitor who had not scrolled at all.
+
+**Fixed by making every length in the intro a constant.**
+
+- `.intro` is `460lvh` and `.introSticky` is `100lvh`. `lvh` is the *largest*
+  viewport and never changes with the toolbar, so the frame is sized once. When
+  the toolbar collapses the screen simply reveals more of an unchanged box —
+  the video never resizes and never re-crops. `.introSubCard`'s rise distance
+  and the reduced-motion `min-height` moved to `lvh` for the same reason.
+  Nothing in the intro may go back to `dvh`.
+- `paint()` derives `travel` from the pinned frame's own `offsetHeight`, not
+  `window.innerHeight` — `innerHeight` moves with the toolbar and was the
+  second, independent source of the same jump. Both terms are now static, so
+  progress depends only on how far the page has scrolled.
+- New `--chrome-gap: max(0px, 100lvh - 100svh)` — the strip an expanded toolbar
+  covers, a constant since both units are static. The bottom-anchored overlays
+  (`.scrollCue`, `.introFinal`) are offset by it so the CTA stays tappable in
+  both toolbar states without drifting.
+- `.introVideo` is composited (`translateZ(0)`, `backface-visibility: hidden`)
+  so scrubbed frames are not repainted together with the glass overlays above.
+
+**Also found and fixed while verifying:** `.intro` cancelled only `-2rem` of
+`.wrap`'s `4rem` bottom padding, so 32px of page outlived the sticky child's
+travel — at the very end of the scroll the frame unstuck by that much and a
+strip of page background slid in under the video, exactly where the CTA sits.
+`margin-block` now matches `.wrap`'s padding on both sides (`-1.5rem -4rem`).
+
+**Verified.** `next build`, ESLint and `tsc --noEmit` all clean. Driven in
+Chromium at 375×667, 390×664, 412×915, 820×1180, 844×390 and 1440×900, plus
+reduced-motion and a mid-scroll rotation: across a 13-point scroll sweep the
+video's width and height never change, it stays pinned at `top: 0` through
+`--intro-progress` 1 (previously `-32`), progress is monotonic 0→1, there is no
+horizontal overflow, and the CTA ends up on screen, hit-testable and starting
+the quiz. The toolbar collapse itself cannot be reproduced headless — there is
+no browser chrome to collapse, so `lvh`/`svh`/`dvh` all resolve equal — so that
+half rests on the units' definitions; what was verified is that the boxes are
+sized to `lvh` and that nothing in the scrub reads a toolbar-sensitive length.
+
+Note: the video still does not decode in this sandbox (no H.264), so the frames
+above are the `--rose-tint` fallback. Geometry, progress and hit-testing are
+unaffected by that; the file-size work in the section above is still open.

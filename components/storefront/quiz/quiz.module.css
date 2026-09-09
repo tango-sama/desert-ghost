@@ -80,18 +80,40 @@
      while it fades out at the end — not slide back down as --sub-out falls. */
   --sub-rise: calc(var(--sub-in) * var(--sub-in) * (3 - 2 * var(--sub-in)));
   --cta-start: max(0, min(1, calc((var(--intro-progress) - 0.78) / 0.16)));
+  /* How much taller the largest viewport is than the smallest: the strip a
+     mobile browser's toolbar covers when it is expanded. Both units are
+     static, so this is a constant — anything offset by it holds still. */
+  --chrome-gap: max(0px, 100lvh - 100svh);
   position: relative;
-  height: 460dvh;
+  /* `lvh`, never `dvh`. dvh tracks the mobile toolbar as it collapses and
+     expands, so each of those transitions would change this section's height
+     mid-scroll, which remaps --intro-progress onto a different frame of the
+     video and re-crops the sticky frame under it — that is the jump. `lvh`
+     never changes, so the scrub is locked to the screen and only the page
+     scrolls beneath it. Every viewport unit in the intro is lvh for the same
+     reason; none of them may go back to dvh. */
+  height: 460lvh;
   min-height: 2600px;
   width: 100vw;
   margin-inline: calc(50% - 50vw);
-  margin-block: -1.5rem -2rem;
+  /* Cancels .wrap's padding on BOTH sides exactly (-1.5rem top, -4rem bottom).
+     The bottom half matters as much as the top: any .wrap padding left over
+     below this section outlives the sticky child's travel, so at the very end
+     of the scroll the pinned frame unsticks by that much and a strip of page
+     background slides in under the video — right where the CTA sits. Matched
+     to .wrap's padding, the section ends flush with the document and the
+     video stays locked to the screen through --intro-progress 1. */
+  margin-block: -1.5rem -4rem;
   text-align: center;
 }
 .introSticky {
   position: sticky;
   top: 0;
-  height: 100dvh;
+  /* Sized to the LARGEST viewport so the video covers the screen in both
+     toolbar states: with the toolbar up its bottom strip hides behind the
+     chrome, and when the toolbar collapses the screen simply reveals more of
+     an unchanged box. Nothing is ever resized, so nothing jumps. */
+  height: 100lvh;
   width: 100%;
   overflow: hidden;
 }
@@ -103,13 +125,20 @@
   background: var(--rose-tint);
   isolation: isolate;
 }
+/* Fills the sticky frame exactly, and because that frame is a fixed lvh box
+   the crop chosen by object-fit is computed once and never renegotiated
+   mid-scroll. Promoted to its own layer so each scrubbed frame is composited
+   rather than repainted with the overlays above it. */
 .introVideo {
   position: absolute;
   inset: 0;
   width: 100%;
   height: 100%;
   object-fit: cover;
+  object-position: center;
   background: var(--rose-tint);
+  transform: translateZ(0);
+  backface-visibility: hidden;
   z-index: 0;
 }
 .introShade {
@@ -166,7 +195,7 @@
   box-shadow: 0 18px 50px rgba(58, 42, 48, 0.13), inset 0 1px 0 rgba(255, 255, 255, 0.48);
   backdrop-filter: blur(14px) saturate(1.08);
   opacity: var(--sub-start);
-  transform: translateY(calc(-50% + (1 - var(--sub-rise)) * 55dvh));
+  transform: translateY(calc(-50% + (1 - var(--sub-rise)) * 55lvh));
   transition: opacity 0.16s linear;
   pointer-events: none;
 }
@@ -189,7 +218,9 @@
    never on screen together. */
 .scrollCue {
   position: absolute;
-  bottom: max(26px, env(safe-area-inset-bottom));
+  /* Lifted clear of --chrome-gap: the frame runs to the bottom of the LARGEST
+     viewport, so without this the cue would sit behind an expanded toolbar. */
+  bottom: calc(max(26px, env(safe-area-inset-bottom)) + var(--chrome-gap));
   z-index: 4;
   width: 34px;
   height: 128px;
@@ -224,7 +255,10 @@
 .introFinal {
   position: absolute;
   inset-inline: 24px;
-  bottom: max(30px, env(safe-area-inset-bottom));
+  /* Same toolbar clearance as .scrollCue — and it must hold for the CTA in
+     particular, which has to stay tappable whether the toolbar is up or
+     collapsed. The offset is constant, so the button does not drift. */
+  bottom: calc(max(30px, env(safe-area-inset-bottom)) + var(--chrome-gap));
   z-index: 4;
   display: flex;
   flex-direction: column;
@@ -310,7 +344,7 @@
 @media (prefers-reduced-motion: reduce) {
   .intro {
     height: auto;
-    min-height: 100dvh;
+    min-height: 100lvh;
   }
   .introSticky { position: relative; }
   .introTitleCard,
