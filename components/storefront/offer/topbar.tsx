@@ -13,7 +13,12 @@ import styles from "./offer.module.css";
 export function Topbar({ scrolled, storeName }: { scrolled: boolean; storeName: string }) {
   return (
     <header className={cn(styles.top, scrolled && styles.topScrolled)}>
-      <span className={styles.brand}>{storeName}</span>
+      {/* The one deliberate exception to "no links out": at the owner's
+          request, the brand name is the funnel's only path back to the main
+          site. It is the shop's identity, not a nav item. */}
+      <a className={styles.brand} href="https://www.desertshop.fit/">
+        {storeName}
+      </a>
       <span className={styles.topNote}>
         الدفع عند الاستلام
         <i className={styles.topDot} aria-hidden />

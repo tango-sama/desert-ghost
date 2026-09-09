@@ -5452,3 +5452,29 @@ numbers above. Not driven in a browser: headless Chromium on this machine
 cannot decode H.264 (the limitation earlier entries record), so the poster and
 source-selection behaviour rests on the encode checks plus the markup change
 above.
+
+## /offer topbar — brand name links to the main site (2026-09-09)
+
+The owner asked that the word "جمالكِ الخارجي" on the quiz-final landing page
+(/offer) link to the main site, https://www.desertshop.fit/. The phrase is not
+code: it is the shop's Arabic brand name, `site_settings.storeName` — the
+request spelled it "حمالك الخارجي", resolved by scanning the public catalog
+and settings (public-read Firestore, same as the build-time prerender; a
+throwaway script, since deleted) for the word. `storeName` renders on /offer
+in three places — the topbar brand, the selection-section watermark (giant
+faint text behind the order band, `aria-hidden` and decorative), and the
+footer mark. Asked which one should link; the owner chose the top bar only.
+
+- `components/storefront/offer/topbar.tsx`: the brand `<span>` became an
+  `<a href="https://www.desertshop.fit/">`. The funnel's header comment says
+  "No nav links — every link out of a landing page is a way to leave it";
+  this is now the one deliberate exception, documented at the element.
+- `offer.module.css` `.brand`: added `color: inherit` and
+  `text-decoration: none` — as an anchor the word would otherwise paint in
+  the browser's link colour instead of following the bar's two states
+  (transparent over the ink hero, `--foreground` once scrolled to cream).
+  The footer and the watermark are deliberately untouched.
+
+**Verified.** `tsc --noEmit` clean; ESLint clean on topbar.tsx (the CSS file
+is not linted). No `next build` run — the change is markup plus one CSS
+rule. Link is a plain same-tab external anchor as requested.

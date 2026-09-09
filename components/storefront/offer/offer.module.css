@@ -87,6 +87,11 @@
   font-weight: 700;
   letter-spacing: 0.14em;
   text-transform: uppercase;
+  /* The brand is an <a> (links home; see topbar.tsx). These two keep it
+     looking like the span it replaced — colour must follow the bar's two
+     states (ink hero vs scrolled cream), never the browser link colour. */
+  color: inherit;
+  text-decoration: none;
 }
 
 .topNote {
