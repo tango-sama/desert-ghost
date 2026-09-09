@@ -5478,3 +5478,39 @@ footer mark. Asked which one should link; the owner chose the top bar only.
 **Verified.** `tsc --noEmit` clean; ESLint clean on topbar.tsx (the CSS file
 is not linted). No `next build` run — the change is markup plus one CSS
 rule. Link is a plain same-tab external anchor as requested.
+
+## Funnel analytics — which question each abandoning visitor left on (2026-09-09)
+
+The owner wants to know in which question a client abandons the quiz. The
+gap: funnel events end at the last `answer` (index of the question just
+answered), so a drop mid-question could not be placed on the question she
+actually left on.
+
+- **New step `question`** — one impression per question screen actually
+  shown, carrying `stepIndex`, fired from quiz-page.tsx on every index
+  change while `stage === "questions"`. Back-navigation included: quitting
+  on a question she returned to is an abandonment at that question. Added to
+  the client type (lib/funnel.ts) and the /api/funnel whitelist (route.ts)
+  only — the admin ladder (`FUNNEL_STEPS`) deliberately does not list it, so
+  the funnel bars keep their seven stages.
+- **lib/marketing.ts `quizAbandonment()`** — pure bucketing. Per session, the
+  LAST event by `ts` (the fetch is un-ordered, so "last" is sorted, never
+  array order). Buckets: last `start` → left on Q1 unanswered; last
+  `question` i → left on question i+1 before answering it; last `answer` i →
+  left in the ~200 ms before question i+1 mounted, so the loss is the next
+  question she never engaged — capped at Q5, which means "answered
+  everything, left before the result". Sessions whose last event is `view`
+  never entered the questions (their drop is the ladder's `start` row), and
+  anything at or past `result` is not a mid-quiz abandonment.
+- **growth-view.tsx** — a card under the funnel ladder: "❓ في أي سؤال تترك
+  الزائرات الاستبيان؟", one bar per question labelled with the real title
+  from lib/quiz.ts (imported, not copied, so labels cannot drift from the
+  quiz they measure), count and percentage of the largest bucket, same bar
+  styling as the ladder. Hidden entirely when the period has no mid-quiz
+  losses. Date-range scoped like the rest of the panel (same fetch).
+
+**Verified.** `tsc --noEmit` clean; ESLint clean on the five touched files
+(the two pre-existing `no-img-element` warnings on the pot icons are
+unchanged); `next build` clean. Data note: `question` events
+only start accruing after deploy, so early periods show an empty card — the
+card needs a full period of the new step to mean anything.

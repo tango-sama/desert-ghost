@@ -247,6 +247,18 @@ export function QuizPage({ products }: { products: Product[] }) {
     trackPixelEvent("ViewContent", { content_name: "quiz", content_type: "product_group" });
   }, [variant]);
 
+  // One impression per question screen actually shown, carrying its index.
+  // Without it the last event before an abandonment is the answer she gave
+  // on the PREVIOUS screen, and the drop cannot be placed on the question
+  // she left on. Fires on back-navigation too: quitting on a question she
+  // returned to is an abandonment at that question. /api/funnel accepts this
+  // step, but the admin funnel ladder deliberately does not list it — it is
+  // a per-question signal (lib/marketing.ts, quizAbandonment), not a stage.
+  useEffect(() => {
+    if (stage !== "questions" || !variant || index >= QUESTIONS.length) return;
+    trackFunnel({ step: "question", variant, stepIndex: index });
+  }, [stage, index, variant]);
+
   const question = QUESTIONS[index];
   const answered = question ? answers[question.key] : undefined;
 

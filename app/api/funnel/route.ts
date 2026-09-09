@@ -24,6 +24,8 @@ export const dynamic = "force-dynamic";
 const STEPS = [
   "view",      // landed on /quiz
   "start",     // tapped through to the first question
+  "question",  // saw one question screen (carries `step_index`) — what places
+               // an abandonment on the exact question she left on
   "answer",    // answered one question (carries `step_index`)
   "result",    // saw a recommendation
   "offer",     // tapped through to the /offer landing page
