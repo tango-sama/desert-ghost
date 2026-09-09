@@ -3,7 +3,8 @@
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { priceFmt, type Product } from "@/lib/firebase";
+import { priceFmt } from "@/lib/catalog";
+import type { Product } from "@/lib/firebase";
 import { trackPixelEvent } from "@/lib/meta-pixel";
 import { trackFunnel, funnelSessionId } from "@/lib/funnel";
 import {

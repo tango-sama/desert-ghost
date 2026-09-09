@@ -5091,3 +5091,90 @@ end; reduced motion renders them `display: none`.
 Note: the self-scrolling intro tour (49bfff8) was reverted on `main` in
 bedcc68 at the owner's request. It remains recoverable by SHA in main's own
 history if it is ever wanted back.
+
+## /quiz loading speed (2026-09-09)
+
+Measured against `next start`, Chromium at 390px. Everything below is a real
+before/after on the same build machine, not an estimate.
+
+| | before | after |
+|---|---|---|
+| HTML | 282,127 B (72,684 gzip) | 63,265 B (14,957 gzip) |
+| JS over the wire | 308.0 KB | 162.1 KB |
+| JS parsed | ~1,050 KB | ~490 KB |
+| favicon.ico | 238,012 B | 24,853 B |
+| TTFB | 155 ms | 4–32 ms |
+| FCP | 632 ms | ~200 ms |
+
+**The Firestore SDK was in the client bundle.** One 139 KB chunk (466 KB
+parsed) of `@firebase/firestore` + `@firebase/app` shipped to every visitor of
+a page that never talks to Firestore from the browser — the catalog arrives as
+props. The cause: `lib/firebase.ts` calls `initializeApp()`/`getFirestore()` at
+module scope, so `import { priceFmt } from "@/lib/firebase"` in a client
+component pulled the entire SDK behind a two-line price formatter. The four
+pure helpers now live in `lib/catalog.ts`; `lib/firebase.ts` re-exports them so
+no existing import breaks, and the quiz path (`quiz-page.tsx`, `lib/quiz.ts`)
+imports from the pure module. Types never moved — `import type` is erased and
+was never the problem.
+
+**The HTML carried every product's /offer landing copy.** `getProducts()`
+returns whole documents, and all 149 were serialised into the page: headline,
+benefits, ingredients, usage, FAQ, reviews, before/after pairs — for a funnel
+that reads eight fields. `slimForQuiz()` (lib/quiz.ts) projects to exactly
+those eight. `/offer` is untouched: the handoff is by id in the URL and that
+page fetches full documents itself.
+
+**Every visitor paid for a Firestore read.** The page was `force-dynamic` from
+when it also read the carrier/WhatsApp toggles; those moved to `/offer` and
+nothing request-varying was left (no searchParams, no cookies — the A/B variant
+is derived in the browser). Now `revalidate = 300`, so the route prerenders and
+a hundred people arriving off one ad share one catalog read instead of making a
+hundred. **Deploy note:** the page is prerendered at build time, so a build that
+cannot reach Firestore ships an empty catalog until the first revalidation.
+
+**The favicon was 238 KB** — nearly 4× the page's HTML, fetched on every page of
+the site. It held six PNG entries; the 128×128 and 256×256 were 213 KB of it
+and are used only for desktop shortcuts. Repacked to 16/32/48/64, the original
+PNGs kept byte-for-byte (no re-encode, no quality question): 24,853 B. Verified
+rendering at all four sizes.
+
+**public/assets is no longer `max-age=0`.** Next serves it that way, so every
+repeat visit spent a round trip revalidating before the hero video could start.
+Now a day of max-age with a week of stale-while-revalidate — deliberately not
+`immutable`, since these filenames are not content-hashed and a replaced clip
+must not strand anyone.
+
+### Still open, and now the whole story: the intro video
+
+`public/assets/quiz/intro-background.mp4` is **4.58 MB — 94% of the page's
+weight**, against ~320 KB for everything else combined. It is 10s of 1280-wide
+b-roll at **3.84 Mbps**, which is a delivery bitrate for feature video, not for
+a muted background loop. It could not be touched here: this sandbox has no
+H.264 decoder (the bundled ffmpeg is built `--disable-everything`, and headless
+Chromium will not decode it either), so it can be neither re-encoded nor have a
+poster frame extracted. On a machine with a normal ffmpeg:
+
+    ffmpeg -i intro-background.mp4 -vf scale=720:-2 -c:v libx264 -crf 30 \
+      -preset slow -profile:v main -movflags +faststart -an intro-background.mp4
+    ffmpeg -i intro-background.mp4 -vf scale=720:-2 -c:v libvpx-vp9 -crf 40 \
+      -b:v 0 -an intro-background.webm
+    ffmpeg -i intro-background.mp4 -vf "select=eq(n\,0),scale=720:-2" \
+      -frames:v 1 intro-poster.webp
+
+720-wide is already more than a 390px viewport needs at 2×. Expect roughly
+400–700 KB for the H.264 and less for the VP9 — an 85%+ cut on its own, far
+larger than everything fixed above put together. Offer both via `<source>`, and
+add the poster so the first frame paints before any of it has buffered.
+
+**Not worth doing, checked:** Cairo is already served as a variable font
+(dropping the explicit `weight` array produced byte-identical files), the Meta
+Pixel already loads `afterInteractive`, and the three preloaded woff2 (100 KB)
+are Arabic type the page genuinely renders.
+
+**Verified.** Typecheck and `next build` clean; ESLint unchanged (same 3
+pre-existing problems). The full funnel driven three times in Chromium — intro
+→ 5 questions → result → `/offer` — each producing real, priced, photographed
+recommendations and the right goal-specific offer page, with no console or page
+errors. `/`, `/products`, `/categories`, `/collagen`, `/glutathione`,
+`/carnitine`, `/sunguard`, `/checkout` and `/amelhadj` all still 200 after the
+`lib/firebase.ts` re-export change.

@@ -218,30 +218,14 @@ function mapDocs<T>(snap: QuerySnapshot<DocumentData>): T[] {
   return snap.docs.map((d) => ({ id: d.id, ...d.data() }) as T);
 }
 
-// title||name, price parsing, etc. tolerate both old and new document shapes
-// per the append-only Firestore schema (context/architecture-context.md).
-export function priceNum(v: unknown): number {
-  if (typeof v === "number") return v;
-  return parseInt(String(v ?? "").replace(/[^0-9]/g, "") || "0", 10) || 0;
-}
-
-export function priceFmt(v: unknown): string {
-  return priceNum(v).toLocaleString("en-US") + " د.ج";
-}
-
-export function benefits(desc: Product["description"]): string[] {
-  if (Array.isArray(desc)) return desc.filter(Boolean) as string[];
-  return String(desc ?? "")
-    .split(/\r?\n/)
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
-export function productImages(p: Product): string[] {
-  const arr = Array.isArray(p.images) ? p.images.filter(Boolean) : [];
-  if (!arr.length && p.image) return [p.image];
-  return arr;
-}
+// The four pure helpers now live in lib/catalog.ts and are re-exported here so
+// every existing `from "@/lib/firebase"` import keeps working. They moved
+// because this module calls initializeApp()/getFirestore() at module scope:
+// importing a single value from it drags the whole Firestore SDK into the
+// importing bundle, which is not something a price formatter should cost a
+// client component. Import them from "@/lib/catalog" in anything that runs in
+// the browser.
+export { priceNum, priceFmt, benefits, productImages } from "@/lib/catalog";
 
 export async function getProducts(): Promise<Product[]> {
   try {

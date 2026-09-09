@@ -30,7 +30,8 @@
 // CATEGORY IDS ARE REAL. The catalog category ids named below are the actual
 // Firestore `categories` document ids, not invented ones — a mismatch would
 // silently recommend nothing.
-import { priceNum, type Product } from "@/lib/firebase";
+import { priceNum } from "@/lib/catalog";
+import type { Product } from "@/lib/firebase";
 
 /**
  * The six scoring categories. Every answer adds points to one or more of
@@ -880,4 +881,40 @@ export function answersSummary(a: Answers): string {
   })
     .filter(Boolean)
     .join(" · ");
+}
+
+/** The catalog, cut down to the fields the quiz actually reads.
+ *
+ *  /quiz hands the whole catalog to the browser so scoring is instant between
+ *  questions, and that is still the right trade — but "the whole catalog" was
+ *  taken literally: every field of all 149 documents was serialised into the
+ *  HTML, `landing` included. That one field carries a product's entire /offer
+ *  page (headline, benefits, ingredients, usage, FAQ, reviews, before/after
+ *  pairs) and the quiz never touches it; nor does it touch `cost`,
+ *  `lastModified`, `images[]`, or anything else the admin panel writes.
+ *
+ *  Eight fields is the complete list this funnel reads: `category` and `stock`
+ *  drive the scoring (recommend/isSoldOut), `title`/`name`/`subtitle` feed
+ *  productForm()'s Arabic keyword match and the card labels, `price` the
+ *  totals, `image` the card thumbnails, and `id` everything downstream.
+ *  /offer is unaffected — the handoff is by id in the URL and that page
+ *  fetches the full documents itself.
+ *
+ *  Keys that are absent stay absent rather than being serialised as
+ *  `undefined`, and the return type is still Product: every consumer here
+ *  reads through `?? ` fallbacks, so a trimmed document behaves exactly like a
+ *  full one that happened to have those fields blank.
+ */
+export function slimForQuiz(products: Product[]): Product[] {
+  return products.map((p) => {
+    const slim: Product = { id: p.id };
+    if (p.title !== undefined) slim.title = p.title;
+    if (p.name !== undefined) slim.name = p.name;
+    if (p.subtitle !== undefined) slim.subtitle = p.subtitle;
+    if (p.price !== undefined) slim.price = p.price;
+    if (p.category !== undefined) slim.category = p.category;
+    if (p.image !== undefined) slim.image = p.image;
+    if (p.stock !== undefined) slim.stock = p.stock;
+    return slim;
+  });
 }
