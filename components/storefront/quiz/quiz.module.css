@@ -67,6 +67,25 @@
   pointer-events: none;
   user-select: none;
 }
+/* Crossfades the pot between icons: the outgoing image sits in the same
+   fixed spot as the incoming one (both are .qPlant), so fading one down
+   while the other fades up reads as one icon dissolving into the next
+   rather than two icons stacked. Duration must match ICON_FADE_MS in
+   quiz-page.tsx. */
+@keyframes qPlantFadeIn {
+  from { opacity: 0; }
+}
+@keyframes qPlantFadeOut {
+  to { opacity: 0; }
+}
+.qPlantIn { animation: qPlantFadeIn 0.32s var(--ease); }
+.qPlantOut { animation: qPlantFadeOut 0.32s var(--ease) forwards; }
+@media (prefers-reduced-motion: reduce) {
+  .qPlantIn,
+  .qPlantOut {
+    animation: none;
+  }
+}
 /* A white scrim over the photograph. The cards carry their own blur, but the
    header text sits directly on the image, and this is what keeps it legible
    without having to know which photograph is behind it. */
@@ -529,6 +548,57 @@
   background: var(--rose);
 }
 
+/* Cards swipe between questions instead of cutting to them. "Forward"
+   (the next question) swipes toward the reading edge — left, the same
+   direction the progress bar fills in RTL — and "back" swipes the other
+   way; the next set enters from whichever side the last set just left
+   through, so the motion reads as one continuous direction of travel.
+   Leave duration must match CARD_LEAVE_MS in quiz-page.tsx. */
+@keyframes qOptionLeaveForward {
+  to { opacity: 0; transform: translateX(-28px); }
+}
+@keyframes qOptionLeaveBack {
+  to { opacity: 0; transform: translateX(28px); }
+}
+@keyframes qOptionEnterForward {
+  from { opacity: 0; transform: translateX(28px); }
+}
+@keyframes qOptionEnterBack {
+  from { opacity: 0; transform: translateX(-28px); }
+}
+/* A card mid-exit must not take a tap meant for whatever replaces it. */
+.qOptionLeaveForward,
+.qOptionLeaveBack {
+  animation-duration: 0.2s;
+  animation-timing-function: var(--ease);
+  animation-fill-mode: forwards;
+  pointer-events: none;
+}
+.qOptionLeaveForward { animation-name: qOptionLeaveForward; }
+.qOptionLeaveBack { animation-name: qOptionLeaveBack; }
+/* Entering cards stagger by --card-i (set inline per card, see quiz-page.tsx)
+   so the list eases onto the screen one card after another rather than as a
+   single block. `backwards` fill holds each card at its from-state through
+   its own delay — without it every card would flash visible immediately and
+   only "restart" hidden when its turn came. */
+.qOptionEnterForward,
+.qOptionEnterBack {
+  animation-duration: 0.32s;
+  animation-timing-function: var(--ease);
+  animation-delay: calc(var(--card-i, 0) * 55ms);
+  animation-fill-mode: backwards;
+}
+.qOptionEnterForward { animation-name: qOptionEnterForward; }
+.qOptionEnterBack { animation-name: qOptionEnterBack; }
+@media (prefers-reduced-motion: reduce) {
+  .qOptionLeaveForward,
+  .qOptionLeaveBack,
+  .qOptionEnterForward,
+  .qOptionEnterBack {
+    animation: none;
+  }
+}
+
 .navRow {
   display: flex;
   align-items: center;
@@ -551,6 +621,9 @@
   transition: background 0.22s var(--ease), color 0.22s var(--ease);
 }
 .back:hover { background: rgba(255, 255, 255, 0.55); color: var(--foreground); }
+/* Disabled only while the cards it would bring back are still mid-swipe —
+   a tap here can't queue a second transition on top of the first. */
+.back:disabled { opacity: 0.55; cursor: not-allowed; }
 
 /* ───────── buttons ───────── */
 .cta {

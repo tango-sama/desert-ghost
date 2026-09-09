@@ -5344,3 +5344,51 @@ is unchanged, not introduced by this fix) and `tsc --noEmit` clean. Drove the
 funnel to Q1, confirmed the default plant renders unanswered, chose "شعري"
 and confirmed the DOM swaps to `hair.webp` immediately and still reads
 `hair.webp` two questions later on Q3.
+
+## Quiz question screens — icon crossfade and staggered card swipe transitions (2026-09-09)
+
+Added two hand-rolled CSS-keyframe + JS-timer animations to
+`components/storefront/quiz/quiz-page.tsx` /
+`components/storefront/quiz/quiz.module.css`, matching the existing
+`MOVE_MS`/`leaveUp`/`arriveUp` pattern already used for product-card
+reordering elsewhere in the app (no animation library in this project).
+
+- **Icon crossfade** (`ICON_FADE_MS = 320`): the pot/category `<img>` is now
+  a stacked pair — the outgoing icon (`.qPlantOut`, `qPlantFadeOut`
+  keyframe) fades out on top of the incoming icon (`.qPlantIn`,
+  `qPlantFadeIn` keyframe) fading in underneath, keyed by `iconSrc` so a
+  goal change (or default → category on answering Q1) crossfades instead of
+  cutting. The outgoing node is removed from the DOM after `ICON_FADE_MS`
+  via a `iconFadeTimer` ref.
+- **Option-card swipe with stagger** (`CARD_LEAVE_MS = 200`): moving between
+  questions now runs through a new `advanceQuestion(nextIndex, dir)` helper
+  that sets `cardsLeaving` + `questionDir` ("forward" | "back"), applies a
+  leave class (`.qOptionLeaveForward` / `.qOptionLeaveBack`) to every option
+  button, waits `CARD_LEAVE_MS`, then swaps `index` and applies the matching
+  enter class (`.qOptionEnterForward` / `.qOptionEnterBack`). Each button
+  gets `style={{ "--card-i": i }}` so the entrance keyframe's
+  `animation-delay` staggers card-by-card instead of firing all at once.
+  Direction convention follows the existing RTL cue in this file
+  (`.option:hover { transform: translateX(-4px) }` = forward/reading
+  direction): forward navigation exits left / enters from the right; back
+  navigation is the mirror. The back button (`← السؤال السابق`) is now
+  `disabled` while `cardsLeaving` is true, and `answer()` guards against
+  re-entry with the same flag.
+- Both animations are skipped (instant state change, no timers) when
+  `prefersReducedMotion()` is true, and every new keyframe class also has a
+  `@media (prefers-reduced-motion: reduce) { animation: none; }` override,
+  matching this file's existing belt-and-suspenders convention.
+
+**Verified** against the production build (`npm run start`), by driving the
+funnel through JS/DOM inspection rather than pixel screenshots (this
+environment's screenshot tool returns unreliable viewport sizes): `next
+build`, ESLint and `tsc --noEmit` clean (only the pre-existing
+`@next/next/no-img-element` warning, now on two `<img>` tags instead of one).
+Live-checked mid-transition state after answering Q1 ("شعري"): both
+`.qPlantOut` (old icon) and `.qPlantIn` (new icon) present in the DOM
+together, and all six option buttons carrying `.qOptionLeaveForward`. After
+~400 ms: DOM settled on Q2 with a single `.qPlantIn` resolving to
+`hair.webp`, and the new option buttons carrying `.qOptionEnterForward` with
+`--card-i` 0–3. Back-navigation confirmed the mirror: `.qOptionLeaveBack`
+mid-transition with the back button `disabled`, settling on Q1 with
+`.qOptionEnterBack` and the previous answer still marked `optionOn`.

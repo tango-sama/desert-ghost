@@ -59,6 +59,18 @@ const THINKING_MS = 1100;
 // the class plays the exit, this timer decides when the state actually flips.
 const MOVE_MS = 260;
 
+// How long the outgoing question's option cards get to swipe off before the
+// index actually advances and the next question's cards mount. Must match
+// the animation-duration on .qOptionLeaveForward/.qOptionLeaveBack in
+// quiz.module.css — CSS plays the exit, this timer decides when it is safe
+// to swap the question underneath it.
+const CARD_LEAVE_MS = 200;
+
+// How long the outgoing pot icon is kept mounted so it can crossfade under
+// its replacement. Must match the animation-duration on .qPlantOut in
+// quiz.module.css.
+const ICON_FADE_MS = 320;
+
 // Category icons that replace the default plant after Q1 is answered.
 // Filenames match the `Goal` values exactly, so no separate lookup table
 // can drift out of sync with lib/quiz.ts.
@@ -100,6 +112,17 @@ export function QuizPage({ products }: { products: Product[] }) {
   const [arriving, setArriving] = useState<Move | null>(null);
   const moveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const arriveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // Whether the current question's option cards are mid-exit, and which way
+  // the quiz is travelling — forward (next) swipes toward the reading edge,
+  // back (previous) swipes the opposite way, and the next question's cards
+  // enter from whichever side the old ones just left through.
+  const [cardsLeaving, setCardsLeaving] = useState(false);
+  const [questionDir, setQuestionDir] = useState<"forward" | "back">("forward");
+  const questionLeaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  // The icon mid-fade-out, stacked under the current one so the pot
+  // crossfades to the next category icon rather than cutting to it.
+  const [outgoingIcon, setOutgoingIcon] = useState<string | null>(null);
+  const iconFadeTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const introRef = useRef<HTMLElement>(null);
   const introVideoRef = useRef<HTMLVideoElement>(null);
   const introStickyRef = useRef<HTMLDivElement>(null);
@@ -116,6 +139,8 @@ export function QuizPage({ products }: { products: Product[] }) {
     () => () => {
       if (moveTimer.current) clearTimeout(moveTimer.current);
       if (arriveTimer.current) clearTimeout(arriveTimer.current);
+      if (questionLeaveTimer.current) clearTimeout(questionLeaveTimer.current);
+      if (iconFadeTimer.current) clearTimeout(iconFadeTimer.current);
     },
     [],
   );
@@ -225,6 +250,28 @@ export function QuizPage({ products }: { products: Product[] }) {
   const question = QUESTIONS[index];
   const answered = question ? answers[question.key] : undefined;
 
+  // Which pot icon is current right now — the category icon from the moment
+  // Q1 is answered, the default plant before that.
+  const iconSrc = answers.goal ? GOAL_ICON[answers.goal] : DEFAULT_GOAL_ICON;
+  const prevIconSrc = useRef(iconSrc);
+
+  // Crossfades the pot to the new icon instead of cutting to it: the old src
+  // is kept mounted (stacked in the same fixed spot, see .qPlant) just long
+  // enough to fade out under its replacement. Runs for any change to
+  // iconSrc, which in practice only happens by choosing/re-choosing Q1.
+  useEffect(() => {
+    if (prevIconSrc.current === iconSrc) return;
+    const outgoing = prevIconSrc.current;
+    prevIconSrc.current = iconSrc;
+    if (prefersReducedMotion()) return;
+    setOutgoingIcon(outgoing);
+    if (iconFadeTimer.current) clearTimeout(iconFadeTimer.current);
+    iconFadeTimer.current = setTimeout(() => {
+      iconFadeTimer.current = null;
+      setOutgoingIcon(null);
+    }, ICON_FADE_MS);
+  }, [iconSrc]);
+
   const rec = useMemo(() => {
     if (!variant) return null;
     return recommend(products, answers, variantBundleSize(variant));
@@ -260,8 +307,30 @@ export function QuizPage({ products }: { products: Product[] }) {
   // as such rather than as "first in the list".
   const anchorId = rec?.anchorProducts.length ? String(rec.anchorProducts[0].id) : null;
 
+  // Swaps questions with a swipe instead of a cut: the current question's
+  // cards play their exit where they stand (they are still `question`'s
+  // cards — the index has not moved yet), and only once that finishes does
+  // the index actually change, so the next question's cards mount fresh and
+  // play their own staggered entrance. A click mid-transition restarts the
+  // timer rather than queuing — there is nothing to lose, `answers` was
+  // already committed synchronously in `answer()` before this ever runs.
+  function advanceQuestion(nextIndex: number, dir: "forward" | "back") {
+    if (questionLeaveTimer.current) clearTimeout(questionLeaveTimer.current);
+    setQuestionDir(dir);
+    if (prefersReducedMotion()) {
+      setIndex(nextIndex);
+      return;
+    }
+    setCardsLeaving(true);
+    questionLeaveTimer.current = setTimeout(() => {
+      questionLeaveTimer.current = null;
+      setCardsLeaving(false);
+      setIndex(nextIndex);
+    }, CARD_LEAVE_MS);
+  }
+
   function answer(value: string) {
-    if (!question) return;
+    if (!question || cardsLeaving) return;
     const next = { ...answers, [question.key]: value } as Answers;
     setAnswers(next);
     trackFunnel({
@@ -272,7 +341,7 @@ export function QuizPage({ products }: { products: Product[] }) {
     });
 
     if (index + 1 < QUESTIONS.length) {
-      setIndex(index + 1);
+      advanceQuestion(index + 1, "forward");
       return;
     }
     setStage("thinking");
@@ -343,10 +412,13 @@ export function QuizPage({ products }: { products: Product[] }) {
   function retake() {
     if (moveTimer.current) clearTimeout(moveTimer.current);
     if (arriveTimer.current) clearTimeout(arriveTimer.current);
+    if (questionLeaveTimer.current) clearTimeout(questionLeaveTimer.current);
     moveTimer.current = null;
     arriveTimer.current = null;
+    questionLeaveTimer.current = null;
     setLeaving(null);
     setArriving(null);
+    setCardsLeaving(false);
     setAnswers({});
     setChosen([]);
     setIndex(0);
@@ -484,11 +556,21 @@ export function QuizPage({ products }: { products: Product[] }) {
               to a category-specific icon once Q1 (the goal question) is
               answered, and stays that icon for the rest of the quiz — keyed
               off `answers.goal` alone, not the current question index, so it
-              does not revert the moment `answer()` advances past Q1. */}
+              does not revert the moment `answer()` advances past Q1. The
+              outgoing icon (if any) is stacked in the same spot underneath,
+              crossfading out as the new one fades in over it. */}
+          {outgoingIcon && (
+            <img
+              className={`${styles.qPlant} ${styles.qPlantOut}`}
+              src={outgoingIcon}
+              alt=""
+              aria-hidden
+            />
+          )}
           <img
-            key={answers.goal ?? "default"}
-            className={styles.qPlant}
-            src={answers.goal ? GOAL_ICON[answers.goal] : DEFAULT_GOAL_ICON}
+            key={iconSrc}
+            className={`${styles.qPlant} ${styles.qPlantIn}`}
+            src={iconSrc}
             alt=""
             aria-hidden
           />
@@ -589,11 +671,23 @@ export function QuizPage({ products }: { products: Product[] }) {
             <h2 className={styles.qTitle}>{question.title}</h2>
             {question.lead && <p className={styles.qLead}>{question.lead}</p>}
             <div className={styles.options}>
-              {question.options.map((o) => (
+              {question.options.map((o, i) => (
                 <button
                   key={o.value}
                   type="button"
-                  className={`${styles.option} ${answered === o.value ? styles.optionOn : ""}`}
+                  className={`${styles.option} ${answered === o.value ? styles.optionOn : ""} ${
+                    cardsLeaving
+                      ? questionDir === "forward"
+                        ? styles.qOptionLeaveForward
+                        : styles.qOptionLeaveBack
+                      : questionDir === "forward"
+                        ? styles.qOptionEnterForward
+                        : styles.qOptionEnterBack
+                  }`}
+                  // Only the entrance reads this — it staggers each card's
+                  // animation-delay so the list eases onto the screen one
+                  // card after another instead of as a single block.
+                  style={{ "--card-i": i } as React.CSSProperties}
                   onClick={() => answer(o.value)}
                 >
                   {/* Text first, dot last: in RTL that puts the label on the
@@ -609,7 +703,12 @@ export function QuizPage({ products }: { products: Product[] }) {
             </div>
             {index > 0 && (
               <div className={styles.navRow}>
-                <button type="button" className={styles.back} onClick={() => setIndex(index - 1)}>
+                <button
+                  type="button"
+                  className={styles.back}
+                  disabled={cardsLeaving}
+                  onClick={() => advanceQuestion(index - 1, "back")}
+                >
                   ← السؤال السابق
                 </button>
               </div>
