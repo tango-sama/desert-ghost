@@ -267,10 +267,10 @@
    simply the next thing on the page, so it needs no opacity/progress wiring
    of its own. Sized to hug the single line of text rather than leave a tall
    blank band: a tight line-height, a small top gap, and a negative bottom
-   margin that eats most (not all — ~1rem stays) of .wrap's own 4rem bottom
-   padding, which this element would otherwise sit well clear of. */
+   margin that fully cancels .wrap's own 4rem bottom padding, which this
+   element would otherwise sit well clear of. */
 .introReassure {
-  margin: 0.9rem auto -3rem;
+  margin: 0.9rem auto -4rem;
   max-width: 26em;
   padding: 0 1.2rem;
   color: var(--ink-2);
