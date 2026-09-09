@@ -99,6 +99,57 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- `/quiz` intro: smoother scrubbing, a second scroll-timed line, and a
+  reassurance line below the fold (2026-09-09, ghost-only; local change not
+  yet pushed/deployed). Three independent fixes/additions on top of the
+  cinematic intro above:
+  1. **Scrubbing was choppy because the source video had almost no
+     keyframes** — `public/assets/quiz/intro-background.mp4` was H.264 with
+     only ~2 I-frames across all 240 frames (10s @ 24fps), so every
+     scroll-driven seek forced the decoder to walk a long chain of B/P frames
+     from the last keyframe. Re-encoded to all-intra (`ffmpeg -g 1
+     -keyint_min 1`, crf 22, no audio, faststart) — every frame is now
+     independently seekable. File grew from ~2.3MB to ~4.6MB, still small.
+     The original `please_add_some_fog_at_the_sta.mp4` the owner provided was
+     NOT touched, per instruction — only the derived copy in `public/assets`
+     was re-encoded. Paired with two JS changes in `quiz-page.tsx`:
+     `preload="metadata"` → `preload="auto"` (whole ~4.6MB file buffers
+     upfront, no network stalls mid-scrub) and a `!video.seeking` guard in
+     `paint()` so a new seek is never queued on top of one still in flight
+     (the other classic cause of choppy scroll-video, independent of
+     keyframes).
+  2. **Second headline** «149 منتجاً على الرف، وواحد أو اثنان فقط يناسبان
+     حالتكِ. أجيبي على خمسة أسئلة قصيرة، ونختار لكِ ما يناسب هدفكِ
+     وروتينكِ.» — a second glass card (`.introSubCard`/`.introSubText`,
+     same visual language as the opening headline) timed to its own
+     `--sub-start` window (rises 0.32→0.40, holds to 0.56, clears by 0.66),
+     positioned to start only after the first headline has fully faded
+     (done by 0.30) and finish well before the CTA starts revealing (0.78) —
+     the three never overlap. Hidden outright under reduced motion
+     (`.introSubCard { opacity: 0 }`) rather than stacking both cards
+     statically, since reduced motion already collapses the intro to one
+     static headline + CTA.
+  3. **Reassurance line** «5 أسئلة · أقل من دقيقة · بدون تسجيل ولا رقم
+     هاتف» — a plain `<p className={styles.introReassure}>`, NOT
+     scroll-progress-driven, placed as a normal-flow sibling right after
+     `<section className={styles.intro}>` (both now wrapped in a fragment).
+     This is the fix for a reported bug: once the CTA fully reveals and the
+     visitor keeps scrolling, the sticky video releases and the intro's
+     460dvh height runs out, leaving a stretch of `.quiz`'s own background
+     (reads as white/cream) with nothing on it. The line now occupies that
+     space instead of leaving it blank.
+  Verified via the dev server + browser automation (same tooling caveat as
+  before: this environment's automation tab doesn't decode video or run
+  rAF/transitions since it's never the OS-focused tab, so the video itself
+  couldn't be watched playing there — but the served file's byte size/
+  keyframe count were confirmed directly, and both new elements' scroll-
+  progress opacity math were confirmed correct via direct computed-style
+  checks the same way the original intro timing was verified). **Still not
+  verified in a real, foreground browser tab by a human** — the owner
+  should load `/quiz` locally and confirm the scrub actually feels smoother
+  now, the second line's timing reads naturally, and the reassurance line
+  looks right against the page background.
+
 - `/quiz` intro redesigned as a cinematic scroll-scrubbed full-screen video
   experience (2026-09-09, ghost-only; local change not yet pushed/deployed).
   The owner provided `please_add_some_fog_at_the_sta.mp4`, copied into

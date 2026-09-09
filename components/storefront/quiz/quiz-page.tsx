@@ -125,9 +125,14 @@ export function QuizPage({ products }: { products: Product[] }) {
 
       const duration = video!.duration;
       const reduced = prefersReducedMotion();
-      if (!reduced && Number.isFinite(duration) && duration > 0) {
+      // Never queue a seek on top of one already in flight — the browser
+      // decodes seeks asynchronously, and stacking a second one before the
+      // first resolves is what makes scroll-scrubbed video look choppy,
+      // regardless of how tight the threshold below is. Skipping this frame
+      // just means the next one (a few ms later) catches up instead.
+      if (!reduced && !video!.seeking && Number.isFinite(duration) && duration > 0) {
         const nextTime = duration * progress;
-        if (Math.abs(video!.currentTime - nextTime) > 0.045) video!.currentTime = nextTime;
+        if (Math.abs(video!.currentTime - nextTime) > 0.02) video!.currentTime = nextTime;
       }
 
       const ready = reduced || progress >= 0.78;
@@ -405,54 +410,74 @@ export function QuizPage({ products }: { products: Product[] }) {
     <div className={styles.quiz}>
       <div className={styles.wrap}>
         {stage === "intro" && (
-          <section className={styles.intro} ref={introRef} aria-label="مقدمة الاستبيان">
-            <div className={styles.introSticky}>
-              <div className={styles.introFrame}>
-                <video
-                  ref={introVideoRef}
-                  className={styles.introVideo}
-                  src="/assets/quiz/intro-background.mp4"
-                  muted
-                  playsInline
-                  preload="metadata"
-                  aria-hidden="true"
-                />
-                <div className={styles.introShade} />
-                <div className={`${styles.scrollCue} ${styles.scrollCueStart}`} aria-hidden="true">
-                  <span />
-                  <i />
-                  <i />
-                </div>
-                <div className={`${styles.scrollCue} ${styles.scrollCueEnd}`} aria-hidden="true">
-                  <span />
-                  <i />
-                  <i />
-                </div>
-                <div className={styles.introTitleCard}>
-                  <h1 className={styles.introTitle}>ما المنتجات المناسبة لكِ؟</h1>
-                </div>
-                <div className={styles.introFinal}>
-                  <button
-                    type="button"
-                    className={styles.ctaBig}
-                    style={{ pointerEvents: ctaReady ? "auto" : "none" }}
-                    tabIndex={ctaReady ? 0 : -1}
-                    aria-hidden={!ctaReady}
-                    onClick={() => {
-                      setStage("questions");
-                      trackFunnel({ step: "start", variant: variant ?? undefined });
-                    }}
-                  >
-                    اكتشفي منتجكِ
-                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                      <path d="M19 12H5" />
-                      <path d="m12 19-7-7 7-7" />
-                    </svg>
-                  </button>
+          <>
+            <section className={styles.intro} ref={introRef} aria-label="مقدمة الاستبيان">
+              <div className={styles.introSticky}>
+                <div className={styles.introFrame}>
+                  <video
+                    ref={introVideoRef}
+                    className={styles.introVideo}
+                    src="/assets/quiz/intro-background.mp4"
+                    muted
+                    playsInline
+                    preload="auto"
+                    aria-hidden="true"
+                  />
+                  <div className={styles.introShade} />
+                  <div className={`${styles.scrollCue} ${styles.scrollCueStart}`} aria-hidden="true">
+                    <span />
+                    <i />
+                    <i />
+                  </div>
+                  <div className={`${styles.scrollCue} ${styles.scrollCueEnd}`} aria-hidden="true">
+                    <span />
+                    <i />
+                    <i />
+                  </div>
+                  <div className={styles.introTitleCard}>
+                    <h1 className={styles.introTitle}>ما المنتجات المناسبة لكِ؟</h1>
+                  </div>
+                  {/* Rises in only once the headline above has fully faded (it
+                      holds through 0.32-0.66, well clear of the headline's own
+                      0-0.30 window and the CTA's 0.78-0.94), so the two never
+                      compete for the same moment of the scroll. */}
+                  <div className={styles.introSubCard}>
+                    <p className={styles.introSubText}>
+                      149 منتجاً على الرف، وواحد أو اثنان فقط يناسبان حالتكِ. أجيبي
+                      على خمسة أسئلة قصيرة، ونختار لكِ ما يناسب هدفكِ وروتينكِ.
+                    </p>
+                  </div>
+                  <div className={styles.introFinal}>
+                    <button
+                      type="button"
+                      className={styles.ctaBig}
+                      style={{ pointerEvents: ctaReady ? "auto" : "none" }}
+                      tabIndex={ctaReady ? 0 : -1}
+                      aria-hidden={!ctaReady}
+                      onClick={() => {
+                        setStage("questions");
+                        trackFunnel({ step: "start", variant: variant ?? undefined });
+                      }}
+                    >
+                      اكتشفي منتجكِ
+                      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                        <path d="M19 12H5" />
+                        <path d="m12 19-7-7 7-7" />
+                      </svg>
+                    </button>
+                  </div>
                 </div>
               </div>
-            </div>
-          </section>
+            </section>
+            {/* Sits in normal document flow right after the sticky section, on
+                the page's own background — this is the "white area" a visitor
+                scrolls into once the CTA has fully revealed and the intro's
+                scroll-jacked height runs out. A plain reassurance line, not
+                scroll-driven: it is simply what comes next on the page. */}
+            <p className={styles.introReassure}>
+              5 أسئلة · أقل من دقيقة · بدون تسجيل ولا رقم هاتف
+            </p>
+          </>
         )}
 
         {stage === "questions" && question && (

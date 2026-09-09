@@ -65,6 +65,13 @@
      0.30 — a flat hold followed by the fade, not a fade from scroll zero. */
   --title-start: max(0, min(1, calc((0.3 - var(--intro-progress)) / 0.18)));
   --cue-start: max(0, min(1, calc((0.22 - var(--intro-progress)) / 0.22)));
+  /* Second line: rises in well after the headline is gone (0.32, vs. the
+     headline's fade finishing at 0.30), holds, then clears out again with
+     room to spare before the CTA starts at 0.78 — the two lines and the CTA
+     never share the same moment of scroll. */
+  --sub-in: max(0, min(1, calc((var(--intro-progress) - 0.32) / 0.08)));
+  --sub-out: max(0, min(1, calc((0.66 - var(--intro-progress)) / 0.1)));
+  --sub-start: min(var(--sub-in), var(--sub-out));
   --cta-start: max(0, min(1, calc((var(--intro-progress) - 0.78) / 0.16)));
   position: relative;
   height: 460dvh;
@@ -133,6 +140,37 @@
   letter-spacing: -0.04em;
   text-wrap: balance;
   text-shadow: 0 1px 20px rgba(255, 255, 255, 0.42);
+}
+/* Same glass-card language as the headline, timed to its own --sub-start
+   window instead — rises up into place rather than the headline's settle-
+   down-from-above motion, so the handoff between the two reads as a
+   continuation rather than a repeat. */
+.introSubCard {
+  position: absolute;
+  inset-inline: 30px;
+  top: 50%;
+  z-index: 3;
+  padding: 0.95rem 1.1rem 1.05rem;
+  border: 1px solid rgba(255, 255, 255, 0.46);
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.18);
+  box-shadow: 0 18px 50px rgba(58, 42, 48, 0.13), inset 0 1px 0 rgba(255, 255, 255, 0.48);
+  backdrop-filter: blur(14px) saturate(1.08);
+  opacity: var(--sub-start);
+  transform: translateY(calc(-50% + (1 - var(--sub-start)) * 20px));
+  transition: opacity 0.16s linear;
+  pointer-events: none;
+}
+.introSubText {
+  max-width: 24em;
+  margin: 0 auto;
+  color: rgba(58, 42, 48, 0.92);
+  font-size: clamp(1rem, 4vw, 1.32rem);
+  font-weight: 700;
+  line-height: 1.65;
+  letter-spacing: -0.01em;
+  text-wrap: balance;
+  text-shadow: 0 1px 16px rgba(255, 255, 255, 0.4);
 }
 .scrollCue {
   position: absolute;
@@ -215,6 +253,22 @@
 }
 .ctaBig:active { transform: translateY(-1px); }
 
+/* Lives right after .intro in normal document flow, on .quiz's own
+   background — the space a visitor scrolls into once the sticky video
+   releases and the CTA has already fully revealed. Not scroll-driven: it is
+   simply the next thing on the page, so it needs no opacity/progress wiring
+   of its own. */
+.introReassure {
+  margin: 1.8rem auto 0;
+  max-width: 26em;
+  padding: 0 1.2rem;
+  color: var(--ink-2);
+  font-size: 0.85rem;
+  font-weight: 700;
+  letter-spacing: 0.01em;
+  line-height: 1.8;
+}
+
 @keyframes rise {
   from { opacity: 0; transform: translateY(14px); }
   to { opacity: 1; transform: translateY(0); }
@@ -251,6 +305,10 @@
   .scrollCue span,
   .scrollCue i,
   .ctaBig { animation: none; }
+  /* The second line is a mid-scroll beat for the scrubbing experience —
+     reduced motion skips the scrub entirely, so keep the one static
+     headline instead of stacking both overlapping cards. */
+  .introSubCard { opacity: 0; }
 }
 
 @media (min-width: 700px) {
