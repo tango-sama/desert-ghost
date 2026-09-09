@@ -5229,3 +5229,53 @@ sized to `lvh` and that nothing in the scrub reads a toolbar-sensitive length.
 Note: the video still does not decode in this sandbox (no H.264), so the frames
 above are the `--rose-tint` fallback. Geometry, progress and hit-testing are
 unaffected by that; the file-size work in the section above is still open.
+
+## Quiz question screens — full-bleed photograph and glass cards (2026-09-09)
+
+Restyled the question stage to the supplied mockup. The design is the question
+*template*, not a one-off for Q1 — the progress bar and «السؤال ١ من ٥» appear
+on every question, and letting the styling change at Q2 would break the funnel
+mid-flow — so all five questions share it, and so does `thinking`, which is a
+one-second beat of the same flow.
+
+- **`.qBackdrop`** — a `position: fixed` photographic layer behind the question
+  screens. `100lvh`, not `dvh`, for the reason the intro documents: a dvh
+  backdrop re-crops itself every time the mobile toolbar collapses. Verified it
+  is *not* clipped by `.quiz`'s `overflow-x: clip` and stays at `top: 0` while
+  the questions scroll over it.
+- **The photograph is one line**: `--quiz-photo` on `.quizPhoto`. Under it sits
+  a brand gradient that paints whenever the file is missing or still loading,
+  and a white scrim (`.qBackdrop::after`) that holds the header type legible
+  whichever image is dropped in.
+- **Progress** is now one track split into answered/remaining in fifths rather
+  than five pips, matching the mockup. RTL puts the fill on the right; the
+  remainder is not rendered at all on Q5 so its flex gap leaves no stub.
+- **Options are glass cards** in the intro's language — translucent white,
+  bright hairline, blur — with the radio moved to the inline-end so the label
+  owns the reading edge. The chosen card is the one that stops being glass: it
+  comes forward to near-solid with the rose ring.
+- Header type, the back button and the thinking spinner were all retuned for a
+  photograph rather than flat cream (`--ink-2` over `--ink-3`, white text
+  shadows, a glass pill behind the back link).
+
+**Bug found and fixed while building this: nothing reset the scroll position.**
+The intro is a 4.6-screen scroll, so tapping its CTA handed the question stage
+a page already ~2,400px down — and since a question screen is barely taller
+than the viewport, Q1 opened partway down itself, with its own heading and
+progress bar above the fold. Now reset on every stage change and every new
+question, `instant` (globals.css sets `scroll-behavior: smooth`, which would
+otherwise animate the whole intro's scroll back), and re-asserted on the next
+frame because a smooth scroll already in flight when the stage changes keeps
+running afterwards and lands the new screen ~14px down.
+
+**Still open:** the background photograph itself. Expected at
+`public/assets/quiz/question-background.jpg` — until it lands the fallback
+gradient carries the screen, which is why the 404 in dev is not an error state.
+
+**Verified.** `next build`, ESLint and `tsc --noEmit` clean. The full funnel
+driven at 375×667, 390×664, 412×915, 820×1180 and 1440×900 — intro → all five
+questions → thinking → result — with the backdrop covering the viewport on
+every question, the header in view on every question, scroll landing at exactly
+0 each time, no horizontal overflow, and the backdrop correctly gone on the
+result. Rendering checked against the mockup with a stand-in photograph and
+again with none.
