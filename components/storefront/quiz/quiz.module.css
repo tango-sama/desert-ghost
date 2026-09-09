@@ -19,43 +19,90 @@
   overflow-x: clip;
   overflow-y: visible;
   max-width: 100vw;
+  /* Painted under the question photograph — see .qBackdrop. */
+  --quiz-photo-fallback: linear-gradient(180deg, var(--rose-tint), var(--cream));
 }
 
 .wrap {
   max-width: 640px;
   margin: 0 auto;
   padding: 1.5rem 1.1rem 4rem;
+  /* Above .qBackdrop, which is a fixed layer at z-index 0. */
+  position: relative;
+  z-index: 1;
+}
+
+/* ───────── question backdrop ─────────
+   The photograph behind the question screens. Swap the file by changing this
+   one line; drop the image at public/assets/quiz/question-background.jpg.
+   The gradient underneath is not decoration — it is what paints if the photo
+   is missing or still loading, so the screen is never bare. */
+.quizPhoto {
+  --quiz-photo: url("/assets/quiz/question-background.jpg");
+}
+.qBackdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  pointer-events: none;
+  /* `lvh`, not `dvh` — the same lesson the intro video taught: a dvh-sized
+     backdrop is resized every time the mobile toolbar collapses, which
+     re-crops the photograph mid-scroll. Sized to the largest viewport, it is
+     painted once and simply stays put while the questions scroll over it. */
+  height: 100lvh;
+  background-image: var(--quiz-photo), var(--quiz-photo-fallback);
+  background-size: cover, cover;
+  background-position: center, center;
+  background-repeat: no-repeat, no-repeat;
+}
+/* A white scrim over the photograph. The cards carry their own blur, but the
+   header text sits directly on the image, and this is what keeps it legible
+   without having to know which photograph is behind it. */
+.qBackdrop::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background: linear-gradient(
+    180deg,
+    rgba(255, 255, 255, 0.32),
+    rgba(255, 255, 255, 0.12) 42%,
+    rgba(255, 255, 255, 0.3)
+  );
 }
 
 /* ───────── progress ───────── */
 .progress {
   display: flex;
-  gap: 6px;
-  margin-bottom: 2rem;
+  gap: 8px;
+  margin-bottom: 2.4rem;
 }
-.bar {
-  flex: 1;
-  height: 4px;
+/* Both halves are flex-basis 0 so their widths come purely from the flex-grow
+   set per question — answered vs. remaining, in fifths. */
+.progressDone,
+.progressLeft {
+  flex-basis: 0;
+  height: 5px;
   border-radius: 100px;
-  background: var(--line);
-  overflow: hidden;
+  transition: flex-grow 0.45s var(--ease);
 }
-.barFill {
-  display: block;
-  height: 100%;
-  width: 0;
-  border-radius: 100px;
-  background: linear-gradient(90deg, var(--gold), var(--rose));
-  transition: width 0.45s var(--ease);
+.progressDone { background: linear-gradient(90deg, var(--gold), var(--rose)); }
+/* Translucent white, not --line: this track lies on a photograph, and a solid
+   tint would read as a bar of paint across it. */
+.progressLeft {
+  background: rgba(255, 255, 255, 0.5);
+  box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.35);
 }
-.barOn .barFill { width: 100%; }
 
+/* The header block sits directly on the photograph with no card behind it, so
+   each line carries a soft white text-shadow. That, plus .qBackdrop's scrim,
+   is what holds the type legible whichever image is dropped in. */
 .stepCount {
-  font-size: 0.74rem;
-  font-weight: 800;
-  color: var(--ink-3);
-  letter-spacing: 1px;
-  margin-bottom: 0.6rem;
+  font-size: 0.78rem;
+  font-weight: 900;
+  color: var(--foreground);
+  letter-spacing: 0.5px;
+  margin-bottom: 0.7rem;
+  text-shadow: 0 1px 12px rgba(255, 255, 255, 0.75);
 }
 
 /* ───────── intro ───────── */
@@ -374,64 +421,94 @@
 
 /* ───────── question ───────── */
 .qTitle {
-  font-size: clamp(1.25rem, 4.6vw, 1.65rem);
+  font-size: clamp(1.45rem, 6vw, 1.95rem);
   font-weight: 900;
-  line-height: 1.5;
+  line-height: 1.45;
+  letter-spacing: -0.02em;
   color: var(--foreground);
-  margin-bottom: 0.5rem;
+  margin-bottom: 0.6rem;
+  text-wrap: balance;
+  text-shadow: 0 1px 16px rgba(255, 255, 255, 0.8);
 }
 /* One line under the question saying why it is being asked. Muted and light,
    so it never competes with the question itself. */
 .qLead {
-  font-size: 0.85rem;
-  line-height: 1.8;
+  font-size: 0.92rem;
+  line-height: 1.85;
   font-weight: 600;
-  color: var(--ink-3);
-  margin-bottom: 1.2rem;
+  /* --ink-2, not --ink-3: the faintest ink was tuned for a flat cream page and
+     goes soft over a photograph. */
+  color: var(--ink-2);
+  margin-bottom: 1.6rem;
+  text-shadow: 0 1px 12px rgba(255, 255, 255, 0.75);
 }
-.options { display: flex; flex-direction: column; gap: 0.65rem; }
+.options { display: flex; flex-direction: column; gap: 0.75rem; }
+/* Glass over the photograph, in the same language as the intro's cards: a
+   translucent white pane, a bright hairline, and a blur that lifts whatever
+   is behind it far enough for the label to sit on top. Solid white would cut
+   six holes in the image. */
 .option {
   display: flex;
   align-items: center;
   gap: 0.85rem;
   width: 100%;
   text-align: right;
-  background: #fff;
-  border: 1.5px solid var(--line);
-  border-radius: 16px;
-  padding: 1rem 1.15rem;
+  border: 1px solid rgba(255, 255, 255, 0.55);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.22);
+  box-shadow: 0 10px 30px rgba(58, 42, 48, 0.1), inset 0 1px 0 rgba(255, 255, 255, 0.5);
+  backdrop-filter: blur(12px) saturate(1.1);
+  padding: 1.05rem 1.2rem;
   cursor: pointer;
   font-family: inherit;
   font-size: 0.95rem;
   color: var(--foreground);
-  transition: all 0.22s var(--ease);
+  transition: background 0.22s var(--ease), border-color 0.22s var(--ease),
+    box-shadow 0.22s var(--ease), transform 0.22s var(--ease);
 }
 .option:hover {
-  border-color: var(--rose-soft);
+  background: rgba(255, 255, 255, 0.34);
+  border-color: rgba(255, 255, 255, 0.75);
   transform: translateX(-4px); /* RTL: nudges toward the reading edge */
-  box-shadow: 0 8px 22px rgba(200, 84, 111, 0.1);
+  box-shadow: 0 14px 34px rgba(58, 42, 48, 0.14), inset 0 1px 0 rgba(255, 255, 255, 0.6);
 }
-.optionOn {
+/* The chosen card is the one that stops being glass: it comes forward to
+   near-solid and takes the brand ring, so a picked answer is unmistakable
+   against five that still show the photograph through them. */
+.optionOn,
+.optionOn:hover {
+  background: rgba(255, 255, 255, 0.82);
   border-color: var(--rose);
-  background: var(--rose-tint);
+  box-shadow: 0 14px 34px rgba(200, 84, 111, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.9);
 }
-.optionLabel { font-weight: 700; display: block; }
+.optionText { flex: 1; min-width: 0; }
+.optionLabel {
+  display: block;
+  font-weight: 800;
+  font-size: 1.02rem;
+  letter-spacing: -0.01em;
+}
 .optionHint {
   display: block;
-  font-size: 0.76rem;
-  color: var(--ink-3);
-  margin-top: 2px;
-  font-weight: 500;
+  font-size: 0.8rem;
+  color: var(--ink-2);
+  margin-top: 3px;
+  font-weight: 600;
 }
 .optionDot {
-  width: 20px;
-  height: 20px;
+  width: 22px;
+  height: 22px;
   border-radius: 50%;
-  border: 2px solid var(--line);
+  border: 2px solid rgba(58, 42, 48, 0.42);
+  background: rgba(255, 255, 255, 0.35);
   flex-shrink: 0;
   position: relative;
+  transition: border-color 0.22s var(--ease), background 0.22s var(--ease);
 }
-.optionOn .optionDot { border-color: var(--rose); }
+.optionOn .optionDot {
+  border-color: var(--rose);
+  background: transparent;
+}
 .optionOn .optionDot::after {
   content: "";
   position: absolute;
@@ -446,17 +523,22 @@
   gap: 0.6rem;
   margin-top: 1.6rem;
 }
+/* A glass pill rather than bare text: on a photograph, an unbacked muted link
+   is the first thing to disappear. */
 .back {
-  background: none;
-  border: none;
-  color: var(--ink-3);
+  background: rgba(255, 255, 255, 0.34);
+  border: 1px solid rgba(255, 255, 255, 0.5);
+  border-radius: 100px;
+  backdrop-filter: blur(10px) saturate(1.05);
+  color: var(--ink-2);
   font-family: inherit;
   font-size: 0.85rem;
   font-weight: 700;
   cursor: pointer;
-  padding: 0.6rem 0.2rem;
+  padding: 0.55rem 1.1rem;
+  transition: background 0.22s var(--ease), color 0.22s var(--ease);
 }
-.back:hover { color: var(--ink-2); }
+.back:hover { background: rgba(255, 255, 255, 0.55); color: var(--foreground); }
 
 /* ───────── buttons ───────── */
 .cta {
@@ -487,18 +569,26 @@
 }
 
 /* ───────── thinking ───────── */
+/* Shares the question photograph, so both marks are tuned for it: the ring is
+   translucent white rather than --line (a flat tint reads as a smudge on an
+   image) and the line under it carries the same white shadow as the header. */
 .thinking { text-align: center; padding: 4rem 0; }
 .spinner {
   width: 42px;
   height: 42px;
   margin: 0 auto 1.4rem;
-  border: 3px solid var(--line);
+  border: 3px solid rgba(255, 255, 255, 0.6);
   border-top-color: var(--rose);
   border-radius: 50%;
   animation: spin 0.8s linear infinite;
 }
 @keyframes spin { to { transform: rotate(360deg); } }
-.thinkingText { font-size: 0.95rem; color: var(--ink-2); font-weight: 700; }
+.thinkingText {
+  font-size: 0.95rem;
+  color: var(--ink-2);
+  font-weight: 700;
+  text-shadow: 0 1px 12px rgba(255, 255, 255, 0.75);
+}
 
 /* ───────── result ───────── */
 .resultHead { text-align: center; margin-bottom: 1.8rem; }

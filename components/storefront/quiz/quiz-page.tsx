@@ -167,6 +167,28 @@ export function QuizPage({ products }: { products: Product[] }) {
     };
   }, [stage]);
 
+  // The intro is a 4.6-screen scroll, so tapping its CTA hands the questions
+  // stage a page already scrolled most of a thousand pixels down — and since
+  // the question screen is barely taller than the viewport, it opened partway
+  // down itself, with its own heading and progress bar above the fold. Reset
+  // on every stage change, and again on each new question.
+  //
+  // `instant` on purpose: globals.css sets `scroll-behavior: smooth`, which
+  // would otherwise animate the whole intro's worth of scroll back to the top
+  // while the visitor watches.
+  //
+  // Re-asserted on the next frame because a smooth scroll already in flight
+  // when the stage changes — she flicks the page and taps the CTA before it
+  // has settled — keeps running after this one and lands the new screen a few
+  // pixels down. Issuing a second scroll cancels that animation for good.
+  useEffect(() => {
+    if (stage === "intro") return;
+    const top = () => window.scrollTo({ top: 0, behavior: "instant" });
+    top();
+    const frame = requestAnimationFrame(top);
+    return () => cancelAnimationFrame(frame);
+  }, [stage, index]);
+
   // The variant is derived from the session id, so it is stable across
   // questions and across a reload without being stored separately.
   //
@@ -414,8 +436,15 @@ export function QuizPage({ products }: { products: Product[] }) {
 
   const total = bundleTotal(selected);
 
+  // The question screens sit on a full-bleed photograph rather than the page
+  // gradient. `thinking` is included on purpose: it is a beat of the same
+  // flow, a second or two long, and dropping back to the cream page in the
+  // middle of it reads as a different site loading.
+  const onPhoto = stage === "questions" || stage === "thinking";
+
   return (
-    <div className={styles.quiz}>
+    <div className={`${styles.quiz} ${onPhoto ? styles.quizPhoto : ""}`}>
+      {onPhoto && <div className={styles.qBackdrop} aria-hidden />}
       <div className={styles.wrap}>
         {stage === "intro" && (
           <section className={styles.intro} ref={introRef} aria-label="مقدمة الاستبيان">
@@ -490,12 +519,20 @@ export function QuizPage({ products }: { products: Product[] }) {
 
         {stage === "questions" && question && (
           <>
+            {/* One track split in two rather than five separate pips: the
+                filled part grows a fifth at a time, so the bar reads as a
+                single measure of how far in she is. RTL puts the first child
+                on the right, which is where the fill belongs. The remainder
+                is dropped entirely on the last question so its flex gap does
+                not leave a stub hanging off the end. */}
             <div className={styles.progress} aria-hidden>
-              {QUESTIONS.map((q, i) => (
-                <span key={q.key} className={`${styles.bar} ${i <= index ? styles.barOn : ""}`}>
-                  <span className={styles.barFill} />
-                </span>
-              ))}
+              <span className={styles.progressDone} style={{ flexGrow: index + 1 }} />
+              {index + 1 < QUESTIONS.length && (
+                <span
+                  className={styles.progressLeft}
+                  style={{ flexGrow: QUESTIONS.length - index - 1 }}
+                />
+              )}
             </div>
             <div className={styles.stepCount}>
               السؤال {index + 1} من {QUESTIONS.length}
@@ -510,11 +547,14 @@ export function QuizPage({ products }: { products: Product[] }) {
                   className={`${styles.option} ${answered === o.value ? styles.optionOn : ""}`}
                   onClick={() => answer(o.value)}
                 >
-                  <span className={styles.optionDot} />
-                  <span>
+                  {/* Text first, dot last: in RTL that puts the label on the
+                      reading edge and the control on the far side, where it
+                      confirms a choice instead of announcing one. */}
+                  <span className={styles.optionText}>
                     <span className={styles.optionLabel}>{o.label}</span>
                     {o.hint && <span className={styles.optionHint}>{o.hint}</span>}
                   </span>
+                  <span className={styles.optionDot} />
                 </button>
               ))}
             </div>
