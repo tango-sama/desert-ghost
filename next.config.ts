@@ -5,8 +5,9 @@ const nextConfig: NextConfig = {
     return [
       {
         // Everything under public/assets — product photos, the funnel imagery,
-        // and /quiz's 4.8 MB intro clip, which is by a wide margin the largest
-        // thing this site serves.
+        // and /quiz's intro clip (4.8 MB of H.264 when this was written, since
+        // re-encoded to ~0.5 MB with a ~0.3 MB VP9 twin — still the largest
+        // single asset this site serves).
         //
         // Next serves public/ as `public, max-age=0`, so every repeat visit
         // revalidates before the browser may reuse a file it already has. The

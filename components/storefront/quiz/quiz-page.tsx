@@ -533,15 +533,16 @@ export function QuizPage({ products }: { products: Product[] }) {
       {onPhoto && (
         <>
           {/* Both go through next/image rather than CSS backgrounds so they
-              are served as WebP/AVIF at the size the device actually needs —
-              the source photograph is a 1.1 MB PNG, which is not something to
-              hand a phone on a mobile connection. `priority` on the
-              photograph: it is the screen, so it must not wait behind the
-              lazy-loading heuristic. */}
+              are served as WebP/AVIF at the size the device actually needs.
+              The source itself is now a 22 KB WebP — converted from the
+              1.1 MB PNG, which the optimizer otherwise had to read whole on
+              every cold cache miss. `priority` on the photograph: it is the
+              screen, so it must not wait behind the lazy-loading
+              heuristic. */}
           <div className={styles.qBackdrop} aria-hidden>
             <Image
               className={styles.qPhoto}
-              src="/assets/quiz/question-background.png"
+              src="/assets/quiz/question-background.webp"
               alt=""
               fill
               sizes="100vw"
@@ -584,12 +585,25 @@ export function QuizPage({ products }: { products: Product[] }) {
                 <video
                   ref={introVideoRef}
                   className={styles.introVideo}
-                  src="/assets/quiz/intro-background.mp4"
                   muted
                   playsInline
                   preload="auto"
+                  poster="/assets/quiz/intro-poster.webp"
                   aria-hidden="true"
-                />
+                >
+                  {/* VP9 twin first: Chrome, Edge and Firefox pick the ~300 KB
+                      webm; Safari cannot play it and falls through to the
+                      H.264 mp4. Both are 720×1280 with keyframes every 2 s so
+                      a scroll-seek never decodes far. The poster paints frame
+                      0 — identical to the video's own first frame — before a
+                      byte of either has buffered, so the intro is never a
+                      blank screen on a slow connection. */}
+                  <source
+                    src="/assets/quiz/intro-background.webm"
+                    type="video/webm; codecs=vp9"
+                  />
+                  <source src="/assets/quiz/intro-background.mp4" type="video/mp4" />
+                </video>
                 <div className={styles.introShade} />
                 <div className={`${styles.scrollCue} ${styles.scrollCueStart}`} aria-hidden="true">
                   <span />

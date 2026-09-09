@@ -5392,3 +5392,63 @@ together, and all six option buttons carrying `.qOptionLeaveForward`. After
 `--card-i` 0–3. Back-navigation confirmed the mirror: `.qOptionLeaveBack`
 mid-transition with the back button `disabled`, settling on Q1 with
 `.qOptionEnterBack` and the previous answer still marked `optionOn`.
+
+## /quiz loading speed — the intro video and the question photograph (2026-09-09)
+
+Closes the "still open" item from the loading-speed section above. The sandbox
+that measured the page could not re-encode the clip — this machine has a full
+ffmpeg (gyan.dev 8.1.1: libx264, libvpx-vp9, libwebp), so the conversion is
+done and measured, not estimated.
+
+The clip was 720×1280 H.264 at **3.84 Mbps** — a delivery bitrate, for a
+dimmed, shaded, muted background that also sits under a scrim and glass cards
+that only read when scrolled past. Re-encoded:
+
+| file | before | after |
+|---|---|---|
+| `intro-background.mp4` | 4,801,558 B | 534,793 B (in place, same URL) |
+| `intro-background.webm` | — | 304,655 B (new, VP9 crf 40) |
+| `intro-poster.webp` | — | 8,320 B (new, frame 0) |
+
+Encode: libx264 crf 30, preset slow, main profile, `+faststart` (moov first,
+so frame 0 is reachable before any significant download), `-g 48` — a
+keyframe every 2 s of the 10 s clip, so a scroll-seek never asks the decoder
+for more than ~48 frames. VP9 twin at crf 40 with `-row-mt 1`. Kept 720 wide:
+below it, a 2× phone screen starts upscaling.
+
+Quality checked numerically (this environment cannot display images, and its
+Chromium cannot decode H.264): PSNR of the re-encode against the original at
+frames 0, 5 s and 9 s is **46.1 / 40.4 / 40.1 dB** — frame 0 is
+indistinguishable, which matters because it is the poster.
+
+Code changes, all in `components/storefront/quiz/quiz-page.tsx` and
+`next.config.ts` (comments only there):
+
+- The `<video>` now carries `poster="/assets/quiz/intro-poster.webp"` — the
+  first frame paints before a byte of either file has buffered, which is what
+  the perceived "laggy at first" was: a blank `--rose-tint` frame while 4.58 MB
+  trickled in on a mobile connection.
+- Two `<source>` children replace the bare `src`: the ~300 KB VP9 webm first
+  (Chrome/Edge/Firefox pick it), the H.264 mp4 second with bare `type` so
+  Safari, which cannot play VP9, falls through reliably.
+- `question-background.png` (1,136,889 B) got a **22,084 B WebP twin**
+  (sharp q82) and the `next/image` src now points at it — the served payload
+  was already tiny through the optimizer, but the optimizer no longer reads a
+  1.1 MB PNG whole on every cold cache miss. The PNG is kept on disk like the
+  icon originals, unreferenced.
+- `next.config.ts`'s cache-header comment still claimed a "4.8 MB intro clip".
+
+Still not done, deliberately: `question-plant.png` (253 KB), `icons/*.png`
+(1.4 MB), `goal-bg.jpg` and root `temp_energy.png` are unreferenced leftovers
+kept as sources in the same spirit as the icons' PNGs — they never ship on the
+page. Page weight for the intro is now ≤ ~520 KB of video where it was 4.58 MB,
+plus an 8 KB poster that paints instantly.
+
+**Verified.** `tsc --noEmit` clean; scoped ESLint on the two edited files
+clean (the two pre-existing `no-img-element` warnings on the dynamic pot-icon
+`<img>`s are unchanged); `next build` clean — `/quiz` prerenders static with
+its 5-minute revalidation. Encodes decode cleanly under ffmpeg with the PSNR
+numbers above. Not driven in a browser: headless Chromium on this machine
+cannot decode H.264 (the limitation earlier entries record), so the poster and
+source-selection behaviour rests on the encode checks plus the markup change
+above.
