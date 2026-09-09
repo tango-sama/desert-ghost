@@ -85,6 +85,8 @@ export function QuizPage({ products }: { products: Product[] }) {
   const [arriving, setArriving] = useState<Move | null>(null);
   const moveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const arriveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
+  const introRef = useRef<HTMLElement>(null);
+  const introVideoRef = useRef<HTMLVideoElement>(null);
 
   // Both timers touch state, so neither may outlive the component.
   useEffect(
@@ -94,6 +96,52 @@ export function QuizPage({ products }: { products: Product[] }) {
     },
     [],
   );
+
+  // The intro video is scrubbed by the visitor's scroll rather than played on
+  // a timeline. This makes the first quiz step feel like a guided beauty scan,
+  // while the quiz itself still starts only when she taps the final button.
+  useEffect(() => {
+    if (stage !== "intro") return;
+    const section = introRef.current;
+    const video = introVideoRef.current;
+    if (!section || !video) return;
+
+    let frame = 0;
+    const clamp = (n: number) => Math.max(0, Math.min(1, n));
+
+    function paint() {
+      frame = 0;
+      const rect = section!.getBoundingClientRect();
+      const travel = Math.max(1, rect.height - window.innerHeight);
+      const progress = clamp(-rect.top / travel);
+      section!.style.setProperty("--intro-progress", progress.toFixed(4));
+
+      const duration = video!.duration;
+      if (!prefersReducedMotion() && Number.isFinite(duration) && duration > 0) {
+        const nextTime = duration * progress;
+        if (Math.abs(video!.currentTime - nextTime) > 0.045) video!.currentTime = nextTime;
+      }
+    }
+
+    function schedule() {
+      if (frame) return;
+      frame = requestAnimationFrame(paint);
+    }
+
+    const onLoaded = () => schedule();
+    video.pause();
+    video.addEventListener("loadedmetadata", onLoaded);
+    window.addEventListener("scroll", schedule, { passive: true });
+    window.addEventListener("resize", schedule);
+    schedule();
+
+    return () => {
+      if (frame) cancelAnimationFrame(frame);
+      video.removeEventListener("loadedmetadata", onLoaded);
+      window.removeEventListener("scroll", schedule);
+      window.removeEventListener("resize", schedule);
+    };
+  }, [stage]);
 
   // The variant is derived from the session id, so it is stable across
   // questions and across a reload without being stored separately.
@@ -346,36 +394,51 @@ export function QuizPage({ products }: { products: Product[] }) {
     <div className={styles.quiz}>
       <div className={styles.wrap}>
         {stage === "intro" && (
-          <div className={styles.intro}>
-            <span className={styles.introKicker}>خاص بكِ</span>
-            <h1 className={styles.introTitle}>
-              ما المنتج المناسب
-              <br />
-              <em className={styles.introEm}>لكِ أنتِ؟</em>
-            </h1>
-            <p className={styles.introLead}>
-              {products.length} منتجاً على الرف، وواحد أو اثنان فقط يناسبان
-              حالتكِ. أجيبي على خمسة أسئلة قصيرة، ونختار لكِ ما يناسب هدفكِ
-              وروتينكِ.
-            </p>
-            <button
-              type="button"
-              className={styles.ctaBig}
-              onClick={() => {
-                setStage("questions");
-                trackFunnel({ step: "start", variant: variant ?? undefined });
-              }}
-            >
-              اكتشفي منتجكِ
-              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
-                <path d="M19 12H5" />
-                <path d="m12 19-7-7 7-7" />
-              </svg>
-            </button>
-            <div className={styles.introMeta}>
-              {QUESTIONS.length} أسئلة · أقل من دقيقة · بدون تسجيل ولا رقم هاتف
+          <section className={styles.intro} ref={introRef} aria-label="مقدمة الاستبيان">
+            <div className={styles.introSticky}>
+              <div className={styles.introFrame}>
+                <video
+                  ref={introVideoRef}
+                  className={styles.introVideo}
+                  src="/assets/quiz/intro-background.mp4"
+                  muted
+                  playsInline
+                  preload="metadata"
+                  aria-hidden="true"
+                />
+                <div className={styles.introShade} />
+                <div className={`${styles.scrollCue} ${styles.scrollCueStart}`} aria-hidden="true">
+                  <span />
+                  <i />
+                  <i />
+                </div>
+                <div className={`${styles.scrollCue} ${styles.scrollCueEnd}`} aria-hidden="true">
+                  <span />
+                  <i />
+                  <i />
+                </div>
+                <div className={styles.introTitleCard}>
+                  <h1 className={styles.introTitle}>ما المنتجات المناسبة لكِ؟</h1>
+                </div>
+                <div className={styles.introFinal}>
+                  <button
+                    type="button"
+                    className={styles.ctaBig}
+                    onClick={() => {
+                      setStage("questions");
+                      trackFunnel({ step: "start", variant: variant ?? undefined });
+                    }}
+                  >
+                    اكتشفي منتجكِ
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round" aria-hidden>
+                      <path d="M19 12H5" />
+                      <path d="m12 19-7-7 7-7" />
+                    </svg>
+                  </button>
+                </div>
+              </div>
             </div>
-          </div>
+          </section>
         )}
 
         {stage === "questions" && question && (

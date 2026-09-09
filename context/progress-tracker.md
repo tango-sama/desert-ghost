@@ -99,6 +99,20 @@ not the intended state (see `development-workflow.md`).
 
 ## Completed
 
+- `/quiz` intro redesigned as a scroll-scrubbed vertical video experience
+  (2026-09-09, ghost-only; local change not yet pushed/deployed). The owner
+  provided `please_add_some_fog_at_the_sta.mp4`, copied into
+  `public/assets/quiz/intro-background.mp4` (H.264, 720x1280, ~10s, ~2.35 MB).
+  Changed only the first intro stage in `components/storefront/quiz/quiz-page.tsx`
+  and page-scoped styles in `quiz.module.css`: the video now sits in a premium
+  rounded 9:16 frame and scrubs against scroll progress; the only opening copy is
+  the transparent-glass headline «ما المنتجات المناسبة لكِ؟», with subtle scroll
+  cues on both sides. The CTA «اكتشفي منتجكِ» appears gently at the end of the
+  scroll scene and still triggers the existing `setStage("questions")` plus
+  `trackFunnel({ step: "start" })`. No quiz questions, scoring, recommendation
+  logic, result selection, analytics view/result events, or `/offer` handoff were
+  changed. Reduced-motion users get a non-scrubbed accessible fallback.
+
 - `/offer` quiz-result landing page redesigned as a hybrid premium
   botanical/lab funnel (2026-09-06, ghost-only; local change not yet
   pushed/deployed). The owner chose direction 3 from the references: dark
