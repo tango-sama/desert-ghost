@@ -57,36 +57,6 @@ const THINKING_MS = 1100;
 // the class plays the exit, this timer decides when the state actually flips.
 const MOVE_MS = 260;
 
-// The pace of the guided intro, as a multiplier on the video's own timeline.
-// The clip is 10s: at 1x the whole reveal would be over before either line of
-// Arabic copy can be read, so the video runs in slow motion and the page
-// travels with it. This one number is the speed of the entire intro — the
-// scroll position is derived from currentTime, never the other way round while
-// the tour is driving.
-const TOUR_RATE = 0.55;
-
-// After she scrolls herself, how long the page stays hers before the tour
-// picks up again — from wherever she left it, not from where it would have
-// been had she not touched it. Long enough that a two-flick scroll is not
-// fought halfway through, short enough that letting go feels like handing the
-// wheel back rather than ending the ride.
-const TOUR_RESUME_MS = 900;
-
-// How long the tour takes when the video cannot be its clock — the clip failed
-// to decode, or its metadata has not arrived yet. Deliberately the same pace
-// (10s of footage at TOUR_RATE), so the copy still gets the same time on
-// screen; only the picture behind it is missing. Without this the button is
-// dead on exactly the connections where scrolling for a minute is least
-// appealing, and it hands over to the video mid-tour the moment one shows up.
-const TOUR_FALLBACK_MS = 18000;
-
-// How far the real scroll position may drift from the one the tour last asked
-// for before we call it her doing. Well above the tour's own per-frame step
-// (a few px) and well below any real gesture — one wheel notch is ~100px — so
-// it catches the inputs that fire no wheel/touch event of their own: a
-// scrollbar drag, momentum after a flick, a browser find-on-page jump.
-const TOUR_DRIFT_PX = 24;
-
 // Which way a ticked card travels: "up" into the chosen list, "down" out of it.
 type MoveDir = "up" | "down";
 type Move = { id: string; dir: MoveDir };
@@ -124,20 +94,6 @@ export function QuizPage({ products }: { products: Product[] }) {
   // threshold that starts its visual reveal (or immediately under reduced
   // motion, where it is shown from the first paint).
   const [ctaReady, setCtaReady] = useState(false);
-  // The guided tour: pressing the intro's own button hands the scrolling over
-  // to the video's clock. `tourOn` is what mounts the drive loop; the refs are
-  // what the two effects use to stay out of each other's way without either
-  // having to re-run.
-  const [tourOn, setTourOn] = useState(false);
-  const [startReady, setStartReady] = useState(true);
-  // Mirrors `tourOn` for the scrub effect, which is registered once per stage
-  // and would otherwise close over a stale value.
-  const tourRef = useRef(false);
-  // performance.now() of her last scroll input. 0 = she has not touched it.
-  const lastUserRef = useRef(0);
-  // The scroll offset the tour last asked for, so drift from it can be read as
-  // an input the listeners below never saw.
-  const tourTargetRef = useRef<number | null>(null);
 
   // Both timers touch state, so neither may outlive the component.
   useEffect(
@@ -151,12 +107,6 @@ export function QuizPage({ products }: { products: Product[] }) {
   // The intro video is scrubbed by the visitor's scroll rather than played on
   // a timeline. This makes the first quiz step feel like a guided beauty scan,
   // while the quiz itself still starts only when she taps the final button.
-  //
-  // Two directions, never both at once. Normally scroll is the input and the
-  // video's currentTime the output: she drags the clip frame by frame. While
-  // the tour is driving (see the effect below) it is the exact reverse — the
-  // video plays and the page is scrolled to match it — so the seek here is
-  // skipped, or the two would spend every frame overwriting each other.
   useEffect(() => {
     if (stage !== "intro") return;
     const section = introRef.current;
@@ -173,36 +123,20 @@ export function QuizPage({ products }: { products: Product[] }) {
       const progress = clamp(-rect.top / travel);
       section!.style.setProperty("--intro-progress", progress.toFixed(4));
 
-      // A scroll the tour did not ask for is hers — pick it up here so inputs
-      // that fire no event of their own (scrollbar drag, touch momentum after
-      // the finger is gone) still take the wheel.
-      if (tourRef.current && tourTargetRef.current !== null) {
-        if (Math.abs(window.scrollY - tourTargetRef.current) > TOUR_DRIFT_PX) {
-          lastUserRef.current = performance.now();
-        }
-      }
-
       const duration = video!.duration;
       const reduced = prefersReducedMotion();
-      const driving =
-        tourRef.current && performance.now() - lastUserRef.current > TOUR_RESUME_MS;
       // Never queue a seek on top of one already in flight — the browser
       // decodes seeks asynchronously, and stacking a second one before the
       // first resolves is what makes scroll-scrubbed video look choppy,
       // regardless of how tight the threshold below is. Skipping this frame
       // just means the next one (a few ms later) catches up instead.
-      if (!reduced && !driving && !video!.seeking && Number.isFinite(duration) && duration > 0) {
+      if (!reduced && !video!.seeking && Number.isFinite(duration) && duration > 0) {
         const nextTime = duration * progress;
         if (Math.abs(video!.currentTime - nextTime) > 0.02) video!.currentTime = nextTime;
       }
 
       const ready = reduced || progress >= 0.78;
       setCtaReady((prev) => (prev === ready ? prev : ready));
-      // The start button belongs to the first screen only: it is gone once the
-      // tour is running, once she has scrolled past the headline, and entirely
-      // under reduced motion, where there is no scrub to hand over.
-      const canStart = !reduced && !tourRef.current && progress <= 0.24;
-      setStartReady((prev) => (prev === canStart ? prev : canStart));
     }
 
     function schedule() {
@@ -210,29 +144,11 @@ export function QuizPage({ products }: { products: Product[] }) {
       frame = requestAnimationFrame(paint);
     }
 
-    // Her own scrolling, caught at the input rather than at the result, so it
-    // is never confused with the tour's own scrollTo. Marking the moment is
-    // all this does; the drive loop reads the timestamp and yields.
-    function onUserInput() {
-      if (!tourRef.current) return;
-      lastUserRef.current = performance.now();
-    }
-    // Space, arrows, Page Up/Down, Home/End — the keys that scroll a page.
-    function onKey(e: KeyboardEvent) {
-      if (e.key.startsWith("Arrow") || e.key === " " || e.key.startsWith("Page") ||
-          e.key === "Home" || e.key === "End") {
-        onUserInput();
-      }
-    }
-
     const onLoaded = () => schedule();
-    if (!tourRef.current) video.pause();
+    video.pause();
     video.addEventListener("loadedmetadata", onLoaded);
     window.addEventListener("scroll", schedule, { passive: true });
     window.addEventListener("resize", schedule);
-    window.addEventListener("wheel", onUserInput, { passive: true });
-    window.addEventListener("touchmove", onUserInput, { passive: true });
-    window.addEventListener("keydown", onKey);
     schedule();
 
     return () => {
@@ -240,122 +156,8 @@ export function QuizPage({ products }: { products: Product[] }) {
       video.removeEventListener("loadedmetadata", onLoaded);
       window.removeEventListener("scroll", schedule);
       window.removeEventListener("resize", schedule);
-      window.removeEventListener("wheel", onUserInput);
-      window.removeEventListener("touchmove", onUserInput);
-      window.removeEventListener("keydown", onKey);
     };
   }, [stage]);
-
-  // The guided tour. With it running the video is the clock: it plays at
-  // TOUR_RATE and every frame the page is scrolled to wherever that moment of
-  // the clip sits in the intro's travel, so the reveal unfolds on its own and
-  // she never has to scroll at all.
-  //
-  // Her scroll is not an interruption to recover from, it is the volume knob:
-  // scrolling seeks the video (the effect above), the tour holds off while she
-  // is moving, and TOUR_RESUME_MS later it carries on from the frame she
-  // chose. Nothing snaps back to where the tour would otherwise have been.
-  useEffect(() => {
-    if (stage !== "intro" || !tourOn) return;
-    const section = introRef.current;
-    const video = introVideoRef.current;
-    if (!section || !video) return;
-
-    tourRef.current = true;
-    video.playbackRate = TOUR_RATE;
-
-    // Where the tour is measuring from. It re-anchors on every handover — when
-    // she gives the page back, and when a video that was not ready at the
-    // press finally is — so the tour always continues from the frame on
-    // screen rather than snapping to where its own clock had got to.
-    let onVideoClock = false;
-    let anchorAt = 0;
-    let anchorProgress = 0;
-    let loop = requestAnimationFrame(tick);
-
-    function geometry() {
-      const rect = section!.getBoundingClientRect();
-      const travel = Math.max(1, rect.height - window.innerHeight);
-      return { travel, top: rect.top + window.scrollY };
-    }
-
-    function tick() {
-      loop = requestAnimationFrame(tick);
-
-      if (performance.now() - lastUserRef.current <= TOUR_RESUME_MS) {
-        // Hers for the moment: the clip must not advance under her, or the
-        // frame she scrolled to would slide away while she reads it. Dropping
-        // the anchor here is what makes the resume pick up from her position.
-        if (!video!.paused) video!.pause();
-        tourTargetRef.current = null;
-        anchorAt = 0;
-        return;
-      }
-
-      const { travel, top } = geometry();
-      const here = Math.max(0, Math.min(1, (window.scrollY - top) / travel));
-      const duration = video!.duration;
-      const hasClip = Number.isFinite(duration) && duration > 0;
-
-      if (anchorAt === 0) {
-        anchorAt = performance.now();
-        anchorProgress = here;
-        // Taking over from the wall clock, or from her: put the clip on the
-        // frame that is actually on screen before letting it lead again.
-        if (hasClip) video!.currentTime = here * duration;
-        onVideoClock = false;
-      }
-      // Only once the seek above has landed does the video become the clock;
-      // reading currentTime mid-seek would jump the page to the old frame.
-      if (hasClip && !onVideoClock && !video!.seeking) onVideoClock = true;
-
-      let progress: number;
-      if (onVideoClock) {
-        if (video!.paused) void video!.play().catch(() => {});
-        progress = Math.min(1, video!.currentTime / duration);
-      } else {
-        progress = Math.min(
-          1,
-          anchorProgress + (performance.now() - anchorAt) / TOUR_FALLBACK_MS,
-        );
-      }
-
-      // Forward only. The tour's own clock never runs backwards, so a target
-      // behind the page means she is ahead of it — scrolled past the end, or
-      // a frame further on than the seek that just landed — and yanking her
-      // back is the one thing a tour that yields to her must never do.
-      const target = Math.max(Math.round(top + progress * travel), Math.round(window.scrollY));
-      tourTargetRef.current = target;
-      // `instant`, because globals.css sets `scroll-behavior: smooth` on
-      // <html> — a smooth scroll re-animating from every frame's scrollTo
-      // would never arrive anywhere.
-      if (target > window.scrollY) window.scrollTo({ top: target, behavior: "instant" });
-
-      // Last frame: the CTA is up, and the page is hers again.
-      if (progress >= 0.999) setTourOn(false);
-    }
-
-    return () => {
-      cancelAnimationFrame(loop);
-      tourRef.current = false;
-      tourTargetRef.current = null;
-      video.pause();
-    };
-  }, [stage, tourOn]);
-
-  // Play must be called straight out of the click, not from inside the drive
-  // loop — a muted video started a frame later is no longer obviously the
-  // result of a gesture, and Safari refuses it.
-  function startTour() {
-    const video = introVideoRef.current;
-    if (video) {
-      video.playbackRate = TOUR_RATE;
-      void video.play().catch(() => {});
-    }
-    lastUserRef.current = 0;
-    setStartReady(false);
-    setTourOn(true);
-  }
 
   // The variant is derived from the session id, so it is stable across
   // questions and across a reload without being stored separately.
@@ -633,31 +435,6 @@ export function QuizPage({ products }: { products: Product[] }) {
                 </div>
                 <div className={styles.introTitleCard}>
                   <h1 className={styles.introTitle}>ما المنتجات المناسبة لكِ؟</h1>
-                  {/* The one thing on the first screen worth pressing. It does
-                      not skip the intro — it plays it: the page scrolls itself
-                      at the video's pace so the reveal can simply be watched.
-                      Scrolling still works throughout and takes over the
-                      moment it is used, so the button is an offer, not a mode
-                      she has to get back out of. Rides the headline card's own
-                      fade, and is gone under reduced motion. */}
-                  <div className={`${styles.startWrap} ${tourOn ? styles.startWrapOff : ""}`}>
-                    <button
-                      type="button"
-                      className={styles.startBtn}
-                      style={{ pointerEvents: startReady ? "auto" : "none" }}
-                      tabIndex={startReady ? 0 : -1}
-                      aria-hidden={!startReady}
-                      onClick={startTour}
-                    >
-                      <svg viewBox="0 0 24 24" fill="currentColor" aria-hidden>
-                        {/* Points left, like the final CTA's arrow: forward is
-                            leftward in RTL, and a play triangle aimed the
-                            other way reads as "back". */}
-                        <path d="M16 5.6v12.8a1 1 0 0 1-1.53.85L4.42 12.85a1 1 0 0 1 0-1.7l10.05-6.4A1 1 0 0 1 16 5.6Z" />
-                      </svg>
-                      اكتشفي المنتج المناسب لكِ
-                    </button>
-                  </div>
                 </div>
                 {/* Rises in only once the headline above has fully faded (it
                     holds through 0.30-0.66, well clear of the headline's own

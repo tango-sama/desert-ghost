@@ -181,54 +181,6 @@
   text-wrap: balance;
   text-shadow: 0 1px 16px rgba(255, 255, 255, 0.4);
 }
-/* Sits inside the headline card, so it needs no position of its own and
-   inherits the card's fade — it belongs to the opening screen and leaves with
-   it. Pointer-events are toggled inline from React (the card itself is
-   pointer-events:none) so it is neither clickable nor tabbable once the
-   headline has scrolled away or the tour is already running. */
-.startWrap {
-  margin-top: 1.05rem;
-  display: flex;
-  justify-content: center;
-  transition: opacity 0.35s var(--ease);
-}
-/* Pressed: the offer has been taken, so it clears out at once rather than
-   lingering over a page that is already moving on its own. */
-.startWrapOff { opacity: 0; }
-
-.startBtn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 0.55rem;
-  min-height: 46px;
-  padding: 0.7rem 1.35rem;
-  font-family: inherit;
-  font-size: 0.9rem;
-  font-weight: 900;
-  letter-spacing: -0.01em;
-  color: rgba(58, 42, 48, 0.94);
-  border: 1px solid rgba(255, 255, 255, 0.6);
-  border-radius: 100px;
-  cursor: pointer;
-  background: rgba(255, 255, 255, 0.72);
-  box-shadow: 0 12px 30px rgba(58, 42, 48, 0.16), inset 0 1px 0 rgba(255, 255, 255, 0.9);
-  backdrop-filter: blur(12px) saturate(1.1);
-  transition: transform 0.3s var(--ease), box-shadow 0.3s var(--ease), background 0.3s var(--ease);
-}
-.startBtn svg {
-  width: 15px;
-  height: 15px;
-  color: var(--rose-deep, var(--rose));
-  flex: none;
-}
-.startBtn:hover {
-  transform: translateY(-2px);
-  background: rgba(255, 255, 255, 0.9);
-  box-shadow: 0 18px 40px rgba(58, 42, 48, 0.22), inset 0 1px 0 rgba(255, 255, 255, 0.92);
-}
-.startBtn:active { transform: translateY(0); }
-
 .scrollCue {
   position: absolute;
   top: 50%;
@@ -366,9 +318,6 @@
   .scrollCue span,
   .scrollCue i,
   .ctaBig { animation: none; }
-  /* Nothing to start: reduced motion skips the scrub, so there is no scroll
-     for the tour to drive and the real CTA is already on screen. */
-  .startWrap { display: none; }
   /* The second line is a mid-scroll beat for the scrubbing experience —
      reduced motion skips the scrub entirely, so keep the one static
      headline instead of stacking both overlapping cards. */
