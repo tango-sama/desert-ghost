@@ -88,6 +88,7 @@ export function QuizPage({ products }: { products: Product[] }) {
   const arriveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const introRef = useRef<HTMLElement>(null);
   const introVideoRef = useRef<HTMLVideoElement>(null);
+  const introStickyRef = useRef<HTMLDivElement>(null);
   // Gates the final CTA's interactivity, not just its opacity: without this,
   // the button sits pointer-events:auto and focusable the whole time the
   // headline is on screen, so a mouse click or a stray Tab could "press" a
@@ -112,7 +113,8 @@ export function QuizPage({ products }: { products: Product[] }) {
     if (stage !== "intro") return;
     const section = introRef.current;
     const video = introVideoRef.current;
-    if (!section || !video) return;
+    const sticky = introStickyRef.current;
+    if (!section || !video || !sticky) return;
 
     let frame = 0;
     const clamp = (n: number) => Math.max(0, Math.min(1, n));
@@ -120,7 +122,12 @@ export function QuizPage({ products }: { products: Product[] }) {
     function paint() {
       frame = 0;
       const rect = section!.getBoundingClientRect();
-      const travel = Math.max(1, rect.height - window.innerHeight);
+      // Measured off the pinned frame, never window.innerHeight: innerHeight
+      // grows and shrinks as the mobile toolbar collapses, which would move
+      // the denominator — and so the video's frame — under a visitor who has
+      // not scrolled at all. The frame is a fixed lvh box, so both terms here
+      // are constants and progress depends only on how far the page scrolled.
+      const travel = Math.max(1, rect.height - sticky!.offsetHeight);
       const progress = clamp(-rect.top / travel);
       section!.style.setProperty("--intro-progress", progress.toFixed(4));
 
@@ -412,7 +419,7 @@ export function QuizPage({ products }: { products: Product[] }) {
       <div className={styles.wrap}>
         {stage === "intro" && (
           <section className={styles.intro} ref={introRef} aria-label="مقدمة الاستبيان">
-            <div className={styles.introSticky}>
+            <div className={styles.introSticky} ref={introStickyRef}>
               <div className={styles.introFrame}>
                 <video
                   ref={introVideoRef}
