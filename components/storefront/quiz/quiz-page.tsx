@@ -87,6 +87,13 @@ export function QuizPage({ products }: { products: Product[] }) {
   const arriveTimer = useRef<ReturnType<typeof setTimeout> | null>(null);
   const introRef = useRef<HTMLElement>(null);
   const introVideoRef = useRef<HTMLVideoElement>(null);
+  // Gates the final CTA's interactivity, not just its opacity: without this,
+  // the button sits pointer-events:auto and focusable the whole time the
+  // headline is on screen, so a mouse click or a stray Tab could "press" a
+  // button that reads as invisible. Flips once scroll crosses the same 0.78
+  // threshold that starts its visual reveal (or immediately under reduced
+  // motion, where it is shown from the first paint).
+  const [ctaReady, setCtaReady] = useState(false);
 
   // Both timers touch state, so neither may outlive the component.
   useEffect(
@@ -117,10 +124,14 @@ export function QuizPage({ products }: { products: Product[] }) {
       section!.style.setProperty("--intro-progress", progress.toFixed(4));
 
       const duration = video!.duration;
-      if (!prefersReducedMotion() && Number.isFinite(duration) && duration > 0) {
+      const reduced = prefersReducedMotion();
+      if (!reduced && Number.isFinite(duration) && duration > 0) {
         const nextTime = duration * progress;
         if (Math.abs(video!.currentTime - nextTime) > 0.045) video!.currentTime = nextTime;
       }
+
+      const ready = reduced || progress >= 0.78;
+      setCtaReady((prev) => (prev === ready ? prev : ready));
     }
 
     function schedule() {
@@ -424,6 +435,9 @@ export function QuizPage({ products }: { products: Product[] }) {
                   <button
                     type="button"
                     className={styles.ctaBig}
+                    style={{ pointerEvents: ctaReady ? "auto" : "none" }}
+                    tabIndex={ctaReady ? 0 : -1}
+                    aria-hidden={!ctaReady}
                     onClick={() => {
                       setStage("questions");
                       trackFunnel({ step: "start", variant: variant ?? undefined });

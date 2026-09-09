@@ -104,20 +104,40 @@ not the intended state (see `development-workflow.md`).
   The owner provided `please_add_some_fog_at_the_sta.mp4`, copied into
   `public/assets/quiz/intro-background.mp4` (H.264, 720x1280 vertical 9:16,
   ~10s, ~2.35 MB). The video fills the entire viewport edge-to-edge as a
-  sticky background (not in a card or frame), scrubbing against scroll
-  progress through a 460dvh tall intro section. Opening elements: (1) centered
-  glass-background headline «ما المنتجات المناسبة لكِ؟» that fades as the
-  user scrolls (visible at 0%, fading 12-30%), (2) symmetrical animated scroll
-  indicators on both sides (vertical lines + downward chevrons with subtle
-  glow, fading as scroll begins), (3) final CTA «اكتشفي منتجكِ» appearing near
-  bottom at 78-94% progress. Subtle overlay ensures headline readability
-  without hiding the video. Reduced-motion users get a non-scrubbed accessible
-  fallback (auto height, no animations, all elements visible). Changed only
-  the first intro stage in `components/storefront/quiz/quiz-page.tsx` and
-  page-scoped styles in `quiz.module.css`. No quiz questions, scoring,
-  recommendation logic, result selection, analytics events, or `/offer`
-  handoff were changed. Mobile-responsive (375px-430px width, safe-area
-  insets, 100dvh units, touch/keyboard accessible).
+  sticky background, scrubbing against scroll progress through a 460dvh tall
+  intro section. Opening elements: (1) centered glass-background headline
+  «ما المنتجات المناسبة لكِ؟» that holds at full opacity through 12% scroll
+  progress, then fades out on the way to 30% (a flat hold, not a fade from
+  scroll zero), (2) symmetrical animated scroll indicators on both sides
+  (vertical lines + downward chevrons with subtle glow, fading as scroll
+  begins), (3) final CTA «اكتشفي منتجكِ» appearing near bottom at 78-94%
+  progress — pointer-events/tabIndex/aria-hidden on the button are gated on
+  the same 78% threshold (or true immediately under reduced motion), so it
+  cannot be mouse-clicked or Tab-focused while still invisible. Subtle overlay
+  ensures headline readability without hiding the video. Reduced-motion users
+  get a non-scrubbed accessible fallback (auto height, no animations, all
+  elements visible and interactive immediately).
+  **A follow-up pass this session (still 2026-09-09) removed the last piece
+  that contradicted "edge-to-edge, no card"**: `.introFrame` previously
+  rendered a `min(100%, 430px)` 9:16 box with a white border, rounded corners
+  and a shadow — a visible phone-shaped card floating over the intro
+  background rather than the intro background itself. It is now `width: 100%;
+  height: 100%` with no border/radius, and `.intro` breaks out of `.wrap`'s
+  640px max-width via `width: 100vw; margin-inline: calc(50% - 50vw)` so nothing
+  above it can constrain the video. Verified with the dev server + browser
+  automation: CSS math checked by direct computed-style inspection (the
+  formulas are correct — the automation tab's own rAF/media/transition clocks
+  were throttled since it never became the OS-visible tab, which also kept the
+  video from decoding there; that is a tooling limitation of that verification
+  pass, not a defect in the shipped code — the same file loads and plays
+  normally as a `<video>` `src` in an ordinary tab). Changed only the first
+  intro stage in `components/storefront/quiz/quiz-page.tsx` and page-scoped
+  styles in `quiz.module.css`. No quiz questions, scoring, recommendation
+  logic, result selection, analytics events, or `/offer` handoff were changed.
+  Mobile-responsive (375px-430px width, safe-area insets, 100dvh units,
+  touch/keyboard accessible). **Not yet verified in a real, foreground
+  browser tab by a human** — the owner should load `/quiz` locally and confirm
+  the video visibly scrubs and the CTA reveal feels right before this ships.
 
 - `/offer` quiz-result landing page redesigned as a hybrid premium
   botanical/lab funnel (2026-09-06, ghost-only; local change not yet
