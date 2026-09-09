@@ -144,7 +144,19 @@ not the intended state (see `development-workflow.md`).
      visitor keeps scrolling, the sticky video releases and the intro's
      460dvh height runs out, leaving a stretch of `.quiz`'s own background
      (reads as white/cream) with nothing on it. The line now occupies that
-     space instead of leaving it blank.
+     space instead of leaving it blank. **Sized down per follow-up
+     feedback** ("make the height of the white area small and fit it to the
+     line of the text") — it was `line-height: 1.8` with a `1.8rem` top
+     margin sitting on top of `.wrap`'s own `4rem` bottom padding (which this
+     was the only thing sitting in front of, while every other stage has
+     real content to fill it), so the band read as an oversized blank strip
+     rather than a caption. Now `line-height: 1.4`, `0.9rem` top margin, and
+     a `-3rem` bottom margin that eats most of `.wrap`'s trailing 4rem
+     (deliberately not all of it — leaves the same ~1rem `.wrap` gives every
+     other stage's last element, so this one doesn't look clipped by
+     comparison). Confirmed via computed style: the paragraph's own box is
+     now exactly one line tall (19px at a 375-430px width), with ~16px above
+     and ~16px below it.
   Verified via the dev server + browser automation (same tooling caveat as
   before: this environment's automation tab doesn't decode video or run
   rAF/transitions since it's never the OS-focused tab, so the video itself

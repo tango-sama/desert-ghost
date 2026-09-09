@@ -265,16 +265,19 @@
    background — the space a visitor scrolls into once the sticky video
    releases and the CTA has already fully revealed. Not scroll-driven: it is
    simply the next thing on the page, so it needs no opacity/progress wiring
-   of its own. */
+   of its own. Sized to hug the single line of text rather than leave a tall
+   blank band: a tight line-height, a small top gap, and a negative bottom
+   margin that eats most (not all — ~1rem stays) of .wrap's own 4rem bottom
+   padding, which this element would otherwise sit well clear of. */
 .introReassure {
-  margin: 1.8rem auto 0;
+  margin: 0.9rem auto -3rem;
   max-width: 26em;
   padding: 0 1.2rem;
   color: var(--ink-2);
   font-size: 0.85rem;
   font-weight: 700;
   letter-spacing: 0.01em;
-  line-height: 1.8;
+  line-height: 1.4;
 }
 
 @keyframes rise {
