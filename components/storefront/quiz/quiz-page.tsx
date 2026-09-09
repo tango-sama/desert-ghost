@@ -16,6 +16,7 @@ import {
   variantBundleSize,
   variantFor,
   type Answers,
+  type Goal,
   type Recommendation,
   type Variant,
 } from "@/lib/quiz";
@@ -57,6 +58,19 @@ const THINKING_MS = 1100;
 // match the animation duration of .leaveUp/.leaveDown in quiz.module.css —
 // the class plays the exit, this timer decides when the state actually flips.
 const MOVE_MS = 260;
+
+// Category icons that replace the default plant after Q1 is answered.
+// Filenames match the `Goal` values exactly, so no separate lookup table
+// can drift out of sync with lib/quiz.ts.
+const GOAL_ICON: Record<Goal, string> = {
+  skin: "/assets/quiz/icons/skin.webp",
+  hair: "/assets/quiz/icons/hair.webp",
+  gain: "/assets/quiz/icons/gain.webp",
+  slim: "/assets/quiz/icons/slim.webp",
+  energy: "/assets/quiz/icons/energy.webp",
+  antiaging: "/assets/quiz/icons/antiaging.webp",
+};
+const DEFAULT_GOAL_ICON = "/assets/quiz/icons/plant.webp";
 
 // Which way a ticked card travels: "up" into the chosen list, "down" out of it.
 type MoveDir = "up" | "down";
@@ -466,15 +480,13 @@ export function QuizPage({ products }: { products: Product[] }) {
               bottom one, which is what makes the screen read as objects
               standing in a room rather than a picture behind a list. It is
               decoration, so it is hidden from assistive tech and passes every
-              tap through to the card underneath. */}
-          <Image
+              tap through to the card underneath. Icon changes based on the
+              answered goal (Q1), showing category-specific icons. */}
+          <img
+            key={answers.goal ?? "default"}
             className={styles.qPlant}
-            src="/assets/quiz/question-plant.png"
+            src={question?.key === "goal" && answers.goal ? GOAL_ICON[answers.goal] : DEFAULT_GOAL_ICON}
             alt=""
-            width={370}
-            height={801}
-            sizes="(max-width: 700px) 30vw, 200px"
-            priority
             aria-hidden
           />
         </>
