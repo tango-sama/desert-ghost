@@ -260,8 +260,9 @@ async function main() {
   console.log("Refresh any tracking above in the admin panel (🔄) for live carrier status.\n");
 }
 
-// Only run when executed directly, so the helpers above can be unit-tested.
-if (process.argv[1] && import.meta.url === `file://${process.argv[1]}`) {
+import { fileURLToPath } from "node:url";
+
+if (process.argv[1] && fileURLToPath(import.meta.url) === process.argv[1]) {
   main().catch((e) => {
     console.error(e?.message || e);
     process.exit(1);
