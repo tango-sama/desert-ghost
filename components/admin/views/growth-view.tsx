@@ -12,6 +12,7 @@ import {
   cashInPeriod,
   spendInPeriod,
   funnelSteps,
+  quizAbandonment,
   variantStats,
   goalStats,
   goalsByCampaign,
@@ -22,6 +23,10 @@ import {
   type FunnelEventDoc,
 } from "@/lib/marketing";
 import { DEFAULT_COGS_RATE, type ProfitInputs, type Totals } from "@/lib/profit";
+// Question titles for the abandonment rows. Imported rather than copied so
+// the labels cannot drift from the quiz they measure — the storefront never
+// imports this admin view, so no storefront bundle pays for the import.
+import { QUESTIONS } from "@/lib/quiz";
 import { cn } from "@/lib/utils";
 import { cardCls, cardH3, btn, EmptyState, tblWrap, thCls, tdCls } from "@/components/admin/ui";
 
@@ -224,6 +229,8 @@ export function GrowthView() {
 
   const steps = useMemo(() => funnelSteps(funnelEvents), [funnelEvents]);
   const variants = useMemo(() => variantStats(funnelEvents), [funnelEvents]);
+  // Where mid-quiz abandonments happen, per question — see quizAbandonment().
+  const abandon = useMemo(() => quizAbandonment(funnelEvents), [funnelEvents]);
   const goals = useMemo(
     () => goalStats(funnelEvents, inRange, profitInputs),
     [funnelEvents, inRange, profitInputs],
@@ -415,6 +422,43 @@ export function GrowthView() {
               </div>
             ))}
           </div>
+
+          {/* Where she leaves the quiz itself, per question. Renders nothing
+              in a period with no mid-quiz losses rather than a table of
+              zeros. */}
+          {abandon.length > 0 && (
+            <div className={cn(cardCls, "mb-4")}>
+              <h3 className={cardH3}>❓ في أي سؤال تترك الزائرات الاستبيان؟</h3>
+              <div className="mb-3 text-[.76rem] text-[var(--ink-3)]">
+                آخر سؤال لم تجب عنه قبل المغادرة — لا تشمل من شاهدت النتيجة أو
+                غادرت من صفحة البداية (تلك في القمع أعلاه).
+              </div>
+              {abandon.map((s) => (
+                <div key={s.question} className="mb-3 last:mb-0">
+                  <div className="mb-1 flex items-baseline justify-between gap-3 text-[.8rem]">
+                    <span className="min-w-0">
+                      <span className="font-bold">السؤال {s.question + 1}</span>
+                      <span className="ms-2 text-[var(--ink-3)]">
+                        {QUESTIONS[s.question]?.title}
+                      </span>
+                    </span>
+                    <span className="num shrink-0 text-[var(--ink-3)]">
+                      {s.sessions} · {Math.round(s.pctOfTop * 100)}%
+                    </span>
+                  </div>
+                  <div className="h-2 overflow-hidden rounded-full bg-[var(--card-2,rgba(0,0,0,.06))]">
+                    <div
+                      className="h-full rounded-full"
+                      style={{
+                        width: `${Math.max(s.pctOfTop * 100, 2)}%`,
+                        background: "linear-gradient(90deg,#D9A86C,#E0728C)",
+                      }}
+                    />
+                  </div>
+                </div>
+              ))}
+            </div>
+          )}
 
           <div className="mb-6 grid grid-cols-2 gap-4 max-[860px]:grid-cols-1">
             <div className={cn(cardCls, "m-0 mb-0")}>

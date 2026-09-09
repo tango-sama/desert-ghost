@@ -354,6 +354,61 @@ export function funnelSteps(events: FunnelEventDoc[]): StepStat[] {
   }));
 }
 
+export type AbandonStat = {
+  /** Question index (0-based) the visitor was last seen on. */
+  question: number;
+  sessions: number;
+  pctOfTop: number;
+};
+
+/**
+ * Which question each abandoning visitor left on.
+ *
+ * A session is an abandonment when its LAST event is `start`, `question` or
+ * `answer` — i.e. it never reached `result`. The bucket is the question she
+ * left on, derived from that last event (sorted by ts — the fetch is not
+ * ordered, so "last" must not mean "last in the array"):
+ *   • last `start`    → she tapped through and left on Q1 unanswered
+ *   • last `question` → the impression of that question fired (quiz-page.tsx
+ *                        fires one per screen shown), she never answered it
+ *   • last `answer`   → she answered and left in the ~200 ms before the next
+ *                        question mounted, so the loss is the next question
+ *                        she never engaged — capped at Q5, where it means
+ *                        "answered everything, left before the result"
+ * Sessions whose last event is `view` never entered the questions (their
+ * drop is the funnel's `start` row), and anything at or past `result` is
+ * not a mid-quiz abandonment at all.
+ */
+export function quizAbandonment(events: FunnelEventDoc[]): AbandonStat[] {
+  const lastOf = new Map<string, FunnelEventDoc>();
+  for (const e of events) {
+    if (!e.sessionId) continue;
+    const prev = lastOf.get(e.sessionId);
+    if (!prev || (e.ts ?? 0) >= (prev.ts ?? 0)) lastOf.set(e.sessionId, e);
+  }
+
+  const buckets = new Map<number, number>();
+  for (const e of lastOf.values()) {
+    const idx = Number.isFinite(Number(e.stepIndex)) ? Number(e.stepIndex) : null;
+    const q =
+      e.step === "start"
+        ? 0
+        : e.step === "question" && idx !== null
+          ? idx
+          : e.step === "answer"
+            ? Math.min((idx ?? 0) + 1, 4)
+            : null;
+    if (q === null) continue;
+    buckets.set(q, (buckets.get(q) ?? 0) + 1);
+  }
+
+  const rows = [...buckets.entries()]
+    .map(([question, sessions]) => ({ question, sessions, pctOfTop: 0 }))
+    .sort((a, b) => a.question - b.question);
+  const top = rows[0]?.sessions ?? 0;
+  return rows.map((r) => ({ ...r, pctOfTop: top ? r.sessions / top : 0 }));
+}
+
 export type VariantStat = {
   variant: string;
   sessions: number;

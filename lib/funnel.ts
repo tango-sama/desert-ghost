@@ -39,7 +39,19 @@ export function funnelSessionId(): string {
 }
 
 export type FunnelEvent = {
-  step: "view" | "start" | "answer" | "result" | "offer" | "checkout" | "order";
+  step:
+    | "view"
+    | "start"
+    | "answer"
+    | "result"
+    | "offer"
+    | "checkout"
+    | "order"
+    // One impression per question screen shown, carrying stepIndex. Without
+    // it the last event before an abandonment is the answer she gave on the
+    // PREVIOUS screen, so the drop cannot be placed on the question she
+    // actually left on (see quiz-page.tsx and lib/marketing.ts).
+    | "question";
   funnel?: string;
   variant?: string;
   stepIndex?: number;
