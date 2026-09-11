@@ -5514,3 +5514,59 @@ actually left on.
 unchanged); `next build` clean. Data note: `question` events
 only start accruing after deploy, so early periods show an empty card — the
 card needs a full period of the new step to mean anything.
+
+## Quiz → /offer journey: ownership-language pass and keyword emphasis (2026-09-11)
+
+The owner asked for the quiz/offer funnel to read as "I discovered what's
+right for me" rather than "the site is selling me something" — same
+philosophy the funnel was already built on (see the comments throughout
+`lib/quiz.ts` and `quiz-page.tsx`: "a recommendation she cannot edit is a
+demand", "we don't promise a number or a duration"). Audited the whole path
+— intro, five questions, result screen, `/offer` — against that bar. Most of
+it already holds: progressive five-question reveal with one idea per screen,
+her own tick/untick control over the final selection, no urgency or scarcity
+language anywhere in the funnel, and a result screen that opens with
+"نتيجتكِ" and explains itself in terms of her own answers
+(`fallbackWhy()`/`ANCHORS[...].message`). Two concrete gaps closed:
+
+- **Intro headline matched the page's own `<title>` instead of itself.**
+  `app/quiz/page.tsx` and `app/offer/page.tsx` both set
+  `"ما المنتج المناسب لكِ؟"` (singular) as the document title, but the
+  on-screen intro `<h1>` in `quiz-page.tsx` had drifted to a plural
+  variant ("ما المنتجات المناسبة لكِ؟"). Fixed the `<h1>` to match — one
+  approved sentence, not two.
+- **Keyword emphasis, added deliberately sparingly.** New `.kw` class in
+  `quiz.module.css` — the same rose→gold gradient-text treatment the brand
+  name already runs elsewhere (`ui-context.md`'s "signature gradients",
+  already used the same way in the carnitine/glutathione/sunguard/collagen
+  funnels), applied to exactly the words the intro sentences are actually
+  about: "المناسب" in the headline, "هدفكِ" and "روتينكِ" in the subhead.
+  Nowhere else in the funnel got this treatment — the per-goal result
+  headlines in `ANCHORS` were deliberately left as plain strings; they are
+  read by more than the result screen (AI blurb context, `/offer`'s
+  `pageHeadline()`) and turning them into JSX-with-spans was a larger,
+  separate change not worth making for a first pass.
+- **Softened the four repeated "اطلبي الآن" CTAs on `/offer`** (hero,
+  sticky bar, order-summary section, closing band) toward the ownership
+  phrasing the brief asked for by name — "أريد اختياري" on the two
+  lightweight/persistent buttons (hero, sticky bar), "اختياري مناسب لي —
+  الدفع عند الاستلام" on the order-summary CTA, "أريد هذا الاختيار" on the
+  closing band. The actual final submit button
+  (`order-modal.tsx`, "تأكيد الطلب — الدفع عند الاستلام") was already in
+  this register and untouched. Deliberately did NOT touch the four separate
+  hand-built funnels (`/glutathione`, `/sunguard`, `/collagen`,
+  `/carnitine`) — they are outside "the existing quiz concept," each is its
+  own tested revenue page, and a copy pass across all four is a separate,
+  larger unit of work if the owner wants it.
+
+**Not done, flagged rather than guessed:** rewriting the six `ANCHORS`
+messages/headlines to literally contain "بناءً على اختياراتكِ" is not
+needed — `fallbackWhy()` already opens on "إجاباتكِ تشير إلى" for five of
+six goals, which is the same idea in the funnel's existing voice — but if
+the owner specifically wants that exact phrase on-screen, it is a one-line
+tweak per goal in `lib/quiz.ts`'s `ANCHORS`.
+
+**Verified.** `tsc --noEmit` clean; ESLint clean on all five touched files
+(same two pre-existing `no-img-element` warnings on the pot icons,
+unrelated to this change). No `next build` run — the change is copy plus
+one CSS class, no new imports or types.

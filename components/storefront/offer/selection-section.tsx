@@ -67,7 +67,7 @@ export function SelectionSection({
               </div>
               <button type="button" className={cn(styles.btn, styles.btnBlock)} onClick={onOrder}>
                 <BagIcon />
-                اطلبي الآن — الدفع عند الاستلام
+                اختياري مناسب لي — الدفع عند الاستلام
               </button>
               <p className={styles.summaryNote}>
                 تكلفة التوصيل تُحسب حسب ولايتكِ وتظهر لكِ في نموذج الطلب قبل التأكيد.

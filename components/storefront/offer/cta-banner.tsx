@@ -20,7 +20,7 @@ export function CtaBanner({ total, onOrder }: { total: number; onOrder: () => vo
       </p>
       <button type="button" className={cn(styles.btn, styles.btnLight)} onClick={onOrder}>
         <BagIcon />
-        اطلبي الآن — <span className="num">{priceFmt(total)}</span>
+        أريد هذا الاختيار — <span className="num">{priceFmt(total)}</span>
       </button>
       <div className={styles.ctaTrust}>
         <span>

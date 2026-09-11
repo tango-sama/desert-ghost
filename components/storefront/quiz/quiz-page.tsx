@@ -628,7 +628,9 @@ export function QuizPage({ products }: { products: Product[] }) {
                   <i />
                 </div>
                 <div className={styles.introTitleCard}>
-                  <h1 className={styles.introTitle}>ما المنتجات المناسبة لكِ؟</h1>
+                  <h1 className={styles.introTitle}>
+                    ما المنتج <span className={styles.kw}>المناسب</span> لكِ؟
+                  </h1>
                 </div>
                 {/* Rises in only once the headline above has fully faded (it
                     holds through 0.30-0.66, well clear of the headline's own
@@ -639,7 +641,9 @@ export function QuizPage({ products }: { products: Product[] }) {
                 <div className={styles.introSubCard}>
                   <p className={styles.introSubText}>
                     149 منتجاً على الرف، وواحد أو اثنان فقط يناسبان حالتكِ. أجيبي
-                    على خمسة أسئلة قصيرة، ونختار لكِ ما يناسب هدفكِ وروتينكِ.
+                    على خمسة أسئلة قصيرة، ونختار لكِ ما يناسب{" "}
+                    <span className={styles.kw}>هدفكِ</span> و
+                    <span className={styles.kw}>روتينكِ</span>.
                   </p>
                 </div>
                 <div className={styles.introFinal}>

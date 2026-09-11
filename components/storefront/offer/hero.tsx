@@ -75,7 +75,7 @@ export const Hero = forwardRef<
             <div className={styles.heroCta}>
               <button type="button" className={`${styles.btn} ${styles.btnLight}`} onClick={onOrder}>
                 <BagIcon />
-                اطلبي الآن
+                أريد اختياري
               </button>
               <span className={styles.heroPrice}>
                 <span className={styles.heroPriceLabel}>المجموع</span>

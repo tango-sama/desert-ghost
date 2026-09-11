@@ -40,7 +40,7 @@ export function StickyBar({
           onClick={onOrder}
         >
           <BagIcon />
-          اطلبي الآن
+          أريد اختياري
         </button>
       </div>
     </div>

@@ -255,6 +255,20 @@
   text-wrap: balance;
   text-shadow: 0 1px 20px rgba(255, 255, 255, 0.42);
 }
+/* Keyword psychology: exactly the word(s) the sentence is actually about get
+   the brand accent, everything around them stays plain ink. Same gradient the
+   brand name itself runs (ui-context.md "signature gradients"), so this reads
+   as house style rather than a random highlight. Used sparingly on purpose —
+   one word per headline, at most a paired phrase in a longer line — because a
+   page where everything is emphasized communicates nothing. Falls back to a
+   solid rose if a browser cannot clip text to a gradient. */
+.kw {
+  color: var(--rose-deep);
+  background: linear-gradient(135deg, var(--rose-deep), var(--gold));
+  -webkit-background-clip: text;
+  background-clip: text;
+  -webkit-text-fill-color: transparent;
+}
 /* Same glass-card language as the headline, timed to its own window instead
    — but rather than the headline's small settle-down-from-above, this one
    enters from off-screen below and glides up into place (clipped by
