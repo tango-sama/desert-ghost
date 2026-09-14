@@ -3,10 +3,12 @@
 // while creating a new order suggests them in a dropdown, and picking one
 // autofills their phone/wilaya/commune/address from their last order.
 //
-// There is no separate `clients` collection (and this repo doesn't own
-// firestore.rules to safely add one — see architecture-context.md), so the
-// list is derived client-side from the `orders` the admin store already has
-// in memory (no extra Firestore reads). This is deliberately ADMIN-ONLY:
+// There is no separate `clients` collection, so the list is derived
+// client-side from the `orders` the admin store already has in memory (no
+// extra Firestore reads). This repo now owns `firestore.rules` (the backend
+// was migrated here from trinkl — see architecture-context.md), so adding one
+// is no longer blocked on another repo; it would still be its own step, since
+// rules changes are never bundled with other work. This is deliberately ADMIN-ONLY:
 // `orders` is admin-only-readable and carries customer PII (name/phone/
 // address) — never import this file from a "use client" component outside
 // /amelhadj, and never wire it into the storefront's password-only "seller

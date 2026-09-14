@@ -5570,3 +5570,102 @@ tweak per goal in `lib/quiz.ts`'s `ANCHORS`.
 (same two pre-existing `no-img-element` warnings on the pot icons,
 unrelated to this change). No `next build` run — the change is copy plus
 one CSS class, no new imports or types.
+
+---
+
+## Firebase backend migrated from `tango-sama/trinkl` into this repo
+
+**What moved.** Until now the split was: this repo (`ghost`) held the Next.js
+frontend, and `tango-sama/trinkl` owned the entire Firebase backend. Every
+carrier, rules or Meta-sync change was therefore a cross-repo change — a
+friction this file records repeatedly ("the actual carrier calls live in
+`functions/index.js` in `tango-sama/trinkl`, not in `ghost`", "**Companion
+change in `tango-sama/trinkl`** (which owns the Cloud Functions)"). That split
+is now closed. Copied in verbatim, no behavior changes:
+
+- `functions/` — `index.js` (2863 lines, all **25** Cloud Functions),
+  `package.json`, `package-lock.json`, `.gitignore`.
+- `firestore.rules`, `firestore.indexes.json`, `storage.rules`.
+- `.firebaserc` — project `desert-shop-24af9`.
+
+The 25 functions: `createYalidineParcel`, `createNoestParcel`,
+`createZrParcel`, `cancelYalidineParcel`, `cancelNoestParcel`,
+`cancelZrParcel`, `getParcelStatus`, `lookupParcel`, `getNoestLabels`,
+`syncNoestFees`, `syncCarriers`, `registerZrWebhook`,
+`registerYalidineWebhook`, `zrWebhook`, `yalidineWebhook`, `getPushKey`,
+`sendTestEmail`, `onNewOrder`, `onNewMessage`, `refreshAllParcels`,
+`logMetaEvent`, `onOrderCreatedMetaPurchase`, `syncMetaInsights`,
+`syncMetaInsightsNow`, `listMetaCampaigns`. All 25 are live: none is dead code
+(the only `legacy` mention in the file is a comment about Noest's event_key
+naming, not an unused export).
+
+**The client contract did not change.** The admin panel already called every
+one of these by name through `httpsCallable` in `us-central1` (`callFn` in
+`lib/admin.ts`). Migrating the *source of truth* into this repo leaves those
+call sites untouched, so nothing had to be rewritten. Rewriting them as Next.js
+route handlers was explicitly NOT done and should not be: five of the 25
+(`onNewOrder`, `onNewMessage`, `onOrderCreatedMetaPurchase`,
+`refreshAllParcels`, `syncMetaInsights`) are Firestore triggers and scheduled
+jobs with no Next.js equivalent, and the callables rely on Firebase Auth's
+`req.auth` context.
+
+**Written fresh, not copied:**
+
+- `firebase.json` — firestore + functions + storage blocks only. trinkl's
+  `hosting` block (`"public": "."`) was deliberately dropped: it published
+  trinkl's repo root as the live static site, and carrying it over would
+  publish this repo's Next source tree over live hosting.
+- `.github/workflows/firebase-deploy.yml` — this repo had no CI at all.
+  Deploys `--only functions` then `--only firestore:rules` on merge to `main`,
+  path-scoped so a storefront change does not redeploy the backend, plus
+  `workflow_dispatch`. Mirrors trinkl's workflow (including its reasoning for
+  putting the rules deploy last and on its own step) minus the hosting deploy.
+  As in trinkl, **no step deploys `storage.rules`** — still a manual deploy.
+
+**Build hygiene.** `functions/` is CommonJS Node 20 and is excluded from
+`tsconfig.json` and `eslint.config.mjs`, so `next build` / `npm run lint` never
+try to compile or lint server-only code that ships via `firebase deploy`.
+
+**No secrets to migrate.** The functions read every carrier/API credential at
+runtime from the server-only `private/*` Firestore docs via the Admin SDK; the
+only `process.env` reference in the whole file is `GCLOUD_PROJECT`. CI needs
+one repo secret, `FIREBASE_SERVICE_ACCOUNT_DESERT_SHOP_24AF9`.
+
+**Verified.** `node --check functions/index.js` clean; `npm ci` in `functions/`
+clean; the module actually loads under the Firebase runtime env and registers
+all 25 handlers as valid function objects. Root `npm ci`, `npm run build` (all
+22 routes built) and `npm run lint` all clean — lint reports 1 error + 4
+warnings, all pre-existing on untouched files (`cart-drawer.tsx`'s
+`no-html-link-for-pages`, four `no-img-element` warnings), none introduced
+here. Nothing was deployed from this session.
+
+### Open questions / follow-ups this surfaced
+
+- **`swapZrParcel` is called by the admin panel but does not exist.**
+  `components/admin/views/orders-view.tsx:1069` calls `callFn("swapZrParcel")`
+  for the ZR Express Swap flow, and `lib/admin.ts:41` points at "swapZrParcel
+  in the trinkl functions" — but it appears **nowhere in trinkl**, so that
+  button has always failed at runtime with `functions/not-found`. This is a
+  pre-existing gap, not a migration regression. Writing it means implementing
+  ZR Express's Swap API (endpoint, payload, swap-count and fee rules), which is
+  undefined in every context file — flagged rather than guessed, per
+  `ai-workflow-rules.md`.
+- **`wa_threads` still has no rule in `firestore.rules`.** The WhatsApp section
+  of `architecture-context.md` says it "must grant it `allow read, write: if
+  isAdmin()`", but the collection appears nowhere in the rules file and there is
+  no catch-all, so the admin panel's own `watchWaThreads`/`watchWaMessages`
+  reads are denied. Now fixable in this repo rather than cross-repo, but a rules
+  change is always its own step, verified with anonymous REST checks before and
+  after deploy.
+- **trinkl still deploys the same functions to the same project.** Its
+  `.github/workflows/firebase-hosting-merge.yml` still runs on its `main` and
+  deploys functions + Firestore rules to `desert-shop-24af9`. Until it is
+  disabled, a push to trinkl's `main` overwrites whatever this repo deploys.
+  This session had read-only access to trinkl and could not change it — the
+  owner needs to disable that workflow (or reduce it to hosting only) before
+  merging this to `main`.
+- `context/architecture-context.md`'s Stack table still describes the frontend
+  as "Static HTML + vanilla JS (ES5)" and the System Boundaries section still
+  describes trinkl's `*.html` / `js/` layout. Pre-existing staleness, left
+  alone here beyond the Backend and Hosting rows this change directly
+  contradicted.

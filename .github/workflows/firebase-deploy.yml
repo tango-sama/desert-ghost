@@ -1,0 +1,70 @@
+# Deploys the Firebase backend (Cloud Functions + Firestore rules) that this
+# repo now owns, migrated from `tango-sama/trinkl`.
+#
+# Deliberately does NOT deploy Firebase Hosting. trinkl's equivalent workflow
+# published its repo root as a static site (`"public": "."`), because trinkl
+# WAS the static site. This repo is a Next.js app that deploys through its own
+# pipeline (Vercel / Firebase App Hosting), so there is no `hosting` block in
+# firebase.json and nothing here touches live hosting.
+#
+# Required repo secret: FIREBASE_SERVICE_ACCOUNT_DESERT_SHOP_24AF9 — the JSON
+# service-account key for project desert-shop-24af9, with permission to deploy
+# functions and Firestore rules. Carrier/API credentials are NOT needed here:
+# they live in the server-only `private/*` Firestore docs and are read at
+# runtime by the Admin SDK (see context/architecture-context.md).
+name: Deploy Firebase backend on merge
+
+on:
+  push:
+    branches:
+      - main
+    # Scoped to the backend: a storefront-only change should not redeploy
+    # Cloud Functions.
+    paths:
+      - "functions/**"
+      - "firestore.rules"
+      - "firestore.indexes.json"
+      - "firebase.json"
+      - ".firebaserc"
+      - ".github/workflows/firebase-deploy.yml"
+  # Lets the owner deploy on demand (e.g. after rotating the service account)
+  # without pushing an empty commit.
+  workflow_dispatch:
+
+jobs:
+  deploy_backend:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install functions dependencies
+        run: npm ci
+        working-directory: functions
+
+      - name: Write service-account key
+        run: echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/gcp-key.json"
+        env:
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DESERT_SHOP_24AF9 }}
+
+      - name: Deploy Cloud Functions
+        run: npx firebase-tools@latest deploy --only functions --project desert-shop-24af9 --non-interactive
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcp-key.json
+
+      # Its own step, deliberately placed last — inherited from trinkl's
+      # workflow and kept for the same reason: if the CI service account lacks
+      # rules-deploy permission, the functions have already shipped and only
+      # this goes red, which is recoverable with one local command. Folding it
+      # into the functions deploy above would let a rules failure block the
+      # functions too.
+      #
+      # There is no catch-all rule in firestore.rules — anything not listed is
+      # denied — so a new collection stays unreadable until its rules ship.
+      - name: Deploy Firestore rules
+        run: npx firebase-tools@latest deploy --only firestore:rules --project desert-shop-24af9 --non-interactive
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcp-key.json

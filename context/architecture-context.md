@@ -7,8 +7,8 @@
 | Frontend       | Static HTML + vanilla JS (ES5)    | Storefront pages and admin panel; no framework, no build step     |
 | Styling        | Plain CSS (`css/theme.css`)       | Single shared stylesheet; RTL Arabic, Blush Rose & Gold tokens    |
 | Data           | Firestore (compat SDK)            | Products, categories, orders, messages, settings, expenses        |
-| Backend        | Cloud Functions v2 (Node, onCall) | Delivery-carrier APIs, push/email notifications, fee syncing      |
-| Hosting        | Firebase Hosting                  | Serves the repo root; `cleanUrls`, no-cache HTML, cached assets   |
+| Backend        | Cloud Functions v2 (Node, onCall) | Delivery-carrier APIs, push/email notifications, fee syncing — now in this repo under `functions/`, see "Backend Ownership" |
+| Hosting        | Vercel / Firebase App Hosting     | Serves the Next.js app. Firebase **Hosting** is not used by this repo and `firebase.json` has no `hosting` block |
 | Notifications  | Web Push (VAPID) + email          | Admin alerts on new orders and messages                           |
 | Delivery       | Yalidine, Noest, ZR Express       | Parcel creation, tracking, and fee grids for Algerian shipping    |
 
@@ -337,7 +337,14 @@ products she ended up with, and the COD form lives there.
 - **`wa_threads` holds customer phone numbers and message bodies, so it is in
   the same admin-only class as `orders` and `messages`:** `firestore.rules`
   must grant it `allow read, write: if isAdmin()` and nothing to anonymous
-  clients. Those rules live with the Cloud Functions project, not this repo.
+  clients. **`firestore.rules` now lives in this repo** (see "Backend
+  Ownership" below), so this is no longer a cross-repo change — but the rule
+  is still MISSING: `wa_threads` appears nowhere in `firestore.rules`, and
+  there is no catch-all, so anonymous clients are correctly denied while the
+  admin panel's own `watchWaThreads`/`watchWaMessages` reads are denied too.
+  Adding it is its own step, per `context/ai-workflow-rules.md` (rules changes
+  are never bundled with other work and are verified with anonymous REST
+  checks before and after deploy).
 - Outbound: `app/api/whatsapp/send/route.ts`. **This is the first route here
   that must not be open** — the other two (`meta-capi`, `storage-closet`) are
   safely anonymous, but an unauthenticated send endpoint would let anyone send
@@ -415,14 +422,61 @@ products she ended up with, and the COD form lives there.
   `private/*`, order/message reads stay admin-only, and `delivery_fees` /
   `delivery_data` stay function-written.
 
+## Backend Ownership
+
+The Firebase backend was migrated here from `tango-sama/trinkl`, which
+previously owned it while this repo held only the Next.js frontend. That split
+made every carrier/rules change a cross-repo change. This repo now owns:
+
+- `functions/` — the 25 Cloud Functions (CommonJS, Node 20), their
+  `package.json`/`package-lock.json`, and the only npm-managed package here
+  besides the Next.js app itself.
+- `firestore.rules`, `firestore.indexes.json`, `storage.rules` — the security
+  rules and indexes.
+- `firebase.json`, `.firebaserc` — project config, pinned to `desert-shop-24af9`.
+- `.github/workflows/firebase-deploy.yml` — deploys functions + Firestore rules
+  on merge to `main`, scoped by path so a storefront change does not redeploy
+  the backend.
+
+Two deliberate exclusions:
+
+- **No `hosting` block.** trinkl's `firebase.json` published its repo root as a
+  static site (`"public": "."`) because trinkl *was* the static site. This repo
+  is a Next.js app that deploys through its own pipeline, so copying that block
+  would publish the Next source tree over live hosting. Nothing here touches
+  Firebase Hosting.
+- **`functions/` is excluded from `tsconfig.json` and `eslint.config.mjs`.** It
+  is server-only CommonJS, shipped by `firebase deploy`, never by `next build`.
+
+The functions need no environment variables or secrets: carrier and API
+credentials are read at runtime from the server-only `private/*` Firestore docs
+via the Admin SDK. CI needs only the
+`FIREBASE_SERVICE_ACCOUNT_DESERT_SHOP_24AF9` repo secret.
+
+`storage.rules` is present and referenced by `firebase.json`, but — as in
+trinkl — no CI step deploys it; it is still deployed by hand.
+
+**trinkl still has its own `main`-branch workflow deploying the same functions
+to the same Firebase project.** Until that workflow is disabled, a push to
+trinkl's `main` will overwrite whatever this repo deployed. This repo cannot
+change that (read-only access to trinkl).
+
 ## Cloud Functions Model
 
 - All callable functions are `onCall` in `us-central1`, invoked from the admin
-  panel: `createYalidineParcel`, `createNoestParcel`, `createZrParcel`,
-  `getParcelStatus`, `getNoestLabels`, `syncNoestFees`, `syncCarriers`,
-  `getPushKey`, `sendTestEmail`.
+  panel. Parcels: `createYalidineParcel`, `createNoestParcel`, `createZrParcel`,
+  `cancelYalidineParcel`, `cancelNoestParcel`, `cancelZrParcel`,
+  `getParcelStatus`, `lookupParcel`, `getNoestLabels`. Carrier data:
+  `syncNoestFees`, `syncCarriers`. Webhook registration: `registerZrWebhook`,
+  `registerYalidineWebhook`. Marketing: `logMetaEvent`, `syncMetaInsightsNow`,
+  `listMetaCampaigns`. Ops: `getPushKey`, `sendTestEmail`.
+- HTTP endpoints (`onRequest`): `zrWebhook`, `yalidineWebhook` — carrier-pushed
+  parcel status updates.
+- Scheduled (`onSchedule`): `refreshAllParcels` (daily parcel-status refresh,
+  16:00), `syncMetaInsights` (ad-spend sync).
 - Firestore triggers: `onNewOrder` and `onNewMessage` send web-push (and email)
-  notifications to every subscription in `push_subs`.
+  notifications to every subscription in `push_subs`;
+  `onOrderCreatedMetaPurchase` reports the Meta `Purchase` conversion.
 - Pattern for every carrier function: validate `req.data` → throw typed
   `HttpsError` → load credentials from `private/*` and origin wilaya from
   `site_settings` → call the carrier API → write results back onto the order doc.

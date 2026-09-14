@@ -19,6 +19,13 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Cloud Functions are CommonJS Node 20 (`require`, `exports.*`), not the
+    // Next.js browser/ESM app this config describes — linting them with
+    // core-web-vitals + next/typescript reports rules that do not apply to a
+    // server-only package. They ship through `firebase deploy --only
+    // functions`, never through `next build`, and carry their own
+    // package.json; see context/architecture-context.md.
+    "functions/**",
   ]),
 
   // The storefront is Arabic, so Arabic-Indic digits are an easy
