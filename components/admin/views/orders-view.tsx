@@ -976,7 +976,11 @@ export function OrdersView() {
     const key = `track:${orderId}`;
     setBusyKey(key, true);
     try {
-      const status = await callFn<TrackingStatus>("getParcelStatus", { orderId });
+      const status = await callFn<TrackingStatus>(
+        "getParcelStatus",
+        { orderId },
+        { retries: 2 }
+      );
       const o = useAdminStore.getState().orders.find(
         (x) => String(x.id) === String(orderId)
       );
@@ -1109,9 +1113,11 @@ export function OrdersView() {
       const o = targets[i];
       setRefreshAllLabel(`⏳ جاري التحديث... (${i + 1}/${targets.length})`);
       try {
-        const status = await callFn<TrackingStatus>("getParcelStatus", {
-          orderId: o.id,
-        });
+        const status = await callFn<TrackingStatus>(
+          "getParcelStatus",
+          { orderId: o.id },
+          { retries: 1 }
+        );
         patchOrder(String(o.id), applyTrackingResult(o, status));
         clearFold(String(o.id));
         ok++;
@@ -1197,7 +1203,7 @@ export function OrdersView() {
         label?: string;
         validated?: boolean;
         alreadyCreated?: boolean;
-      }>(CREATE_FN[co], { orderId });
+      }>(CREATE_FN[co], { orderId }, { retries: 1 });
       patchOrder(orderId, {
         [co]: {
           tracking: d.tracking,
@@ -1356,7 +1362,7 @@ export function OrdersView() {
       // live with the carrier.
       if (carrier) {
         try {
-          await callFn(CANCEL_FN[carrier], { orderId: o.id });
+          await callFn(CANCEL_FN[carrier], { orderId: o.id }, { retries: 2 });
         } catch (err) {
           console.error(CANCEL_FN[carrier], err);
           setBusyKey(key, false);

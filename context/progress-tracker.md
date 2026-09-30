@@ -5570,3 +5570,15 @@ tweak per goal in `lib/quiz.ts`'s `ANCHORS`.
 (same two pre-existing `no-img-element` warnings on the pot icons,
 unrelated to this change). No `next build` run — the change is copy plus
 one CSS class, no new imports or types.
+
+## Admin orders — carrier API retry (2026-09-30)
+
+Intermittent carrier failures when creating, cancelling ("تعليم كجديد") or
+tracking parcels: `callFn` made a single attempt, so any transient
+Yalidine/Noest/ZR timeout or 5xx reached the admin as an error. `callFn` now
+takes `{ retries }` and retries only transient codes (unavailable,
+deadline-exceeded, internal, unknown, resource-exhausted, network/5xx text)
+with backoff. Applied to getParcelStatus, lookupParcel, create*Parcel
+(server returns `alreadyCreated`) and cancel*Parcel (missing parcel = no-op
+success). Server-side functions live in trinkl and were not changed; if errors
+persist, check their logs for the carrier's real response.

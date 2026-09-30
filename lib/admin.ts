@@ -471,13 +471,45 @@ export async function uploadImage(file: File, folder = "uploads"): Promise<strin
 
 // ───────── deployed Cloud Functions (us-central1 onCall) ─────────
 
+// Carrier APIs (Yalidine/Noest/ZR) intermittently time out or return 5xx, which
+// the callables surface as unavailable / deadline-exceeded / internal. Those
+// are transient, so idempotent calls are retried with a short backoff instead
+// of surfacing the first blip to the admin. Only pass `retries` for calls that
+// are safe to repeat: getParcelStatus and lookupParcel are reads, and the
+// create/cancel functions are idempotent server-side (create returns
+// `alreadyCreated`, cancel of a missing parcel is a no-op success).
+const TRANSIENT_CODES = new Set([
+  "functions/unavailable",
+  "functions/deadline-exceeded",
+  "functions/internal",
+  "functions/unknown",
+  "functions/resource-exhausted",
+]);
+
+function isTransient(err: unknown): boolean {
+  const e = err as { code?: string; message?: string } | null;
+  if (e?.code && TRANSIENT_CODES.has(e.code)) return true;
+  return /network|timeout|timed out|fetch failed|ECONNRESET|502|503|504/i.test(
+    String(e?.message ?? "")
+  );
+}
+
 export async function callFn<R = Record<string, unknown>>(
   name: string,
-  data?: Record<string, unknown>
+  data?: Record<string, unknown>,
+  opts?: { retries?: number }
 ): Promise<R> {
   const fns = getFunctions(app, "us-central1");
-  const res = await httpsCallable(fns, name)(data ?? {});
-  return res.data as R;
+  const retries = opts?.retries ?? 0;
+  for (let attempt = 0; ; attempt++) {
+    try {
+      const res = await httpsCallable(fns, name)(data ?? {});
+      return res.data as R;
+    } catch (err) {
+      if (attempt >= retries || !isTransient(err)) throw err;
+      await new Promise((r) => setTimeout(r, 800 * 2 ** attempt));
+    }
+  }
 }
 
 // Admin-gated lookup of a parcel that already exists at the carrier (see the
@@ -488,5 +520,5 @@ export function lookupParcel(
   carrier: CarrierKey,
   tracking: string
 ): Promise<ParcelLookupResult> {
-  return callFn<ParcelLookupResult>("lookupParcel", { carrier, tracking });
+  return callFn<ParcelLookupResult>("lookupParcel", { carrier, tracking }, { retries: 2 });
 }
