@@ -1,0 +1,32 @@
+# Deploys the imported trinkl/ folder (legacy static store + Cloud Functions +
+# Firestore rules) to Firebase project desert-shop-24af9.
+#
+# Manual only (workflow_dispatch) on purpose: tango-sama/trinkl still has its
+# own deploy-on-push workflow, and two repos deploying the same project on every
+# push would fight. Once FIREBASE_SERVICE_ACCOUNT_DESERT_SHOP_24AF9 is added to
+# THIS repo's secrets and a manual run succeeds, switch the trigger to
+# `push: branches: [main], paths: ['trinkl/**']` and retire the trinkl workflow.
+name: Deploy trinkl to Firebase
+on:
+  workflow_dispatch:
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: trinkl
+    env:
+      GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcp-key.json
+      FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DESERT_SHOP_24AF9 }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install functions dependencies
+        run: npm ci
+        working-directory: trinkl/functions
+      - name: Write service account key
+        run: echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/gcp-key.json"
+      - name: Deploy Hosting, Functions and Firestore rules
+        run: npx firebase-tools@latest deploy --only hosting,functions,firestore:rules --project desert-shop-24af9 --non-interactive

@@ -5570,3 +5570,20 @@ tweak per goal in `lib/quiz.ts`'s `ANCHORS`.
 (same two pre-existing `no-img-element` warnings on the pot icons,
 unrelated to this change). No `next build` run — the change is copy plus
 one CSS class, no new imports or types.
+
+## Completed (2026-09-30) — trinkl merged into this repo
+
+- `tango-sama/trinkl` (legacy static store, Firebase Cloud Functions incl.
+  `createZrParcel`, Firestore/Storage rules) imported into `trinkl/` with its
+  full git history (`git subtree add`). Its own `CLAUDE.md` and `context/` docs
+  now live under `trinkl/`.
+- Excluded from this app's ESLint and `tsconfig` (plain JS, not Next.js).
+- `.github/workflows/trinkl-firebase-deploy.yml` deploys `trinkl/` to Firebase
+  `desert-shop-24af9`, **manual only**. The old trinkl repo is left running and
+  still deploys on push to its `main`.
+- **Open, owner action:** add secret `FIREBASE_SERVICE_ACCOUNT_DESERT_SHOP_24AF9`
+  to this repo, run the workflow once, then switch its trigger to push on
+  `trinkl/**` and retire the trinkl repo's workflow. Until then, trinkl changes
+  must still land in the old repo to go live.
+- Same day, before the move: ZR parcel `productName` capped at 100 chars
+  (trinkl `ef61811`) — ZR rejected longer names.

@@ -19,6 +19,9 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Imported legacy trinkl repo (static site + Cloud Functions) — plain JS,
+    // not part of the Next.js app.
+    "trinkl/**",
   ]),
 
   // The storefront is Arabic, so Arabic-Indic digits are an easy
