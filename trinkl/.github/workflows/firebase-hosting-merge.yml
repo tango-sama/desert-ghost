@@ -1,0 +1,51 @@
+name: Deploy to Firebase on merge
+on:
+  push:
+    branches:
+      - main
+jobs:
+  deploy_live_website:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: FirebaseExtended/action-hosting-deploy@v0
+        with:
+          repoToken: '${{ secrets.GITHUB_TOKEN }}'
+          firebaseServiceAccount: '${{ secrets.FIREBASE_SERVICE_ACCOUNT_DESERT_SHOP_24AF9 }}'
+          channelId: live
+          projectId: desert-shop-24af9
+      # action-hosting-deploy only publishes static Hosting files — Cloud
+      # Functions (functions/index.js) need their own deploy step, otherwise
+      # new/changed functions never reach the live project.
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 20
+      - name: Install functions dependencies
+        run: npm ci
+        working-directory: functions
+      - name: Deploy Cloud Functions
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/gcp-key.json"
+          npx firebase-tools@latest deploy --only functions --project desert-shop-24af9 --non-interactive
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcp-key.json
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DESERT_SHOP_24AF9 }}
+
+      # firestore.rules is neither static Hosting content nor a function, so
+      # neither step above ever shipped it — a rules change had to be deployed
+      # by hand from someone's machine, and forgetting meant new collections
+      # stayed unreadable (there is no catch-all rule: anything not listed is
+      # denied). This closes that gap.
+      #
+      # Its own step, deliberately placed last: if the CI service account lacks
+      # rules-deploy permission, hosting and functions have already shipped and
+      # only this goes red, which is recoverable with one local command. Folding
+      # it into the functions deploy above would have let a rules failure block
+      # the functions too.
+      - name: Deploy Firestore rules
+        run: |
+          echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/gcp-key.json"
+          npx firebase-tools@latest deploy --only firestore:rules --project desert-shop-24af9 --non-interactive
+        env:
+          GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcp-key.json
+          FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DESERT_SHOP_24AF9 }}

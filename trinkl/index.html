@@ -1,0 +1,341 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<base href="/" />
+<link rel="icon" type="image/webp" href="assets/logo.webp">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>جمالكِ الخارجي | Desert Shop — منتجات الجمال والعناية</title>
+<meta name="description" content="ديزرت شوب — متجر متخصص في منتجات الجمال، العناية بالبشرة والشعر، العطور والمكمّلات النسائية. الدفع عند الاستلام وتوصيل لكل الولايات.">
+<meta name="keywords" content="جمال, عناية, شعر, بشرة, عطور, تنحيف, تسمين, مكملات, تسوق, الجزائر">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css">
+<!-- Firebase SDK is loaded at the end of <body> so it doesn't block first paint -->
+<link rel="preconnect" href="https://www.gstatic.com">
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+<link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
+<link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js">
+<style>
+/* ── HERO ── */
+.hero{max-width:1320px;margin:0 auto;padding:8rem 3rem 4rem;display:grid;grid-template-columns:1.05fr 1fr;gap:3rem;align-items:center;min-height:88vh}
+.hero-copy{position:relative;z-index:2}
+.hero-eyebrow{display:inline-flex;align-items:center;gap:.55rem;font-size:.72rem;letter-spacing:2px;
+  color:var(--rose-deep);text-transform:uppercase;font-weight:800;margin-bottom:1.4rem;
+  background:rgba(217,168,108,.16);padding:.5rem 1.1rem;border-radius:100px;border:1px solid rgba(217,168,108,.45)}
+.hero-eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--rose);animation:pulse 1.8s infinite}
+@keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+.hero h1{font-size:clamp(2.4rem,5.2vw,4rem);font-weight:900;line-height:1.18;color:var(--ink);margin-bottom:1.2rem}
+.hero h1 em{font-style:normal;background:linear-gradient(135deg,var(--rose),var(--gold));-webkit-background-clip:text;background-clip:text;-webkit-text-fill-color:transparent;color:transparent}
+.hero p.lead{font-size:1.05rem;line-height:1.9;color:var(--ink-2);max-width:460px;margin-bottom:2rem}
+.hero-actions{display:flex;gap:1rem;flex-wrap:wrap}
+.hero-trust{display:flex;align-items:center;gap:1rem;margin-top:2.2rem}
+.hero-trust .avs{display:flex}
+.hero-trust .av{width:36px;height:36px;border-radius:50%;border:2px solid var(--bg);margin-right:-10px;
+  display:flex;align-items:center;justify-content:center;font-size:.95rem;
+  background:linear-gradient(135deg,var(--rose-soft),var(--gold-light))}
+.hero-trust .tx{font-size:.8rem;color:var(--ink-2);line-height:1.4}
+.hero-trust .tx b{color:var(--ink);font-weight:800}
+.hero-visual{position:relative;height:80vh;max-height:620px}
+.hero-photo{position:absolute;inset:0;border-radius:32px;overflow:hidden;box-shadow:var(--shadow-lg);
+  background:linear-gradient(155deg,var(--rose-soft),var(--gold-light) 70%,var(--blush))}
+.hero-photo img{width:100%;height:100%;object-fit:cover}
+.hero-photo .ph{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;font-size:9rem;filter:drop-shadow(0 14px 28px rgba(58,42,48,.18))}
+.hero-float{position:absolute;z-index:3;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);
+  border:1px solid var(--line);border-radius:16px;padding:.85rem 1.1rem;box-shadow:var(--shadow-lg);display:flex;align-items:center;gap:.65rem}
+.hf-rating{top:1.4rem;right:1.4rem;animation:floatA 6s ease-in-out infinite}
+.hf-rating .stars{color:var(--gold);letter-spacing:1px}
+.hf-rating .tx{font-size:.72rem;color:var(--ink-2)}
+.hf-rating .tx b{color:var(--ink)}
+.hf-ship{bottom:1.4rem;left:1.4rem;animation:floatB 7s ease-in-out infinite}
+.hf-ship .ic{width:40px;height:40px;border-radius:12px;background:var(--rose-tint);display:flex;align-items:center;justify-content:center}
+.hf-ship .ic svg{width:22px;height:22px;color:var(--rose-deep)}
+.hf-ship .nm{font-size:.78rem;font-weight:800;color:var(--ink)}
+.hf-ship .pr{font-size:.7rem;color:var(--ink-3)}
+@keyframes floatA{0%,100%{transform:translateY(0)}50%{transform:translateY(-9px)}}
+@keyframes floatB{0%,100%{transform:translateY(0)}50%{transform:translateY(-7px)}}
+
+/* ── FEATURED ROW ── */
+.featured-band{background:linear-gradient(135deg,#FBEEEA,#FFF7F4);border-block:1px solid var(--line)}
+.frow-wrap{position:relative;max-width:1200px;margin:0 auto}
+.frow{display:flex;gap:1.25rem;overflow-x:auto;scroll-snap-type:x mandatory;scroll-behavior:smooth;padding:.5rem .25rem 1.25rem;-webkit-overflow-scrolling:touch}
+.frow::-webkit-scrollbar{height:8px}
+.frow::-webkit-scrollbar-thumb{background:var(--rose);border-radius:100px}
+.frow::-webkit-scrollbar-track{background:var(--line);border-radius:100px}
+.fcard{flex:0 0 250px;scroll-snap-align:start;display:flex;flex-direction:column;background:var(--bg-2);border:1px solid var(--line-2);border-radius:20px;overflow:hidden;box-shadow:var(--shadow);transition:transform .25s,box-shadow .25s}
+.fcard:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.fcard .fimg{aspect-ratio:1/1;background:var(--bg-3);overflow:hidden}
+.fcard .fimg img{width:100%;height:100%;object-fit:cover;transition:transform .4s}
+.fcard:hover .fimg img{transform:scale(1.05)}
+.fcard .fbody{padding:1rem 1.1rem 1.25rem;display:flex;flex-direction:column;gap:.6rem;flex:1}
+.fcard .fname{font-size:1rem;font-weight:800;color:var(--rose-deep);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.fcard .fdesc{font-size:.8rem;color:var(--ink-2);line-height:1.6;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;flex:1}
+.fcard .btn-primary{margin-top:auto;text-align:center;padding:.6rem;font-size:.84rem}
+.frow-nav{position:absolute;top:42%;transform:translateY(-50%);width:44px;height:44px;border-radius:50%;border:1px solid var(--line-2);background:var(--bg-2);box-shadow:var(--shadow);color:var(--rose-deep);font-size:1.5rem;font-weight:700;cursor:pointer;z-index:5;display:none;align-items:center;justify-content:center;transition:background .2s}
+.frow-nav:hover{background:var(--rose-tint)}
+.frow-nav.prev{right:-10px}.frow-nav.next{left:-10px}
+@media(min-width:760px){.frow-nav{display:flex}}
+
+/* ── CONTACT ── */
+.contact-grid{display:grid;grid-template-columns:1fr 1fr;gap:3rem;align-items:start;max-width:1100px;margin:0 auto}
+.cinfo-item{display:flex;gap:1rem;align-items:flex-start;margin-bottom:1.5rem;padding-bottom:1.5rem;border-bottom:1px solid var(--line)}
+.cinfo-ic{width:48px;height:48px;border-radius:14px;background:var(--rose-tint);display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.cinfo-ic svg{width:22px;height:22px;color:var(--rose-deep)}
+.cinfo-l{font-size:.66rem;color:var(--gold);letter-spacing:1.5px;text-transform:uppercase;font-weight:800;margin-bottom:.3rem}
+.cinfo-v{font-size:.92rem;color:var(--ink);line-height:1.6}
+.cform{background:var(--bg-2);border:1px solid var(--line-2);border-radius:22px;padding:2rem;box-shadow:var(--shadow)}
+.ffield{margin-bottom:1rem}
+.ffield label{display:block;font-size:.74rem;font-weight:800;color:var(--ink-2);margin-bottom:.5rem}
+.finput,.ftext{width:100%;background:var(--bg);border:1.5px solid var(--line);color:var(--ink);
+  font-family:var(--sans);font-size:.92rem;padding:.8rem 1rem;border-radius:12px;outline:none;transition:border .25s}
+.finput:focus,.ftext:focus{border-color:var(--rose)}
+.ftext{resize:vertical;min-height:110px}
+
+@media(max-width:900px){
+  .hero{grid-template-columns:1fr;padding:7rem 1.2rem 3rem;gap:2.5rem;text-align:center;min-height:auto}
+  .hero-eyebrow{margin-inline:auto}.hero p.lead{margin-inline:auto}.hero-actions{justify-content:center}.hero-trust{justify-content:center}
+  .hero-visual{height:auto;aspect-ratio:4/5;max-height:none}
+  .fcard{flex-basis:78%}
+  .contact-grid{grid-template-columns:1fr;gap:2rem}
+}
+</style>
+</head>
+<body>
+<div class="bg-glow"></div>
+<div class="wrap">
+
+<!-- NAV -->
+<nav class="site-nav">
+  <a class="brand" href="index.html">
+    <img src="assets/logo.webp" alt="Desert Shop" onerror="this.style.display='none'">
+    <span class="brand-tx"><span class="brand-name">جمالكِ الخارجي</span><span class="brand-sub">Desert Shop</span></span>
+  </a>
+  <ul class="nav-menu">
+    <li><a href="index.html">الرئيسية</a></li>
+    <li><a href="products.html">المنتجات</a></li>
+    <li><a href="categories.html">التصنيفات</a></li>
+    <li><a href="#contact">تواصلي معنا</a></li>
+  </ul>
+  <div class="nav-actions">
+    <button class="nav-cart" data-cart-open aria-label="السلة">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg>
+      <span class="badge">0</span>
+    </button>
+    <button class="burger" aria-label="القائمة"><span></span><span></span><span></span></button>
+  </div>
+</nav>
+
+<!-- HERO -->
+<header class="hero">
+  <div class="hero-copy">
+    <div class="hero-eyebrow"><span class="dot"></span> أناقتكِ تبدأ من هنا</div>
+    <h1>كل ما تحتاجينه <em>لجمالكِ</em> وعنايتكِ في مكان واحد</h1>
+    <p class="lead">منتجات أصلية مختارة بعناية للعناية بالبشرة والشعر، العطور الفرمونية، والمكمّلات النسائية — بجودة مضمونة، أسعار مناسبة، وتوصيل لكل ولايات الوطن.</p>
+    <div class="hero-actions">
+      <a class="btn-primary" href="products.html">تسوّقي الآن</a>
+      <a class="btn-ghost" href="categories.html">تصفّحي التصنيفات</a>
+    </div>
+    <div class="hero-trust">
+      <div class="avs"><div class="av">👩</div><div class="av">🧕</div><div class="av">💁‍♀️</div><div class="av">💃</div></div>
+      <div class="tx"><b>+5000 زبونة سعيدة</b><br>يثقن في ديزرت شوب</div>
+    </div>
+  </div>
+  <div class="hero-visual">
+    <div class="hero-photo" id="heroPhoto"><div class="ph">💄</div></div>
+    <div class="hero-float hf-rating"><span class="stars">★★★★★</span><span class="tx"><b>4.9</b> · تقييم الزبائن</span></div>
+    <div class="hero-float hf-ship">
+      <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 18h14"/><path d="M12 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></div>
+      <div><div class="nm">توصيل سريع</div><div class="pr">لكل 58 ولاية</div></div>
+    </div>
+  </div>
+</header>
+
+<!-- FEATURES -->
+<section class="features reveal">
+  <div class="feature"><div class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/><path d="M6 12h.01M18 12h.01"/></svg></div><div><div class="ft">الدفع عند الاستلام</div><div class="fs">توصيل لـ 58 ولاية</div></div></div>
+  <div class="feature"><div class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10"/><path d="m9 12 2 2 4-4"/></svg></div><div><div class="ft">منتجات أصلية</div><div class="fs">ضمان الجودة 100%</div></div></div>
+  <div class="feature"><div class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M5 18h14"/><path d="M12 18V6a2 2 0 0 0-2-2H4a2 2 0 0 0-2 2v11a1 1 0 0 0 1 1h2"/><path d="M15 18H9"/><path d="M19 18h2a1 1 0 0 0 1-1v-3.65a1 1 0 0 0-.22-.624l-3.48-4.35A1 1 0 0 0 17.52 8H14"/><circle cx="17" cy="18" r="2"/><circle cx="7" cy="18" r="2"/></svg></div><div><div class="ft">توصيل سريع</div><div class="fs">إلى باب المنزل</div></div></div>
+  <div class="feature"><div class="fic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 11h3a2 2 0 0 1 2 2v3a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-5Zm0 0a9 9 0 1 1 18 0m0 0v5a2 2 0 0 1-2 2h-1a2 2 0 0 1-2-2v-3a2 2 0 0 1 2-2h3Z"/></svg></div><div><div class="ft">خدمة زبائن</div><div class="fs">7/7 أيام</div></div></div>
+</section>
+
+<!-- CATEGORIES -->
+<section class="sec reveal" id="categories">
+  <div class="sec-head">
+    <span class="sec-label">تسوّقي حسب الفئة</span>
+    <h2 class="sec-title">تصنيفاتنا</h2>
+    <div class="sec-underline"></div>
+    <p class="sec-sub">اختاري ما يناسب احتياجكِ من مجموعتنا المتنوّعة للعناية والجمال.</p>
+  </div>
+  <div class="cat-grid" id="catGrid"></div>
+</section>
+
+<!-- FEATURED CAROUSEL -->
+<section class="featured-band reveal" id="featuredBand" style="display:none">
+  <div class="sec">
+    <div class="sec-head">
+      <span class="sec-label">مختارات مميزة</span>
+      <h2 class="sec-title">منتجات تستحق التجربة</h2>
+      <div class="sec-underline"></div>
+    </div>
+    <div class="frow-wrap">
+      <button class="frow-nav prev" id="fcarPrev" aria-label="السابق">›</button>
+      <div class="frow" id="fcarTrack"></div>
+      <button class="frow-nav next" id="fcarNext" aria-label="التالي">‹</button>
+    </div>
+  </div>
+</section>
+
+<!-- PRODUCTS -->
+<section class="sec reveal" id="collection">
+  <div class="sec-head">
+    <span class="sec-label">الأكثر طلباً</span>
+    <h2 class="sec-title">أبرز المنتجات</h2>
+    <div class="sec-underline"></div>
+  </div>
+  <div class="pgrid" id="pgrid"></div>
+  <div style="text-align:center;margin-top:2.5rem"><a class="btn-gold" href="products.html">عرض كل المنتجات</a></div>
+</section>
+
+<!-- CONTACT -->
+<section class="sec reveal" id="contact">
+  <div class="sec-head">
+    <span class="sec-label">تواصلي معنا</span>
+    <h2 class="sec-title">نحن هنا لمساعدتكِ</h2>
+    <div class="sec-underline"></div>
+  </div>
+  <div class="contact-grid">
+    <div>
+      <div class="cinfo-item"><div class="cinfo-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M22 16.92v3a2 2 0 0 1-2.18 2 19.79 19.79 0 0 1-8.63-3.07 19.5 19.5 0 0 1-6-6 19.79 19.79 0 0 1-3.07-8.67A2 2 0 0 1 4.11 2h3a2 2 0 0 1 2 1.72c.13.96.36 1.9.7 2.81a2 2 0 0 1-.45 2.11L8.09 9.91a16 16 0 0 0 6 6l1.27-1.27a2 2 0 0 1 2.11-.45c.91.34 1.85.57 2.81.7A2 2 0 0 1 22 16.92z"/></svg></div><div><div class="cinfo-l">واتساب / هاتف</div><div class="cinfo-v"><span class="ltr">+213 662 705 830</span></div></div></div>
+      <div class="cinfo-item"><div class="cinfo-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg></div><div><div class="cinfo-l">التوصيل</div><div class="cinfo-v">إلى كل ولايات الجزائر — 58 ولاية</div></div></div>
+      <div class="cinfo-item" style="border-bottom:none"><div class="cinfo-ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><path d="M12 6v6l4 2"/></svg></div><div><div class="cinfo-l">ساعات العمل</div><div class="cinfo-v">كل أيام الأسبوع · 9:00 ص — 9:00 م</div></div></div>
+      <a class="btn-whatsapp" data-wa="مرحباً، أريد الاستفسار عن منتجاتكم" target="_blank" style="margin-top:.5rem">تواصلي عبر واتساب</a>
+    </div>
+    <div class="cform">
+      <form id="contactForm">
+        <div class="ffield"><label>الاسم الكامل</label><input class="finput" id="cName" required placeholder="اسمكِ الكريم"></div>
+        <div class="ffield"><label>رقم الهاتف</label><input class="finput" id="cPhone" type="tel" placeholder="0X XX XX XX XX" style="direction:ltr;text-align:right"></div>
+        <div class="ffield"><label>رسالتكِ</label><textarea class="ftext" id="cMsg" required placeholder="كيف يمكننا مساعدتكِ؟"></textarea></div>
+        <button type="submit" class="btn-primary btn-block">إرسال الرسالة</button>
+      </form>
+    </div>
+  </div>
+</section>
+
+<!-- FOOTER -->
+<footer class="site-footer">
+  <div class="foot-inner">
+    <div class="foot-top">
+      <div>
+        <div class="foot-brand"><img src="assets/logo.webp" alt="Desert Shop" onerror="this.style.display='none'"><span class="brand-name" style="font-size:1.2rem">جمالكِ الخارجي</span></div>
+        <p class="foot-desc">وجهتكِ الأولى لمنتجات الجمال والعناية النسائية في الجزائر. جودة أصلية، خصوصية تامة، وتوصيل لكل الولايات.</p>
+        <div class="foot-social">
+          <a data-wa="مرحباً" target="_blank" aria-label="WhatsApp"><img src="assets/whatsapp.png" alt="WhatsApp" onerror="this.parentElement.style.display='none'"></a>
+          <a data-social="instagram" href="https://instagram.com" target="_blank" rel="noopener" aria-label="Instagram" style="display:none"><img src="assets/instagram.png" alt="Instagram" onerror="this.parentElement.style.display='none'"></a>
+          <a data-social="facebook" href="https://facebook.com" target="_blank" rel="noopener" aria-label="Facebook" style="display:none"><img src="assets/facebook.png" alt="Facebook" onerror="this.parentElement.style.display='none'"></a>
+          <a data-social="tiktok" href="https://tiktok.com" target="_blank" rel="noopener" aria-label="TikTok" style="display:none"><img src="assets/tiktok.png" alt="TikTok" onerror="this.parentElement.style.display='none'"></a>
+        </div>
+      </div>
+      <div class="foot-col"><h4>تسوّقي</h4><ul><li><a href="products.html">كل المنتجات</a></li><li><a href="categories.html">التصنيفات</a></li><li><a href="index.html#collection">الأكثر طلباً</a></li></ul></div>
+      <div class="foot-col"><h4>المتجر</h4><ul><li><a href="index.html#contact">تواصلي معنا</a></li><li><a data-wa="مرحباً" target="_blank">محادثة في واتساب</a></li><li><a href="checkout.html">سلة المشتريات</a></li></ul></div>
+      <div class="foot-col"><h4>الدفع والتوصيل</h4><ul><li>الدفع عند الاستلام</li><li>توصيل لكل الولايات</li><li>منتجات أصلية مضمونة</li></ul></div>
+    </div>
+    <div class="foot-bottom">
+      <div class="foot-copy">© <span id="yr"></span> جمالكِ الخارجي — Desert Shop · جميع الحقوق محفوظة</div>
+      <div class="foot-made">صُنع بحبّ في الجزائر 🇩🇿</div>
+    </div>
+  </div>
+</footer>
+</div>
+
+<a class="tiktok-live" href="#" target="_blank" rel="noopener" aria-label="بث تيك توك مباشر"><svg class="tk-ic" viewBox="0 0 24 24" fill="currentColor"><path d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.08-.14 1.62.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg><span>بث مباشر</span><span class="lv"><span class="dot"></span>LIVE</span></a>
+<a class="wa-float" data-wa="مرحباً، لدي استفسار" target="_blank" aria-label="WhatsApp">
+  <svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg>
+</a>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
+<script src="js/firebase.js"></script>
+<script src="js/site.js"></script>
+<script src="js/meta.js"></script>
+<script src="js/cart.js"></script>
+<script>
+(function () {
+  document.getElementById('yr').textContent = new Date().getFullYear();
+  var catMap = {};
+
+  // settings (hero image + WA number + social)
+  DS.getSettings().then(function (s) {
+    SiteUI.applySettings(s);
+    if (s && s.heroImage) document.getElementById('heroPhoto').innerHTML = '<img src="' + s.heroImage + '" alt="جمالكِ الخارجي">';
+  });
+
+  // categories
+  DS.getCategories().then(function (cats) {
+    cats.forEach(function (c) { catMap[c.id] = c.name; });
+    var visible = cats.filter(function (c) { return c.visible !== false; }).slice(0, 8);
+    var html = visible.map(function (c) {
+      var img = c.image ? '<img src="' + SiteUI.esc(c.image) + '" alt="' + SiteUI.esc(c.name) + '" loading="lazy">' : '<div class="placeholder">🌸</div>';
+      var color = SiteUI.catColor(c);
+      return '<a class="cat-tile" href="products.html?cat=' + encodeURIComponent(c.id) + '">' +
+        '<div class="cat-accent" style="background:' + color + '"></div>' + img +
+        '<div class="cat-meta"><div class="cat-name"><span class="cat-dot" style="background:' + color + '"></span>' + SiteUI.esc(c.name) + '</div><div class="cat-go">تسوّقي الآن ←</div></div></a>';
+    }).join('');
+    document.getElementById('catGrid').innerHTML = html || '<p style="grid-column:1/-1;text-align:center;color:var(--ink-3)">لا توجد تصنيفات بعد.</p>';
+    SiteUI.observeReveals(document.getElementById('catGrid'));
+  });
+
+  // products (live)
+  DS.getProducts().then(function (prods) {
+    window._DS_PRODUCTS = prods;
+    var grid = document.getElementById('pgrid');
+    if (!prods.length) { grid.innerHTML = '<p style="grid-column:1/-1;text-align:center;color:var(--ink-3);padding:2rem">لا توجد منتجات بعد.</p>'; return; }
+    // newest first (lastModified or numeric id), show up to 8
+    var sorted = prods.slice().sort(function (a, b) { return (Number(b.lastModified || b.id) || 0) - (Number(a.lastModified || a.id) || 0); });
+    grid.innerHTML = sorted.slice(0, 8).map(function (p) { return SiteUI.productCardHTML(p, catMap[p.category] || ''); }).join('');
+    SiteUI.observeReveals(grid);
+  });
+
+  // featured row (horizontal scroll of compact cards)
+  DS.getFeatured().then(function (list) {
+    if (!list.length) return;
+    document.getElementById('featuredBand').style.display = '';
+    var row = document.getElementById('fcarTrack');
+    row.innerHTML = list.map(function (f) {
+      var link = f.productLink || 'products.html';
+      var desc = f.rightText || f.leftText || '';
+      return '<div class="fcard">' +
+        '<div class="fimg"><img src="' + SiteUI.esc(f.image) + '" alt="' + SiteUI.esc(f.productName) + '" loading="lazy"></div>' +
+        '<div class="fbody"><div class="fname">' + SiteUI.esc(f.productName) + '</div>' +
+          (desc ? '<div class="fdesc">' + SiteUI.esc(desc) + '</div>' : '') +
+          '<a class="btn-primary" href="' + SiteUI.esc(link) + '">' + SiteUI.esc(f.ctaText || 'تفاصيل أكثر') + '</a>' +
+        '</div></div>';
+    }).join('');
+    var prev = document.getElementById('fcarPrev'), next = document.getElementById('fcarNext');
+    var step = function () { var c = row.querySelector('.fcard'); return c ? c.offsetWidth + 20 : 270; };
+    // RTL: forward (next) scrolls toward the end = negative scrollLeft
+    if (next) next.addEventListener('click', function () { row.scrollBy({ left: -step(), behavior: 'smooth' }); });
+    if (prev) prev.addEventListener('click', function () { row.scrollBy({ left: step(), behavior: 'smooth' }); });
+    // hide arrows when everything already fits
+    if (list.length <= 3 && prev && next) { prev.style.display = 'none'; next.style.display = 'none'; }
+  });
+
+  // contact form → saveMessage + WhatsApp
+  document.getElementById('contactForm').addEventListener('submit', function (e) {
+    e.preventDefault();
+    var name = document.getElementById('cName').value.trim();
+    var phone = document.getElementById('cPhone').value.trim();
+    var msg = document.getElementById('cMsg').value.trim();
+    if (!name || !msg) return;
+    DS.saveMessage({ name: name, phone: phone, message: msg }).catch(function () {});
+    Cart.toast('تم إرسال رسالتكِ ✓');
+    this.reset();
+    if (window.SITE && SITE.waEnabled === false) return;
+    var wa = SiteUI.waLink('مرحباً، اسمي ' + name + (phone ? '\nهاتف: ' + phone : '') + '\n\n' + msg);
+    window.open(wa, '_blank');
+  });
+})();
+</script>
+</body>
+</html>

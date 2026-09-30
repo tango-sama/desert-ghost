@@ -1,0 +1,442 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<base href="/" />
+<link rel="icon" type="image/webp" href="assets/logo.webp">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>إتمام الطلب | جمالكِ الخارجي — Desert Shop</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css">
+<!-- Firebase SDK is loaded at the end of <body> so it doesn't block first paint -->
+<link rel="preconnect" href="https://www.gstatic.com">
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+<link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
+<link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js">
+<style>
+.checkout{max-width:1100px;margin:0 auto;padding:7rem 3rem 4rem}
+.checkout h1{text-align:center;font-size:clamp(1.6rem,3.5vw,2.2rem);font-weight:900;color:var(--ink);margin-bottom:.4rem}
+.checkout .sub{text-align:center;color:var(--ink-2);margin-bottom:2.5rem}
+.cgrid{display:grid;grid-template-columns:1.4fr 1fr;gap:2rem;align-items:start}
+.cod-banner{background:linear-gradient(135deg,#1A7A34,#25D366);color:#fff;text-align:center;font-weight:800;padding:.9rem;border-radius:16px 16px 0 0;display:flex;align-items:center;justify-content:center;gap:.5rem}
+.cod-banner svg{width:20px;height:20px}
+.form-card{background:var(--bg-2);border:1px solid var(--line-2);border-radius:0 0 20px 20px;border-top:none;padding:2rem;box-shadow:var(--shadow)}
+.frow{display:grid;grid-template-columns:1fr 1fr;gap:1rem}
+.ffield{margin-bottom:1.1rem}.ffield.full{grid-column:1/-1}
+.ffield label{display:block;font-size:.78rem;font-weight:800;color:var(--ink-2);margin-bottom:.5rem}
+.ffield label .req{color:var(--rose)}
+.finput,.fselect{width:100%;background:var(--bg);border:1.5px solid var(--line);color:var(--ink);font-family:var(--sans);
+  font-size:.92rem;padding:.8rem 1rem;border-radius:12px;outline:none;transition:border .25s}
+.finput:focus,.fselect:focus{border-color:var(--rose)}
+.finput.err,.fselect.err{border-color:var(--rose);background:#FFF0F3}
+.delivery-opts{display:grid;grid-template-columns:1fr 1fr;gap:.85rem}
+.company-opts{display:grid;grid-template-columns:1fr 1fr;gap:.85rem}
+.co-opt{border:1.5px solid var(--line);border-radius:14px;padding:.85rem 1rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:.5rem;font-weight:800;font-size:.88rem;color:var(--ink)}
+.co-opt:hover{border-color:var(--rose-soft)}
+.co-opt.on{border-color:var(--rose);background:var(--rose-tint)}
+.co-opt[data-co="yalidine"].on{border-color:#E11900;background:rgba(225,25,0,.07)}
+.co-opt[data-co="noest"].on{border-color:#1E73E8;background:rgba(30,115,232,.07)}
+.co-opt[data-co="zr"].on{border-color:#E8A413;background:rgba(232,164,19,.08)}
+.co-opt .co-dot{width:14px;height:14px;border-radius:50%;flex-shrink:0}
+.ins-row{display:none;align-items:center;justify-content:space-between;gap:.6rem;margin-top:.85rem;border:1.5px solid var(--line);border-radius:14px;padding:.8rem 1rem;cursor:pointer;font-weight:800;font-size:.85rem;color:var(--ink);transition:all .2s;user-select:none}
+.ins-row.show{display:flex}
+.ins-row.on{border-color:#E11900;background:rgba(225,25,0,.07)}
+.ins-row .sw{width:44px;height:24px;border-radius:12px;background:var(--line);position:relative;flex-shrink:0;transition:background .2s}
+.ins-row .sw::after{content:'';position:absolute;top:3px;inset-inline-start:3px;width:18px;height:18px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:inset-inline-start .2s}
+.ins-row.on .sw{background:#E11900}
+.ins-row.on .sw::after{inset-inline-start:23px}
+.del-opt{border:1.5px solid var(--line);border-radius:14px;padding:1rem;cursor:pointer;transition:all .2s;display:flex;align-items:center;gap:.75rem}
+.del-opt:hover{border-color:var(--rose-soft)}
+.del-opt.on{border-color:var(--rose);background:var(--rose-tint)}
+.del-opt .radio{width:22px;height:22px;border-radius:50%;border:2px solid var(--line);flex-shrink:0;display:flex;align-items:center;justify-content:center}
+.del-opt.on .radio{border-color:var(--rose)}
+.del-opt.on .radio::after{content:'';width:11px;height:11px;border-radius:50%;background:var(--rose)}
+.del-opt .dt{font-weight:800;font-size:.9rem;color:var(--ink)}
+.del-opt .dd{font-size:.74rem;color:var(--ink-3)}
+.del-opt .dprice{font-weight:900;font-size:.9rem;color:var(--rose-deep);white-space:nowrap}
+.del-opt .dprice small{display:block;font-size:.6rem;color:var(--ink-3);font-weight:700;text-align:center}
+.addr-field{max-height:0;opacity:0;transform:translateY(-8px);overflow:hidden;margin-bottom:0;transition:max-height .4s ease,opacity .3s ease,transform .4s ease,margin-bottom .4s ease}
+.addr-field.show{max-height:130px;opacity:1;transform:none;margin-bottom:1.1rem}
+.summary{position:sticky;top:90px;background:var(--bg-2);border:1px solid var(--line-2);border-radius:20px;padding:1.5rem;box-shadow:var(--shadow)}
+.summary h3{font-weight:800;font-size:1.15rem;color:var(--ink);margin-bottom:1.1rem;padding-bottom:.9rem;border-bottom:1px solid var(--line)}
+.sum-item{display:flex;gap:.85rem;margin-bottom:.9rem}
+.sum-img{width:60px;height:60px;border-radius:12px;overflow:hidden;flex-shrink:0;background:var(--bg-3)}
+.sum-img img{width:100%;height:100%;object-fit:cover}
+.sum-info{flex:1;min-width:0}
+.sum-name{font-weight:700;font-size:.84rem;color:var(--ink);line-height:1.4;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.sum-price{color:var(--rose-deep);font-weight:800;font-size:.82rem;margin-top:.15rem}
+.sum-qty{display:flex;align-items:center;gap:.45rem;margin-top:.4rem}
+.sum-lines{border-top:1px solid var(--line);padding-top:1rem;margin-top:.5rem}
+.sum-line{display:flex;justify-content:space-between;font-size:.9rem;color:var(--ink-2);margin-bottom:.55rem}
+.sum-line.total{font-size:1.2rem;color:var(--ink);font-weight:900;padding-top:.75rem;border-top:1px solid var(--line);margin-top:.5rem}
+.sum-line.total .num{color:var(--rose-deep)}
+.empty-cart{text-align:center;padding:5rem 1rem}
+.empty-cart .ic{font-size:4rem;margin-bottom:1rem}
+.ov{display:none;position:fixed;inset:0;background:rgba(58,42,48,.5);z-index:400;align-items:center;justify-content:center;padding:1.5rem}
+.ov.open{display:flex}
+.success{background:var(--bg-2);border-radius:24px;padding:2.5rem;max-width:420px;text-align:center;box-shadow:var(--shadow-lg);animation:pop .35s var(--ease)}
+@keyframes pop{from{transform:scale(.9);opacity:0}to{transform:scale(1);opacity:1}}
+.success .ic{width:78px;height:78px;border-radius:50%;background:#E6F8EC;display:flex;align-items:center;justify-content:center;margin:0 auto 1.25rem}
+.success .ic svg{width:38px;height:38px;color:#22c55e}
+.success h2{font-size:1.5rem;font-weight:900;color:var(--ink);margin-bottom:.75rem}
+.success p{color:var(--ink-2);line-height:1.7;margin-bottom:1.25rem}
+.success .oid{background:var(--bg);border:1px dashed var(--rose);border-radius:12px;padding:.7rem;margin-bottom:1.25rem;font-weight:700}
+.success .oid b{color:var(--rose-deep)}
+@media(max-width:900px){.checkout{padding:6rem 1.2rem 3rem}.cgrid{grid-template-columns:1fr}.summary{position:static;order:-1}.frow{grid-template-columns:1fr}.delivery-opts{grid-template-columns:1fr}.company-opts{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<div class="bg-glow"></div>
+<div class="wrap">
+
+<nav class="site-nav">
+  <a class="brand" href="index.html"><img src="assets/logo.webp" alt="Desert Shop" onerror="this.style.display='none'"><span class="brand-tx"><span class="brand-name">جمالكِ الخارجي</span><span class="brand-sub">Desert Shop</span></span></a>
+  <ul class="nav-menu">
+    <li><a href="index.html">الرئيسية</a></li>
+    <li><a href="products.html">المنتجات</a></li>
+    <li><a href="categories.html">التصنيفات</a></li>
+    <li><a href="index.html#contact">تواصلي معنا</a></li>
+  </ul>
+  <div class="nav-actions">
+    <button class="nav-cart" data-cart-open aria-label="السلة"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg><span class="badge">0</span></button>
+    <button class="burger" aria-label="القائمة"><span></span><span></span><span></span></button>
+  </div>
+</nav>
+
+<div class="checkout" id="checkout">
+  <h1>إتمام الطلب</h1>
+  <p class="sub">أكملي بياناتكِ وسنتواصل معكِ لتأكيد الطلب — الدفع عند الاستلام</p>
+  <div class="cgrid" id="cgrid">
+    <div class="form-side">
+      <div id="sellerBanner" style="display:none;background:linear-gradient(135deg,#7C5CBF,#A78BFA);color:#fff;font-weight:800;font-size:.86rem;padding:.8rem 1rem;border-radius:16px;margin-bottom:.8rem;align-items:center;gap:.5rem;justify-content:space-between">
+        <span>📞 وضع البائعة — سيُسجَّل كطلب هاتفي بدون إشعارات</span>
+        <button type="button" id="sellerLogout" style="background:rgba(255,255,255,.2);border:none;color:#fff;font-family:inherit;font-weight:800;font-size:.78rem;padding:.3rem .8rem;border-radius:100px;cursor:pointer">خروج</button>
+      </div>
+      <div class="cod-banner"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><rect width="20" height="12" x="2" y="6" rx="2"/><circle cx="12" cy="12" r="2"/></svg> الدفع عند الاستلام — Cash on Delivery</div>
+      <form class="form-card" id="orderForm">
+        <div class="frow">
+          <div class="ffield full"><label>الاسم الكامل <span class="req">*</span></label><input class="finput" id="fname" placeholder="الاسم واللقب"></div>
+          <div class="ffield full"><label>رقم الهاتف <span class="req">*</span></label><input class="finput" id="fphone" type="tel" placeholder="0X XX XX XX XX" style="direction:ltr;text-align:right"></div>
+          <div class="ffield full" style="display:none">
+            <label>شركة التوصيل</label>
+            <div class="company-opts" id="companyOpts">
+              <div class="co-opt on" data-co="noest"><span class="co-dot" style="background:#1E73E8"></span> Noest — نوست</div>
+              <div class="co-opt" data-co="yalidine"><span class="co-dot" style="background:#E11900"></span> Yalidine — ياليدين</div>
+              <div class="co-opt" data-co="zr"><span class="co-dot" style="background:#E8A413"></span> ZR Express — زد آر</div>
+            </div>
+            <div class="ins-row" id="insRow"><span>🛡️ التأمين على الطرد (Assurance)</span><span class="sw"></span></div>
+          </div>
+          <div class="ffield"><label>الولاية <span class="req">*</span></label><select class="fselect" id="fwilaya"><option value="">اختاري الولاية</option></select></div>
+          <div class="ffield"><label>البلدية <span class="req">*</span></label><select class="fselect" id="fbaladiya" disabled><option value="">اختاري الولاية أولاً</option></select></div>
+        </div>
+        <div class="ffield full">
+          <label>نوع التوصيل</label>
+          <div class="delivery-opts" id="deliveryOpts">
+            <div class="del-opt on" data-type="home"><div class="radio"></div><div style="flex:1"><div class="dt">🏠 توصيل للمنزل</div><div class="dd">إلى باب منزلكِ</div></div><div class="dprice" data-fee-home>—<small>التوصيل</small></div></div>
+            <div class="del-opt" data-type="office"><div class="radio"></div><div style="flex:1"><div class="dt">🏢 مكتب التوصيل</div><div class="dd">Stop Desk</div></div><div class="dprice" data-fee-office>—<small>التوصيل</small></div></div>
+          </div>
+        </div>
+        <div class="ffield full addr-field show" id="addrField">
+          <label>عنوان المنزل <span class="req">*</span></label>
+          <input class="finput" id="faddress" placeholder="الحي، الشارع، رقم المنزل...">
+        </div>
+        <button type="submit" class="btn-primary btn-block" id="confirmBtn" style="margin-top:.5rem">✅ تأكيد الطلب</button>
+        <button type="button" class="btn-whatsapp btn-block" id="waConfirmBtn" style="margin-top:.7rem">تأكيد الطلب عبر واتساب</button>
+        <p style="text-align:center;font-size:.78rem;color:var(--ink-3);margin-top:1rem;line-height:1.6">«تأكيد الطلب» يحفظ طلبكِ ونتصل بكِ لتأكيده. أو أرسلي التفاصيل عبر واتساب. الدفع عند الاستلام.</p>
+        <p style="text-align:center;margin-top:.4rem"><a href="#" id="sellerLogin" style="font-size:.72rem;color:var(--ink-3);text-decoration:underline;display:none">دخول صاحبة المتجر</a></p>
+      </form>
+    </div>
+    <div class="summary">
+      <h3>ملخص الطلب (<span id="itemCount">0</span>)</h3>
+      <div id="sumItems"></div>
+      <div class="sum-lines">
+        <div class="sum-line"><span>المجموع الفرعي</span><span><span class="num" id="sumSub">0</span> د.ج</span></div>
+        <div class="sum-line"><span>التوصيل</span><span id="sumDelivery">يُحدَّد حسب الولاية</span></div>
+        <div class="sum-line total"><span>الإجمالي</span><span><span class="num" id="sumTotal">0</span> د.ج</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<footer class="site-footer">
+  <div class="foot-inner"><div class="foot-bottom" style="border-top:none;padding-top:0">
+    <div class="foot-copy">© <span id="yr"></span> جمالكِ الخارجي — Desert Shop</div>
+    <div class="foot-made"><a href="products.html" style="color:var(--rose-deep);font-weight:700">متابعة التسوّق</a></div>
+  </div></div>
+</footer>
+</div>
+
+<div class="ov" id="successOv"><div class="success">
+  <div class="ic"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6 9 17l-5-5"/></svg></div>
+  <h2>تم استلام طلبكِ! 🌸</h2>
+  <p>شكراً لثقتكِ. سنتواصل معكِ قريباً على هاتفكِ لتأكيد الطلب وموعد التوصيل.</p>
+  <div class="oid">رقم الطلب: <b id="successOid"></b></div>
+  <a class="btn-primary btn-block" href="index.html" style="margin-bottom:.6rem">العودة للمتجر</a>
+  <button class="btn-whatsapp btn-block" id="resendWa">إرسال التفاصيل عبر واتساب</button>
+</div></div>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
+<script src="js/firebase.js"></script>
+<script src="js/site.js"></script>
+<script src="js/meta.js"></script>
+<script src="js/cart.js"></script>
+<script src="js/yalidine.js"></script>
+<script>
+(function () {
+  document.getElementById('yr').textContent = new Date().getFullYear();
+  var delivery = 'home', company = 'noest', lastOrder = null, deliveryFee = 0, insurance = false;
+  var siteSettings = {};
+
+  DS.getSettings().then(function (s) { SiteUI.applySettings(s); siteSettings = s || {}; applyCarriers(siteSettings); });
+  // Load each carrier's own wilaya/commune/fee lists; refresh when ready.
+  DS.getDeliveryData('yalidine').then(function (d) { if (d) { YALIDINE.setCarrierData('yalidine', d); refreshLists(); } });
+  DS.getDeliveryData('noest').then(function (d) { if (d) { YALIDINE.setCarrierData('noest', d); refreshLists(); } });
+  DS.getDeliveryData('zr').then(function (d) { if (d) { YALIDINE.setCarrierData('zr', d); refreshLists(); } });
+
+  function applyCarriers(s) {
+    // ZR is opt-in (zrEnabled must be set to true in the admin settings);
+    // the other two stay visible unless explicitly hidden.
+    var customerEnabled = { yalidine: s.yalidineEnabled !== false, noest: s.noestEnabled !== false, zr: s.zrEnabled === true };
+    if (!customerEnabled.yalidine && !customerEnabled.noest && !customerEnabled.zr) { customerEnabled.yalidine = true; customerEnabled.noest = true; }
+    // Only seller mode gets a carrier choice: the admin sees every carrier and
+    // picks which one ships the order. Customers never see the picker — their
+    // order uses the default (first customer-enabled) carrier.
+    var seller = isSeller();
+    var enabled = seller ? { yalidine: true, noest: true, zr: true } : customerEnabled;
+    var wrap = document.getElementById('companyOpts');
+    if (!wrap) return;
+    var opts = wrap.querySelectorAll('.co-opt');
+    var first = null;
+    opts.forEach(function (o) {
+      var note = o.querySelector('.co-note');
+      if (note) note.remove();
+      if (enabled[o.dataset.co]) {
+        o.style.display = ''; if (!first) first = o.dataset.co;
+        if (seller && !customerEnabled[o.dataset.co]) o.insertAdjacentHTML('beforeend', '<span class="co-note" style="font-size:.66rem;font-weight:700;color:var(--ink-3);margin-inline-start:auto">(مخفية عن الزبائن)</span>');
+      } else { o.style.display = 'none'; }
+    });
+    if (!seller || !enabled[company]) company = first;
+    opts.forEach(function (o) { o.classList.toggle('on', o.dataset.co === company); });
+    updateInsuranceRow();
+    var field = wrap.closest('.ffield');
+    if (field) field.style.display = seller ? '' : 'none';
+    refreshLists();
+  }
+
+  var ws = document.getElementById('fwilaya');
+  var cs = document.getElementById('fbaladiya');
+
+  function populateWilayas() {
+    var prev = ws.value;
+    ws.innerHTML = '<option value="">اختاري الولاية</option>' +
+      YALIDINE.wilayasFor(company).map(function (w) { return '<option value="' + w.id + '">' + w.id + ' - ' + SiteUI.esc(w.ar) + '</option>'; }).join('');
+    ws.value = (prev && YALIDINE.wilayaForCarrier(company, prev)) ? prev : '';
+    populateCommunes();
+  }
+  function refreshLists() { populateWilayas(); updateFees(); }
+
+  function selectedWilaya() { return ws.value ? YALIDINE.wilayaForCarrier(company, ws.value) : null; }
+
+  function populateCommunes() {
+    var w = selectedWilaya();
+    if (!w) { cs.innerHTML = '<option value="">اختاري الولاية أولاً</option>'; cs.disabled = true; return; }
+    cs.disabled = false;
+    cs.innerHTML = '<option value="">اختاري البلدية</option>' +
+      YALIDINE.communesForCarrier(company, w.id).map(function (name) { return '<option value="' + SiteUI.esc(name) + '" data-fr="' + SiteUI.esc(name) + '">' + SiteUI.esc(name) + '</option>'; }).join('');
+  }
+
+  function money(n) { return n.toLocaleString('en-US') + ' د.ج'; }
+
+  function updateFees() {
+    var fh = document.querySelector('[data-fee-home]'), fo = document.querySelector('[data-fee-office]');
+    if (!fh || !fo) return; // form replaced by the empty-cart message
+    var w = selectedWilaya();
+    fh.innerHTML = (w ? money(YALIDINE.feeForCarrier(company, w.id, 'home')) : '—') + '<small>التوصيل</small>';
+    fo.innerHTML = (w ? money(YALIDINE.feeForCarrier(company, w.id, 'office')) : '—') + '<small>التوصيل</small>';
+    deliveryFee = w ? YALIDINE.feeForCarrier(company, w.id, delivery) : 0;
+    renderSummary();
+  }
+
+  populateWilayas();
+  ws.addEventListener('change', function () { populateCommunes(); updateFees(); });
+
+  document.getElementById('companyOpts').addEventListener('click', function (e) {
+    var o = e.target.closest('.co-opt'); if (!o) return;
+    this.querySelectorAll('.co-opt').forEach(function (x) { x.classList.remove('on'); });
+    o.classList.add('on'); company = o.dataset.co;
+    updateInsuranceRow();
+    populateWilayas(); updateFees();
+  });
+
+  // Yalidine parcel insurance (assurance) — only offered when Yalidine ships the order.
+  var insRow = document.getElementById('insRow');
+  function updateInsuranceRow() { if (insRow) insRow.classList.toggle('show', company === 'yalidine'); }
+  insRow && insRow.addEventListener('click', function () {
+    insurance = !insurance;
+    insRow.classList.toggle('on', insurance);
+  });
+
+  function renderSummary() {
+    var items = Cart.get();
+    document.getElementById('itemCount').textContent = items.length;
+    if (!items.length) {
+      document.getElementById('checkout').innerHTML = '<div class="empty-cart"><div class="ic">🛍️</div><h1>سلتكِ فارغة</h1><p class="sub">لم تُضيفي أي منتجات بعد.</p><div style="text-align:center"><a class="btn-primary" href="products.html">تصفّحي المنتجات</a></div></div>';
+      return;
+    }
+    document.getElementById('sumItems').innerHTML = items.map(function (i) {
+      return '<div class="sum-item" data-id="' + i.id + '">' +
+        '<div class="sum-img">' + (i.image ? '<img src="' + SiteUI.esc(i.image) + '" alt="">' : '') + '</div>' +
+        '<div class="sum-info"><div class="sum-name">' + SiteUI.esc(i.title) + '</div>' +
+          '<div class="sum-price">' + DS.priceFmt(i.price) + '</div>' +
+          '<div class="sum-qty"><button type="button" class="qty-btn s-dec">−</button><span class="ci-qv" style="min-width:22px;text-align:center;font-weight:800">' + (i.quantity || 1) + '</span><button type="button" class="qty-btn s-inc">+</button>' +
+            '<button type="button" class="ci-remove s-rem" style="margin-right:auto"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px" stroke-linecap="round" stroke-linejoin="round"><path d="M3 6h18"/><path d="M19 6v14c0 1-1 2-2 2H7c-1 0-2-1-2-2V6"/></svg></button>' +
+          '</div>' +
+        '</div></div>';
+    }).join('');
+    var sub = Cart.total();
+    document.getElementById('sumSub').textContent = sub.toLocaleString('en-US');
+    var feeEl = document.getElementById('sumDelivery');
+    if (selectedWilaya()) feeEl.innerHTML = '<span class="num">' + deliveryFee.toLocaleString('en-US') + '</span> د.ج';
+    else feeEl.textContent = 'يُحدَّد حسب الولاية';
+    document.getElementById('sumTotal').textContent = (sub + deliveryFee).toLocaleString('en-US');
+  }
+  renderSummary();
+  if (window.Meta && Cart.get().length) {
+    var icItems = Cart.get();
+    Meta.track('InitiateCheckout', {
+      content_ids: icItems.map(function (i) { return String(i.id); }), content_type: 'product',
+      contents: icItems.map(function (i) { return { id: String(i.id), quantity: i.quantity || 1, item_price: DS.priceNum(i.price) }; }),
+      value: Cart.total(), currency: 'DZD',
+      num_items: icItems.reduce(function (n, i) { return n + (i.quantity || 1); }, 0)
+    });
+  }
+
+  // qty controls inside summary
+  document.addEventListener('click', function (e) {
+    var row = e.target.closest('.sum-item'); if (!row) return;
+    var id = row.getAttribute('data-id');
+    var it = Cart.get().find(function (x) { return String(x.id) === String(id); }); if (!it) return;
+    if (e.target.closest('.s-inc')) Cart.setQty(id, (it.quantity || 1) + 1);
+    else if (e.target.closest('.s-dec')) Cart.setQty(id, (it.quantity || 1) - 1);
+    else if (e.target.closest('.s-rem')) Cart.remove(id);
+    else return;
+    renderSummary();
+  });
+
+  // delivery toggle
+  document.getElementById('deliveryOpts') && document.getElementById('deliveryOpts').addEventListener('click', function (e) {
+    var o = e.target.closest('.del-opt'); if (!o) return;
+    document.querySelectorAll('.del-opt').forEach(function (x) { x.classList.remove('on'); });
+    o.classList.add('on'); delivery = o.dataset.type;
+    var af = document.getElementById('addrField');
+    af.classList.toggle('show', delivery === 'home');
+    if (delivery !== 'home') document.getElementById('faddress').classList.remove('err');
+    updateFees();
+  });
+
+  function buildMessage(o) {
+    return '*طلب جديد من Desert Shop* 🌸\n---------------------------\n🛒 *المنتجات:*\n' +
+      o.items.map(function (i) { return '- ' + i.title + ' (عدد: ' + i.qty + ')'; }).join('\n') +
+      '\n---------------------------\n' +
+      '💰 *المجموع الفرعي:* ' + o.subtotal.toLocaleString('en-US') + ' د.ج' +
+      '\n🚚 *التوصيل:* ' + o.deliveryFee.toLocaleString('en-US') + ' د.ج' +
+      '\n🧾 *الإجمالي:* ' + o.total.toLocaleString('en-US') + ' د.ج\n---------------------------\n' +
+      '🔖 رقم الطلب: ' + o.num + '\n👤 الاسم: ' + o.customer + '\n📱 الهاتف: ' + o.phone +
+      '\n📍 العنوان: ' + o.wilaya + ' - ' + o.baladiya +
+      (o.address ? '\n🏠 عنوان المنزل: ' + o.address : '') +
+      '\n🏷️ شركة التوصيل: ' + ({ noest: 'Noest', yalidine: 'Yalidine', zr: 'ZR Express' }[o.deliveryCompany] || o.deliveryCompany) +
+      (o.deliveryCompany === 'yalidine' ? '\n🛡️ التأمين: ' + (o.insurance ? 'مفعّل' : 'غير مفعّل') : '') +
+      '\n📦 نوع التوصيل: ' + (o.deliveryType === 'home' ? 'للمنزل (à domicile)' : 'للمكتب (Stop Desk)') +
+      '\n---------------------------\nيرجى تأكيد الطلب.';
+  }
+
+  function placeOrder(openWa) {
+    var name = document.getElementById('fname'), phone = document.getElementById('fphone'),
+        wil = document.getElementById('fwilaya'), bal = document.getElementById('fbaladiya'),
+        addr = document.getElementById('faddress');
+    var ok = true;
+    [name, phone, wil, bal].forEach(function (f) { var bad = !f.value.trim(); f.classList.toggle('err', bad); if (bad) ok = false; });
+    if (delivery === 'home') { var abad = !addr.value.trim(); addr.classList.toggle('err', abad); if (abad) ok = false; } else addr.classList.remove('err');
+    if (phone.value && !/^0[567][0-9]{8}$/.test(phone.value.replace(/\s/g, ''))) { phone.classList.add('err'); ok = false; }
+    if (!ok) { alert('يرجى ملء جميع الحقول المطلوبة بشكل صحيح (اسم، هاتف صحيح يبدأ بـ 05/06/07، ولاية، بلدية، وعنوان المنزل للتوصيل للمنزل).'); return; }
+
+    var w = selectedWilaya();
+    var items = Cart.get().map(function (i) { return { id: i.id, title: i.title, price: i.price, qty: i.quantity || 1, image: i.image || '' }; });
+    var sub = Cart.total();
+    var copt = bal.options[bal.selectedIndex];
+    var order = {
+      num: 'DS-' + Math.floor(1000 + Math.random() * 9000),
+      customer: name.value.trim(), phone: phone.value.trim(),
+      wilaya: w ? w.ar : '', wilayaId: w ? w.id : null, wilayaFr: w ? w.fr : '',
+      baladiya: bal.value, communeFr: copt ? (copt.getAttribute('data-fr') || '') : '',
+      address: delivery === 'home' ? addr.value.trim() : '',
+      deliveryCompany: company, deliveryType: delivery, deliveryFee: deliveryFee,
+      insurance: company === 'yalidine' && insurance,
+      items: items, subtotal: sub, total: sub + deliveryFee
+    };
+    var seller = isSeller();
+    if (seller) order.source = 'admin_phone';
+    // Meta Purchase: a stable client-generated id, reused as the CAPI event_id
+    // by the onOrderCreatedMetaPurchase Firestore trigger (functions/index.js)
+    // so the browser Pixel copy and the server CAPI copy dedupe as one event.
+    // Skipped for seller/admin-phone orders — that's the seller's own
+    // browser placing a phone order, not a real customer web conversion.
+    if (window.Meta && !seller) {
+      order.metaEventId = Meta.newEventId();
+      order.fbp = Meta.getFbp(); order.fbc = Meta.getFbc();
+      order.pageUrl = window.location.href;
+      Meta.track('Purchase', {
+        content_ids: items.map(function (i) { return String(i.id); }), content_type: 'product',
+        contents: items.map(function (i) { return { id: String(i.id), quantity: i.qty, item_price: DS.priceNum(i.price) }; }),
+        value: order.total, currency: 'DZD',
+        num_items: items.reduce(function (n, i) { return n + (i.qty || 1); }, 0)
+      }, { eventId: 'purchase_' + order.metaEventId, skipCapi: true }); // CAPI leg: the Firestore trigger, only after the order actually saves
+    }
+    lastOrder = order;
+    DS.saveOrder(order).catch(function (err) { console.error('saveOrder', err); });
+
+    document.getElementById('successOid').textContent = order.num;
+    document.getElementById('successOv').classList.add('open');
+    Cart.clear();
+    if (openWa && SITE.waEnabled !== false) window.open(SiteUI.waLink(buildMessage(order)), '_blank');
+  }
+
+  // ───────── seller (store owner) mode ─────────
+  // Signed in with the admin-panel password; orders placed while active are
+  // recorded as phone orders (source: admin_phone) and skip notifications.
+  var SELLER_KEY = 'ds_staff';
+  function isSeller() { try { return localStorage.getItem(SELLER_KEY) === '1'; } catch (e) { return false; } }
+  function renderSeller() {
+    // the empty-cart message replaces the whole form, banner included
+    var banner = document.getElementById('sellerBanner'), login = document.getElementById('sellerLogin');
+    if (!banner || !login) return;
+    var on = isSeller();
+    banner.style.display = on ? 'flex' : 'none';
+    login.style.display = on ? 'none' : 'inline';
+    applyCarriers(siteSettings); // seller mode exposes all carriers; re-sync wilaya list
+  }
+  document.getElementById('sellerLogin') && document.getElementById('sellerLogin').addEventListener('click', function (e) {
+    e.preventDefault();
+    var pw = prompt('كلمة مرور لوحة التحكم:');
+    if (pw === null) return;
+    if (pw === 'tango88') { try { localStorage.setItem(SELLER_KEY, '1'); } catch (er) {} renderSeller(); }
+    else alert('كلمة المرور غير صحيحة');
+  });
+  document.getElementById('sellerLogout') && document.getElementById('sellerLogout').addEventListener('click', function () {
+    try { localStorage.removeItem(SELLER_KEY); } catch (e) {}
+    renderSeller();
+  });
+  renderSeller();
+
+  document.getElementById('orderForm') && document.getElementById('orderForm').addEventListener('submit', function (e) { e.preventDefault(); placeOrder(false); });
+  document.getElementById('waConfirmBtn') && document.getElementById('waConfirmBtn').addEventListener('click', function () { placeOrder(true); });
+
+  document.getElementById('resendWa').addEventListener('click', function () { if (lastOrder) window.open(SiteUI.waLink(buildMessage(lastOrder)), '_blank'); });
+})();
+</script>
+</body>
+</html>

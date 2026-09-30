@@ -1,0 +1,9 @@
+{
+    "name": "desert-shop",
+    "version": "2.0.0",
+    "description": "Desert Shop — women's beauty & wellness store (static, Firebase).",
+    "scripts": {
+        "start": "npx serve . -l 8000",
+        "dev": "npx serve . -l 8000"
+    }
+}

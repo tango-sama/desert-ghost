@@ -1,0 +1,50 @@
+{
+  "firestore": {
+    "rules": "firestore.rules",
+    "indexes": "firestore.indexes.json"
+  },
+  "functions": [
+    {
+      "source": "functions",
+      "codebase": "default",
+      "ignore": ["node_modules", ".git", "*.local"]
+    }
+  ],
+  "hosting": {
+    "site": "desert-shop-24af9",
+    "public": ".",
+    "cleanUrls": true,
+    "ignore": [
+      "firebase.json",
+      "**/.*",
+      "**/node_modules/**",
+      "functions/**",
+      "components/**",
+      "utils/**",
+      "trickle/**",
+      "app.js",
+      "context/**",
+      "**/*.md",
+      "**/*.local-backup",
+      "package.json",
+      "serve.json",
+      "vercel.json",
+      "firestore.rules",
+      "storage.rules",
+      "firestore.indexes.json"
+    ],
+    "headers": [
+      {
+        "source": "**",
+        "headers": [{ "key": "Cache-Control", "value": "no-cache" }]
+      },
+      {
+        "source": "**/*.@(webp|png|jpg|jpeg|gif|svg|ico|woff|woff2|ttf|eot)",
+        "headers": [{ "key": "Cache-Control", "value": "public, max-age=604800" }]
+      }
+    ]
+  },
+  "storage": {
+    "rules": "storage.rules"
+  }
+}

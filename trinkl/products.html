@@ -1,0 +1,174 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<base href="/" />
+<link rel="icon" type="image/webp" href="assets/logo.webp">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>كل المنتجات | جمالكِ الخارجي — Desert Shop</title>
+<meta name="description" content="تصفّحي كل منتجات الجمال والعناية النسائية — العناية بالبشرة والشعر، العطور، التنحيف والتسمين والمزيد.">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Cairo:wght@400;600;700;800;900&display=swap" rel="stylesheet">
+<link rel="stylesheet" href="css/theme.css">
+<!-- Firebase SDK is loaded at the end of <body> so it doesn't block first paint -->
+<link rel="preconnect" href="https://www.gstatic.com">
+<link rel="preconnect" href="https://firestore.googleapis.com" crossorigin>
+<link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js">
+<link rel="preload" as="script" href="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js">
+<style>
+.page-head{max-width:1320px;margin:0 auto;padding:7.5rem 3rem 1rem;text-align:center}
+.page-head .sec-label{margin-bottom:.8rem}
+.toolbar{max-width:1320px;margin:0 auto;padding:1.5rem 3rem;display:flex;gap:1rem;align-items:center;flex-wrap:wrap;justify-content:space-between}
+.search-box{position:relative;flex:1;min-width:240px;max-width:420px}
+.search-box input{width:100%;background:var(--bg-2);border:1.5px solid var(--line);border-radius:100px;
+  padding:.8rem 2.8rem .8rem 1.2rem;font-family:var(--sans);font-size:.92rem;color:var(--ink);outline:none;transition:border .25s}
+.search-box input:focus{border-color:var(--rose)}
+.search-box svg{position:absolute;right:1rem;top:50%;transform:translateY(-50%);width:18px;height:18px;color:var(--ink-3)}
+.sortsel{background:var(--bg-2);border:1.5px solid var(--line);border-radius:100px;padding:.75rem 1.2rem;font-family:var(--sans);font-size:.88rem;color:var(--ink);cursor:pointer;outline:none}
+.filter-pills{max-width:1320px;margin:0 auto;padding:.5rem 3rem 1.5rem;display:grid;
+  grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:.65rem}
+.fpill{background:var(--bg-2);border:1.5px solid var(--line);color:var(--ink-2);font-family:var(--sans);
+  font-size:.84rem;font-weight:700;padding:.6rem 1rem;border-radius:22px;cursor:pointer;transition:all .2s;
+  display:flex;align-items:center;justify-content:center;text-align:center;white-space:normal;line-height:1.25;min-height:44px}
+.fpill:hover{filter:brightness(.96);transform:translateY(-1px)}
+.fpill.active{box-shadow:0 6px 16px rgba(0,0,0,.16);transform:translateY(-1px)}
+.fpill[data-cat="all"]{background:linear-gradient(135deg,var(--rose),var(--rose-deep));border-color:transparent;color:#fff}
+.fpill[data-cat="all"].active{box-shadow:0 6px 16px rgba(224,114,140,.35)}
+@media(max-width:520px){.filter-pills{grid-template-columns:repeat(auto-fill,minmax(120px,1fr))}}
+.results-grid{max-width:1320px;margin:0 auto;padding:.5rem 3rem 4rem}
+.empty{text-align:center;color:var(--ink-3);padding:4rem 1rem;font-weight:700}
+.empty .ic{font-size:3.5rem;margin-bottom:1rem}
+.count-tag{font-size:.82rem;color:var(--ink-3);font-weight:600}
+@media(max-width:768px){.page-head{padding:6.5rem 1.2rem .5rem}.toolbar,.filter-pills,.results-grid{padding-inline:1.2rem}}
+</style>
+</head>
+<body>
+<div class="bg-glow"></div>
+<div class="wrap">
+
+<nav class="site-nav">
+  <a class="brand" href="index.html"><img src="assets/logo.webp" alt="Desert Shop" onerror="this.style.display='none'"><span class="brand-tx"><span class="brand-name">جمالكِ الخارجي</span><span class="brand-sub">Desert Shop</span></span></a>
+  <ul class="nav-menu">
+    <li><a href="index.html">الرئيسية</a></li>
+    <li><a href="products.html">المنتجات</a></li>
+    <li><a href="categories.html">التصنيفات</a></li>
+    <li><a href="index.html#contact">تواصلي معنا</a></li>
+  </ul>
+  <div class="nav-actions">
+    <button class="nav-cart" data-cart-open aria-label="السلة"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="8" cy="21" r="1"/><circle cx="19" cy="21" r="1"/><path d="M2.05 2.05h2l2.66 12.42a2 2 0 0 0 2 1.58h9.78a2 2 0 0 0 1.95-1.57l1.65-7.43H5.12"/></svg><span class="badge">0</span></button>
+    <button class="burger" aria-label="القائمة"><span></span><span></span><span></span></button>
+  </div>
+</nav>
+
+<div class="page-head">
+  <span class="sec-label">مجموعتنا الكاملة</span>
+  <h1 class="sec-title" id="pageTitle">كل المنتجات</h1>
+  <div class="sec-underline"></div>
+</div>
+
+<div class="toolbar">
+  <div class="search-box">
+    <input id="search" type="search" placeholder="ابحثي عن منتج...">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.3-4.3"/></svg>
+  </div>
+  <div style="display:flex;align-items:center;gap:1rem">
+    <span class="count-tag" id="countTag"></span>
+    <select class="sortsel" id="sort">
+      <option value="new">الأحدث</option>
+      <option value="price-asc">السعر: من الأقل</option>
+      <option value="price-desc">السعر: من الأعلى</option>
+      <option value="name">الاسم</option>
+    </select>
+  </div>
+</div>
+
+<div class="filter-pills" id="pills"></div>
+<div class="results-grid"><div class="pgrid" id="pgrid"></div><div class="empty" id="empty" style="display:none"><div class="ic">🔍</div>لا توجد منتجات مطابقة</div></div>
+
+<footer class="site-footer">
+  <div class="foot-inner">
+    <div class="foot-bottom" style="border-top:none;padding-top:0">
+      <div class="foot-copy">© <span id="yr"></span> جمالكِ الخارجي — Desert Shop</div>
+      <div class="foot-made"><a href="index.html" style="color:var(--rose-deep);font-weight:700">العودة للرئيسية</a></div>
+    </div>
+  </div>
+</footer>
+</div>
+
+<a class="tiktok-live" href="#" target="_blank" rel="noopener" aria-label="بث تيك توك مباشر"><svg class="tk-ic" viewBox="0 0 24 24" fill="currentColor"><path d="M12.53.02C13.84 0 15.14.01 16.44 0c.08 1.53.63 3.09 1.75 4.17 1.12 1.11 2.7 1.62 4.24 1.79v4.03c-1.44-.05-2.89-.35-4.2-.97-.57-.26-1.1-.59-1.62-.93-.01 2.92.01 5.84-.02 8.75-.08 1.4-.54 2.79-1.35 3.94-1.31 1.92-3.58 3.17-5.91 3.21-1.43.08-2.86-.31-4.08-1.03-2.02-1.19-3.44-3.37-3.65-5.71-.02-.5-.03-1-.01-1.49.18-1.9 1.12-3.72 2.58-4.96 1.66-1.44 3.98-2.13 6.15-1.72.02 1.48-.04 2.96-.04 4.44-.99-.32-2.15-.23-3.02.37-.63.41-1.11 1.04-1.36 1.75-.21.51-.15 1.08-.14 1.62.24 1.64 1.82 3.02 3.5 2.87 1.12-.01 2.19-.66 2.77-1.61.19-.33.4-.67.41-1.06.1-1.79.06-3.57.07-5.36.01-4.03-.01-8.05.02-12.07z"/></svg><span>بث مباشر</span><span class="lv"><span class="dot"></span>LIVE</span></a>
+<a class="wa-float" data-wa="مرحباً، لدي استفسار" target="_blank" aria-label="WhatsApp"><svg viewBox="0 0 24 24" fill="currentColor"><path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51l-.57-.01c-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 0 1-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 0 1-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 0 1 2.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0 0 12.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L.057 24l6.305-1.654a11.882 11.882 0 0 0 5.683 1.448h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 0 0-3.48-8.413Z"/></svg></a>
+
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-firestore-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/9.23.0/firebase-functions-compat.js"></script>
+<script src="js/firebase.js"></script>
+<script src="js/site.js"></script>
+<script src="js/meta.js"></script>
+<script src="js/cart.js"></script>
+<script>
+(function () {
+  document.getElementById('yr').textContent = new Date().getFullYear();
+  var params = new URLSearchParams(location.search);
+  var activeCat = params.get('cat') || 'all';
+  var search = '', sort = 'new', catMap = {}, ALL = [], CATS = [];
+
+  var pillsEl = document.getElementById('pills'), grid = document.getElementById('pgrid'),
+      empty = document.getElementById('empty'), countTag = document.getElementById('countTag'),
+      titleEl = document.getElementById('pageTitle');
+
+  function render() {
+    var list = ALL.slice();
+    if (activeCat !== 'all') list = list.filter(function (p) { return p.category === activeCat; });
+    if (search) { var q = search.toLowerCase(); list = list.filter(function (p) {
+      return ((p.title || p.name || '') + ' ' + (p.subtitle || '')).toLowerCase().indexOf(q) !== -1; }); }
+    if (sort === 'price-asc') list.sort(function (a, b) { return DS.priceNum(a.price) - DS.priceNum(b.price); });
+    else if (sort === 'price-desc') list.sort(function (a, b) { return DS.priceNum(b.price) - DS.priceNum(a.price); });
+    else if (sort === 'name') list.sort(function (a, b) { return String(a.title || '').localeCompare(String(b.title || ''), 'ar'); });
+    else list.sort(function (a, b) { return (Number(b.lastModified || b.id) || 0) - (Number(a.lastModified || a.id) || 0); });
+
+    countTag.textContent = list.length + ' منتج';
+    if (!list.length) { grid.innerHTML = ''; empty.style.display = ''; return; }
+    empty.style.display = 'none';
+    grid.innerHTML = list.map(function (p) { return SiteUI.productCardHTML(p, catMap[p.category] || ''); }).join('');
+    SiteUI.observeReveals(grid);
+    titleEl.textContent = activeCat === 'all' ? 'كل المنتجات' : (catMap[activeCat] || 'المنتجات');
+  }
+
+  function renderPills(cats) {
+    var html = '<button class="fpill' + (activeCat === 'all' ? ' active' : '') + '" data-cat="all">الكل</button>';
+    html += cats.filter(function (c) { return c.visible !== false; }).map(function (c) {
+      var color = SiteUI.catColor(c);
+      var active = activeCat === c.id;
+      var style = active
+        ? 'background:' + color + ';border-color:' + color + ';color:var(--ink)'
+        : 'background:' + SiteUI.hexToRgba(color, .14) + ';border-color:' + SiteUI.hexToRgba(color, .5) + ';color:var(--ink)';
+      return '<button class="fpill' + (active ? ' active' : '') + '" data-cat="' + SiteUI.esc(c.id) + '" style="' + style + '">' + SiteUI.esc(c.name) + '</button>';
+    }).join('');
+    pillsEl.innerHTML = html;
+  }
+
+  DS.getSettings().then(SiteUI.applySettings);
+  DS.getCategories().then(function (cats) {
+    CATS = cats;
+    cats.forEach(function (c) { catMap[c.id] = c.name; });
+    renderPills(CATS);
+    if (activeCat !== 'all') titleEl.textContent = catMap[activeCat] || 'المنتجات';
+  });
+  DS.getProducts().then(function (prods) { ALL = prods; window._DS_PRODUCTS = prods; render(); });
+
+  pillsEl.addEventListener('click', function (e) {
+    var b = e.target.closest('.fpill'); if (!b) return;
+    activeCat = b.dataset.cat;
+    renderPills(CATS);
+    var u = new URL(location); if (activeCat === 'all') u.searchParams.delete('cat'); else u.searchParams.set('cat', activeCat);
+    history.replaceState(null, '', u);
+    render();
+  });
+  var st;
+  document.getElementById('search').addEventListener('input', function (e) { clearTimeout(st); var v = e.target.value; st = setTimeout(function () { search = v.trim(); render(); }, 200); });
+  document.getElementById('sort').addEventListener('change', function (e) { sort = e.target.value; render(); });
+})();
+</script>
+</body>
+</html>
