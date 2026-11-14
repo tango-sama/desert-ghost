@@ -11,7 +11,7 @@ const attempts = new Map<string, { count: number; resetAt: number }>();
 const FALLBACK_STAGES = ["تم إنشاء الطلب", "تم التأكيد والشحن", "في مركز الفرز", "خرج للتوصيل", "تم الاستلام"];
 
 function normalizePhone(value: unknown): string {
-  let digits = String(value ?? "").replace(/\\D/g, "");
+  let digits = String(value ?? "").replace(/\D/g, "");
   if (digits.startsWith("00213")) digits = digits.slice(5);
   else if (digits.startsWith("213")) digits = digits.slice(3);
   if (digits.length === 9) digits = "0" + digits;
