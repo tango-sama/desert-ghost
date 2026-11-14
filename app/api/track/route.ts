@@ -59,7 +59,24 @@ function isDelivered(order: Record<string, unknown>): boolean {
 function publicTracking(order: Record<string, unknown>) {
   const ts = (order.trackingStatus ?? {}) as Record<string, unknown>;
   const rawEvents = Array.isArray(ts.events) ? ts.events : [];
-  const events = rawEvents.slice(-12).reverse().map((raw) => {
+
+  // Customer-facing history starts only when the parcel first reaches a
+  // sorting/distribution centre. Earlier pickup, registration, and preparation
+  // events remain private. Carrier event arrays are stored oldest-first.
+  const firstCentreIndex = rawEvents.findIndex((raw) => {
+    const event = (raw ?? {}) as Record<string, unknown>;
+    const description = [event.label, event.location, event.badge]
+      .filter((value): value is string => typeof value === "string")
+      .join(" ")
+      .toLowerCase();
+    return /مركز|فرز|centre|hub|sorting cent(?:er|re)|centre de tri/.test(description);
+  });
+
+  const visibleEvents = firstCentreIndex >= 0
+    ? rawEvents.slice(firstCentreIndex).slice(-12).reverse()
+    : [];
+
+  const events = visibleEvents.map((raw) => {
     const event = (raw ?? {}) as Record<string, unknown>;
     return {
       label: text(event.label, 120) ?? "تحديث الشحنة",
