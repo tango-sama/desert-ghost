@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
-import { Menu, Search, ShoppingCart, X } from "lucide-react";
+import { Menu, Search, ShoppingCart, X, PackageSearch } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useCartStore, cartCount } from "@/stores/cart-store";
 import type { SiteSettings } from "@/lib/firebase";
@@ -106,6 +106,7 @@ export function Nav({
             </button>
           </form>
 
+          <Link href="/track" className="hidden shrink-0 items-center gap-1.5 rounded-full border border-[var(--line)] px-3 py-2 text-xs font-bold text-[var(--rose-deep)] transition hover:bg-[var(--rose-tint)] lg:inline-flex"><PackageSearch size={16} /> تتبع الطلب</Link>
           <div className="flex shrink-0 items-center gap-1 ms-auto md:ms-0">
             <button
               type="button"
@@ -181,6 +182,7 @@ export function Nav({
             { href: "/", label: "الرئيسية" },
             { href: "/products", label: "المنتجات" },
             { href: "/categories", label: "التصنيفات" },
+            { href: "/track", label: "تتبع طلبيتي" },
             { href: "/#contact", label: "تواصلي معنا" },
           ].map((l) => (
             <li key={l.href}>

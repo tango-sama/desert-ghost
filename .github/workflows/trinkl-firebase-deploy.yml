@@ -16,7 +16,7 @@ jobs:
       run:
         working-directory: trinkl
     env:
-      GOOGLE_APPLICATION_CREDENTIALS: ${{ runner.temp }}/gcp-key.json
+      GOOGLE_APPLICATION_CREDENTIALS: ${{ github.workspace }}/gcp-key.json
       FIREBASE_SERVICE_ACCOUNT: ${{ secrets.FIREBASE_SERVICE_ACCOUNT_DESERT_SHOP_24AF9 }}
     steps:
       - uses: actions/checkout@v4
@@ -27,6 +27,6 @@ jobs:
         run: npm ci
         working-directory: trinkl/functions
       - name: Write service account key
-        run: echo "$FIREBASE_SERVICE_ACCOUNT" > "$RUNNER_TEMP/gcp-key.json"
+        run: printf '%s' "$FIREBASE_SERVICE_ACCOUNT" > "$GOOGLE_APPLICATION_CREDENTIALS"
       - name: Deploy Hosting, Functions and Firestore rules
         run: npx firebase-tools@latest deploy --only hosting,functions,firestore:rules --project desert-shop-24af9 --non-interactive

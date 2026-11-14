@@ -57,6 +57,7 @@ export function Footer({ settings }: { settings: SiteSettings }) {
             <ul className="space-y-2.5 text-sm text-muted-foreground">
               <li><Link href="/products" className="hover:text-[var(--rose-deep)]">كل المنتجات</Link></li>
               <li><Link href="/categories" className="hover:text-[var(--rose-deep)]">التصنيفات</Link></li>
+              <li><Link href="/track" className="hover:text-[var(--rose-deep)]">تتبع طلبيتي</Link></li>
               <li><Link href="/#collection" className="hover:text-[var(--rose-deep)]">الأكثر طلباً</Link></li>
             </ul>
           </div>
